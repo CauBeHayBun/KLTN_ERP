@@ -1,6 +1,6 @@
 # HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP (ERP) TÍCH HỢP AI VÀ WEBSOCKET REALTIME TRONG NGÀNH RETAIL & LẮP RÁP LINH KIỆN MÁY TÍNH
 
-> **Khóa Luận Tốt Nghiệp Đại Học — Trường Đại Học Công Nghiệp TP. Hồ Chí Minh (IUH)**  
+> **Khóa Luận Tốt Nghiệp Đại Học — Trường Đại Học Công Nghệ TP. Hồ Chí Minh / Trường Đại Học Công Nghiệp TP. Hồ Chí Minh (IUH)**  
 > **Chuyên Ngành**: Hệ Thống Thông Tin — Khoa Công Nghệ Thông Tin  
 > **Tên Đề Tài**: Xây dựng Hệ thống ERP Quản lý Bán lẻ Linh kiện Máy tính kết hợp Website Thương mại Điện tử, Trợ lý AI và Kênh Chat CSKH Realtime bằng WebSocket (**AetherPC ERP & Storefront**).
 
@@ -9,10 +9,10 @@
 ## MỤC LỤC
 
 1. [1. Tổng Quan Hệ Thống & Bối Cảnh Đề Tài](#1-tổng-quan-hệ-thống--bối-cảnh-đề-tài)
-2. [2. Kiến Trúc Hệ Thống & Sơ Đồ Khối](#2-kiến-trúc-hệ-thống--sơ-đồ-khối)
+2. [2. Kiến Trúc Hệ Thống & Sơ Đồ Khối (System Architecture)](#2-kiến-trúc-hệ-thống--sơ-đồ-khối-system-architecture)
 3. [3. Danh Sách 14 Vai Trò & Ma Trận Phân Quyền (RBAC Matrix)](#3-danh-sách-14-vai-trò--ma-trận-phân-quyền-rbac-matrix)
 4. [4. Mô Tả Chi Tiết Quy Trình Vận Hành (Workflow Processes)](#4-mô-tả-chi-tiết-quy-trình-vận-hành-workflow-processes)
-5. [5. Chi Tiết Tính Năng 12 Phân Hệ ERP Admin & Storefront](#5-chi-tiết-tính-năng-12-phân-hệ-erp-admin--storefront)
+5. [5. Chi Tiết Tính Năng 12 Phân Hệ ERP Admin & 12 Phân Hệ Storefront](#5-chi-tiết-tính-năng-12-phân-hệ-erp-admin--12-phân-hệ-storefront)
 6. [6. Thuật Toán & Công Thức Toán Học Trong Hệ Thống](#6-thuật-toán--công-thức-toán-học-trong-hệ-thống)
 7. [7. Danh Mục RESTful APIs & WebSocket Protocol](#7-danh-mục-restful-apis--websocket-protocol)
 8. [8. Bộ Kịch Bản Kiểm Thử Chi Tiết (Comprehensive Test Suite)](#8-bộ-kịch-bản-kiểm-thử-chi-tiết-comprehensive-test-suite)
@@ -25,20 +25,20 @@
 
 ## 1. Tổng Quan Hệ Thống & Bối Cảnh Đề Tài
 
-Thị trường kinh doanh linh kiện máy tính và lắp ráp PC theo yêu cầu (Custom PC / Gaming Workstation) tại Việt Nam đòi hỏi khả năng xử lý dữ liệu phức tạp: hàng ngàn mã sản phẩm (SKU) với thông số kỹ thuật đa dạng (Socket CPU, Bus RAM, Form Factor Mainboard, Công suất TDP), biến động giá liên tục từ nhiều Nhà cung cấp, cùng các dịch vụ giá trị gia tăng như kiểm định chất lượng QA/QC, lắp ráp kỹ thuật, bảo hành và chăm sóc khách hàng.
+Thị trường kinh doanh linh kiện máy tính và lắp ráp PC theo yêu cầu (Custom PC / Gaming Workstation) tại Việt Nam đòi hỏi khả năng xử lý dữ liệu vô cùng phức tạp: hàng ngàn mã sản phẩm (SKU) với thông số kỹ thuật đa dạng (Socket CPU, Bus RAM, Form Factor Mainboard, Công suất TDP), biến động giá liên tục từ nhiều Nhà cung cấp, cùng các dịch vụ giá trị gia tăng như kiểm định chất lượng QA/QC, lắp ráp kỹ thuật, bảo hành và chăm sóc khách hàng.
 
-**AetherPC ERP** được nghiên cứu và phát triển nhằm giải quyết triệt để các thách thức trên thông qua một **Hệ thống ERP Hợp nhất (Unified Enterprise Resource Planning)**, kết nối trực tiếp **Website Thương mại Điện tử (E-Commerce Storefront)**, **Trợ lý AI Tự động hóa (Google Gemini AI SDK)**, **Hệ thống Kiểm định QA/QC** và **Kênh Chat CSKH Realtime (WebSocket Server)**.
+**AetherPC ERP** được nghiên cứu và phát triển nhằm giải quyết triệt me các thách thức trên thông qua một **Hệ thống ERP Hợp nhất (Unified Enterprise Resource Planning)**, kết nối trực tiếp **Website Thương mại Điện tử (E-Commerce Storefront)**, **Trợ lý AI Tự động hóa (Google Gemini AI SDK)**, **Hệ thống Kiểm định QA/QC** và **Kênh Chat CSKH Realtime (WebSocket Server)**.
 
 ### Các Mục Tiêu Cốt Lõi:
-1. **Tự động hóa luồng Procure-to-Pay (P2P)**: Đánh giá và chọn báo giá Nhà cung cấp tối ưu nhất bằng Thuật toán Ma trận Giá ($P_{\text{save}}$), gửi RFQ đồng bộ đúng 100% số lượng đề xuất thực tế từ Thủ Kho.
-2. **Kiểm định chất lượng nghiêm ngặt (QA/QC)**: Kiểm đếm linh kiện nhập kho, lập biên bản kiểm định và phân loại sản phẩm lỗi trước khi cho phép nhập kho chính thức.
-3. **Chuẩn hóa luồng Order-to-Cash (O2C)**: Tích hợp bán lẻ POS tại quầy, thanh toán QR Code VietQR, quy trình lắp ráp PC 5 bước kỹ thuật, phân công Shipper và giao hàng có minh chứng thực tế (Proof of Delivery).
-4. **Chăm sóc khách hàng Realtime**: Xây dựng server WebSocket hai chiều hai kênh ($< 1\text{ms}$), phân định lịch sử trò chuyện độc lập theo từng tài khoản (`session_user_<slug>`).
-5. **Quản trị Tài chính & Nhân sự**: Tính lương tự động theo 26 ngày công chuẩn Việt Nam, khấu trừ $10.5\%$ bảo hiểm, tính thưởng Sales $1\%$ và thưởng lắp ráp $150k$/máy, hạch toán Sổ Nhật ký Tài chính VAS.
+1. **Tự động hóa luồng Procure-to-Pay (P2P)**: Đánh giá và chọn báo giá Nhà cung cấp tối ưu nhất bằng Thuật toán Ma trận Giá ($P_{\text{save}}$), khởi tạo RFQ giữ nguyên 100% số lượng đề xuất thực tế từ Thủ Kho.
+2. **Kiểm định chất lượng nghiêm ngặt (QA/QC)**: Kiểm đếm linh kiện nhập kho từ Nhà cung cấp, phát hành Biên bản QA/QC, phân loại linh kiện đạt chuẩn và hàng lỗi nhà sản xuất (DOA) trước khi cho phép nhập kho chính thức.
+3. **Chuẩn hóa luồng Order-to-Cash (O2C)**: Tích hợp bán lẻ POS tại quầy (quét mã vạch, mã QR VietQR), quy trình lắp ráp PC 5 bước kỹ thuật, xuất kho bật modal Phân công Shipper trực tiếp và giao hàng có minh chứng thực tế (Proof of Delivery).
+4. **Chăm sóc khách hàng Realtime**: Xây dựng server WebSocket hai chiều hai kênh ($< 1\text{ms}$), hỗ trợ mẫu câu phản hồi nhanh, phân định lịch sử trò chuyện độc lập theo từng tài khoản (`session_user_<slug>`).
+5. **Quản trị Tài chính & Nhân sự**: Tính lương tự động theo quy chuẩn 26 ngày công Việt Nam, khấu trừ $10.5\%$ bảo hiểm bắt buộc ($8\%$ BHXH, $1.5\%$ BHYT, $1\%$ BHTN), cộng thưởng Sales $1\%$ và thưởng lắp ráp $150k$/máy, hạch toán Sổ Nhật ký Tài chính VAS.
 
 ---
 
-## 2. Kiến Trúc Hệ Thống & Sơ Đồ Khối
+## 2. Kiến Trúc Hệ Thống & Sơ Đồ Khối (System Architecture)
 
 Hệ thống được thiết kế theo kiến trúc 3 tầng (3-Tier Architecture) hiện đại, đảm bảo tính mở rộng, bảo mật và hiệu năng cao.
 
@@ -156,72 +156,99 @@ sequenceDiagram
 
 ---
 
-## 5. Chi Tiết Tính Năng 12 Phân Hệ ERP Admin & Storefront
+## 5. Chi Tiết Tính Năng 12 Phân Hệ ERP Admin & 12 Phân Hệ Storefront
 
-### 5.1. Executive Dashboard (`Dashboard.jsx`)
-- KPIs thời gian thực: Tổng doanh thu, tổng đơn hàng, tỷ lệ hoàn thành, phân rã doanh số POS vs Storefront.
-- Biểu đồ phân bố danh mục linh kiện bán ra.
-- Bộ lọc khoảng thời gian thống nhất (`Từ ngày — Đến ngày`).
-- Drilldown Modals xem danh sách đơn hàng chi tiết khi click thẻ KPI.
+### 5.1. Các Phân Hệ ERP Admin (`/admin/*`)
 
-### 5.2. Sales POS Thu Ngân (`SalesPOS.jsx`)
-- Tìm kiếm sản phẩm theo Tên/SKU, hỗ trợ quét mã vạch Barcode scanner.
-- Thanh toán đa phương thức: Tiền mặt, Chuyển khoản QR Code VietQR tự động.
-- In hóa đơn bán lẻ tại quầy và quản lý sổ đăng ký đơn hàng.
+1. **Executive Dashboard (`Dashboard.jsx`)**:
+   - KPIs thời gian thực: Tổng doanh thu, tổng đơn hàng, tỷ lệ hoàn thành, phân rã doanh số POS vs Storefront.
+   - Biểu đồ phân bố danh mục linh kiện bán ra.
+   - Banner thông báo CEO duyệt báo giá mua hàng trên tông màu sáng ấm (`#fffbeb → #fef3c7`).
+   - Drilldown Modals xem danh sách đơn hàng chi tiết khi click thẻ KPI.
 
-### 5.3. Quản Lý Kho Bãi (`Warehouse.jsx`)
-- Quản lý 1.580 linh kiện PC theo 3 ngưỡng rủi ro (`SAFE`, `WARNING`, `OUT_OF_STOCK`).
-- Theo dõi nhật ký biến động xuất nhập kho (Stock Movement Audit Logs).
-- **Xác Nhận Xuất Kho & Phân Công Shipper**: Bật modal chọn Shipper trực tiếp trong bảng Chi tiết đơn hàng, tự động đóng cả 2 modal và gửi thông báo hệ thống Realtime.
+2. **Sales POS Thu Ngân (`SalesPOS.jsx`)**:
+   - Tìm kiếm sản phẩm theo Tên/SKU, hỗ trợ quét mã vạch Barcode scanner.
+   - Thanh toán đa phương thức: Tiền mặt, Chuyển khoản QR Code VietQR tự động.
+   - In hóa đơn bán lẻ tại quầy và quản lý sổ đăng ký đơn hàng.
 
-### 5.4. Mua Hàng & RFQ (`Purchasing.jsx`)
-- Ma trận so sánh báo giá đa NCC với thuật toán chọn phương án tiết kiệm nhất $P_{\text{save}}$.
-- **Đồng bộ đúng số lượng đề xuất**: Tiếp nhận chuẩn xác số lượng từ cảnh báo kho (ví dụ: 63 cái, 25 cái) khi mở form khởi tạo RFQ.
+3. **Quản Lý Kho Bãi (`Warehouse.jsx`)**:
+   - Quản lý 1.580 linh kiện PC theo 3 ngưỡng rủi ro (`SAFE`, `WARNING`, `OUT_OF_STOCK`).
+   - Theo dõi nhật ký biến động xuất nhập kho (Stock Movement Audit Logs) và xem chi tiết lịch sử.
+   - Xem lịch sử gửi cảnh báo Yêu cầu Báo giá (RFQ Alert History Modal).
+   - **Xác Nhận Xuất Kho & Phân Công Shipper**: Nhấn "Xác Nhận Xuất Kho" trong chi tiết đơn hàng sẽ tự động mở modal Phân công Shipper (Shipper 1, Shipper 2, Shipper tự do), tự động đóng cả 2 modal và gửi thông báo Realtime tới bộ phận Giao Hàng & Bán Hàng.
 
-### 5.5. Kiểm Định Chất Lượng QA/QC (`QualityControl.jsx`)
-- Kiểm tra quy chuẩn linh kiện nhập kho từ Nhà cung cấp.
-- Đánh giá tỷ lệ linh kiện đạt chuẩn vs linh kiện lỗi nhà sản xuất (DOA).
-- Khởi tạo Biên bản Kiểm định QA/QC trước khi chuyển kho chính.
+4. **Mua Hàng & RFQ (`Purchasing.jsx`)**:
+   - Ma trận so sánh báo giá đa NCC với thuật toán chọn phương án tiết kiệm nhất $P_{\text{save}}$.
+   - **Đồng bộ đúng số lượng đề xuất**: Tiếp nhận chuẩn xác 100% số lượng đề xuất từ cảnh báo kho (ví dụ: 63 cái, 25 cái) khi mở form khởi tạo RFQ.
 
-### 5.6. Quản Lý Lắp Ráp PC (`Assembly.jsx`)
-- Tự động sinh Job lắp ráp máy bộ PC.
-- Quy trình Checklist 5 bước kỹ thuật:
-  - **Bước 1**: Kiểm tra tương thích Socket CPU & Mainboard.
-  - **Bước 2**: Tra keo tản nhiệt & lắp tản nhiệt.
-  - **Bước 3**: Đi dây nguồn (Cable Management).
-  - **Bước 4**: Cấu hình BIOS & Boot OS.
-  - **Bước 5**: Chạy Stress Test kiểm tra nhiệt độ CPU/GPU.
-- Tự động cộng $150.000$đ thưởng kỹ thuật cho nhân viên hoàn thành.
+5. **Kiểm Định Chất Lượng QA/QC (`QualityControl.jsx`)**:
+   - Kiểm tra quy chuẩn linh kiện nhập kho từ Nhà cung cấp.
+   - Đánh giá tỷ lệ linh kiện đạt chuẩn vs linh kiện lỗi nhà sản xuất (DOA).
+   - Khởi tạo Biên bản Kiểm định QA/QC trước khi chuyển kho chính.
 
-### 5.7. Quản Lý Nhân Sự & Bảng Lương (`HRManager.jsx` & `MyPayroll.jsx`)
-- Tính lương theo quy chuẩn 26 ngày công chuẩn Việt Nam.
-- Tự động khấu trừ $10.5\%$ bảo hiểm bắt buộc ($8\%$ BHXH, $1.5\%$ BHYT, $1\%$ BHTN).
-- Cộng thưởng doanh số Sales $1\%$ và thưởng Lắp ráp PC.
-- Cổng MyPayroll Portal cho nhân viên tra cứu phiếu lương cá nhân.
+6. **Quản Lý Lắp Ráp PC (`Assembly.jsx`)**:
+   - Tự động sinh Job lắp ráp máy bộ PC.
+   - Quy trình Checklist 5 bước kỹ thuật:
+     - **Bước 1**: Kiểm tra tương thích Socket CPU & Mainboard.
+     - **Bước 2**: Tra keo tản nhiệt & lắp tản nhiệt.
+     - **Bước 3**: Đi dây nguồn (Cable Management).
+     - **Bước 4**: Cấu hình BIOS & Boot OS.
+     - **Bước 5**: Chạy Stress Test kiểm tra nhiệt độ CPU/GPU.
+   - Tự động cộng $150.000$đ thưởng kỹ thuật cho nhân viên hoàn thành.
 
-### 5.8. Kế Toán Tài Chính (`Accountant.jsx`)
-- Sổ Nhật ký Tài chính VAS (`INCOME`/`EXPENSE`).
-- Khớp hóa đơn mua hàng Vendor Bill 3 bên (PO - GRN - Bill).
-- Báo cáo kết quả kinh doanh P&L (Profit & Loss).
+7. **Quản Lý Nhân Sự & Bảng Lương (`HRManager.jsx` & `MyPayroll.jsx`)**:
+   - Tính lương theo quy chuẩn 26 ngày công chuẩn Việt Nam.
+   - Tự động khấu trừ $10.5\%$ bảo hiểm bắt buộc ($8\%$ BHXH, $1.5\%$ BHYT, $1\%$ BHTN).
+   - Cộng thưởng doanh số Sales $1\%$ và thưởng Lắp ráp PC.
+   - Cổng MyPayroll Portal cho nhân viên tra cứu phiếu lương cá nhân.
 
-### 5.9. Giao Hàng & Vận Chuyển (`Delivery.jsx`)
-- Tiếp nhận đơn hàng sẵn sàng giao (`READY_TO_SHIP`).
-- Tải ảnh minh chứng giao hàng thực tế từ máy/điện thoại (`FileReader` Base64).
-- Ghi nhận 6 lý do giao thất bại phổ biến kèm ghi chú.
+8. **Kế Toán Tài Chính (`Accountant.jsx`)**:
+   - Sổ Nhật ký Tài chính VAS (`INCOME`/`EXPENSE`).
+   - Khớp hóa đơn mua hàng Vendor Bill 3 bên (PO - GRN - Bill).
+   - Báo cáo kết quả kinh doanh P&L (Profit & Loss).
 
-### 5.10. Chăm Sóc Khách Hàng Realtime (`CustomerService.jsx`)
-- Live Chat 1-1 Realtime qua WebSocket Server `ws://localhost:5000/ws/cskh` ($< 1\text{ms}$).
-- Sử dụng mẫu câu trả lời nhanh, quản lý phiên chat theo từng tài khoản (`session_user_<slug>`).
-- Quản lý Ticket bảo hành và phê duyệt đơn Đổi trả linh kiện.
+9. **Giao Hàng & Vận Chuyển (`Delivery.jsx`)**:
+   - Tiếp nhận đơn hàng sẵn sàng giao (`READY_TO_SHIP`).
+   - Tải ảnh minh chứng giao hàng thực tế từ máy/điện thoại (`FileReader` Base64).
+   - Ghi nhận 6 lý do giao thất bại phổ biến kèm ghi chú.
 
-### 5.11. Quản Trị Hệ Thống (`SystemAdmin.jsx`)
-- Quản lý danh sách tài khoản thuộc 14 nhóm quyền RBAC.
-- Theo dõi nhật ký hệ thống Audit Logs và khởi tạo dữ liệu mẫu.
+10. **Chăm Sóc Khách Hàng Realtime (`CustomerService.jsx`)**:
+    - Live Chat 1-1 Realtime qua WebSocket Server `ws://localhost:5000/ws/cskh` ($< 1\text{ms}$).
+    - Sử dụng mẫu câu trả lời nhanh, quản lý phiên chat theo từng tài khoản (`session_user_<slug>`).
+    - Hỗ trợ xóa phiên chat cũ (`🗑️ Xóa phiên chat này`).
+    - Quản lý Ticket bảo hành và phê duyệt đơn Đổi trả linh kiện.
 
-### 5.12. Storefront E-Commerce & AI Build PC (`PCBuilder.jsx`, `Home.jsx`, `Cart.jsx`, `MyOrders.jsx`)
-- **Tự Build PC Thông Minh**: Tự động kiểm tra xung đột Socket CPU/Mainboard và công suất nguồn PSU ($\le 80\%$ TDP).
-- **Trợ Lý AI Chatbot**: Google Gemini AI SDK tư vấn cấu hình PC theo ngân sách.
-- **Giỏ hàng & Vận đơn**: Tính phí giao hàng rõ ràng (`+30.000 đ` hoặc `MIỄN PHÍ`), thanh toán VietQR và tra cứu hành trình vận đơn.
+11. **Quản Trị Hệ Thống (`SystemAdmin.jsx`)**:
+    - Quản lý danh sách tài khoản thuộc 14 nhóm quyền RBAC.
+    - Theo dõi nhật ký hệ thống Audit Logs và khởi tạo dữ liệu mẫu.
+
+12. **Cổng Nhà Cung Cấp (`SupplierPortal/index.jsx`)**:
+    - Giao diện dành riêng cho các Nhà cung cấp đối tác.
+    - Tiếp nhận các đơn Yêu cầu Báo giá (RFQ) từ AetherPC.
+    - Nhập đơn giá báo giá và cam kết ngày giao hàng dự kiến.
+
+---
+
+### 5.2. Các Phân Hệ Storefront & E-Commerce (`/*`)
+
+1. **Trang Chủ Storefront (`Home.jsx`)**: Banner khuyến mãi, danh mục linh kiện nổi bật, sản phẩm bán chạy.
+2. **Bộ Công Cụ Tự Build PC (`PCBuilder.jsx`)**:
+   - Tự chọn cấu hình linh kiện PC chuyên nghiệp.
+   - Tự động kiểm tra xung đột Socket CPU/Mainboard và chuẩn RAM DDR4/DDR5.
+   - Tính toán công suất nguồn PSU khuyến nghị ($\le 80\%$ TDP).
+3. **Chi Tiết Sản Phẩm (`ProductDetail.jsx`)**: Thông số kỹ thuật đầy đủ, tình trạng tồn kho, đánh giá.
+4. **Giỏ Hàng & Thanh Toán (`Cart.jsx`)**:
+   - Áp dụng mã giảm giá.
+   - Tách biệt chi tiết **Phí giao hàng / Vận chuyển (`+30.000 đ` hoặc `MIỄN PHÍ`)** và **Tạm tính linh kiện**.
+   - Thanh toán chuyển khoản QR Code VietQR tự động.
+5. **Theo Dõi Đơn Hàng (`MyOrders.jsx`)**: Tra cứu hành trình vận đơn Realtime, xem ảnh minh chứng giao hàng, tải hóa đơn.
+6. **Flash Sale (`FlashSale.jsx`)**: Danh mục sản phẩm giảm giá theo giờ.
+7. **Hạng Hội Viên & Loyalty (`MemberTier.jsx`)**: Điểm tích lũy và đặc quyền hạng thành viên Aether.
+8. **Ưu Đãi Khuyến Mãi (`Promotions.jsx`)**: Danh sách voucher và chương trình ưu đãi hiện có.
+9. **Tin Tức Công Nghệ (`News.jsx` & `NewsDetail.jsx`)**: Bài viết đánh giá phần cứng và hướng dẫn lắp ráp PC.
+10. **Giới Thiệu Doanh Nghiệp (`About.jsx`)**: Thông tin công ty, tầm nhìn & sứ mệnh.
+11. **Tuyển Dụng (`Careers.jsx`)**: Cơ hội nghề nghiệp tại AetherPC.
+12. **Trợ Lý Chatbot AI Antigravity**: Tích hợp Google Gemini AI SDK tư vấn cấu hình PC 24/7.
 
 ---
 
@@ -286,7 +313,7 @@ $$P_{\text{PSU khuyến nghị}} \ge \frac{P_{\text{tổng TDP}}}{0.80}$$
 
 ### 8.3. Quản Lý Kho (`TC-WH`)
 - **`TC-WH-01`**: Lọc nhật ký biến động kho IN/OUT theo khoảng thời gian.
-- **`TC-WH-02`**: Bấm "Xác Nhận Xuất Kho" trong chi tiết đơn hàng -> Bật modal chọn Shipper -> Đóng cả 2 modal và phát thông báo Realtime.
+- **`TC-WH-02`**: Nhấn "Xác Nhận Xuất Kho" trong chi tiết đơn hàng -> Bật modal chọn Shipper -> Đóng cả 2 modal và phát thông báo Realtime.
 
 ### 8.4. Mua Hàng & RFQ (`TC-PUR`)
 - **`TC-PUR-01`**: Tạo RFQ đa NCC cho sản phẩm cảnh báo kho -> Tự động giữ nguyên số lượng đề xuất thực tế (ví dụ: 63 cái).
