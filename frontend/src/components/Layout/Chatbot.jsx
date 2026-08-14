@@ -877,50 +877,85 @@ export default function Chatbot() {
                   {/* Product Search List Layout */}
                   {msg.layout === 'product_list' && msg.productsData && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
-                      {msg.productsData.map((p, idx) => (
-                        <div key={idx} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.5rem',
-                          background: '#f1f5f9',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px'
-                        }}>
-                          <img src={p.image || `https://placehold.co/40x40`} alt="" style={{ width: '42px', height: '42px', objectFit: 'contain', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                            <div style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 800 }}>{formatPrice(p.price)}</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexShrink: 0 }}>
-                            <button
+                      {msg.productsData.map((p, idx) => {
+                        const prodId = p.id || p.productId;
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.6rem 0.75rem',
+                              background: '#ffffff',
+                              border: '1.5px solid #e2e8f0',
+                              borderRadius: '10px',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {/* Clickable Image + Name + Price -> Navigates to Product Detail */}
+                            <div
                               onClick={() => {
-                                addToCart(p, 1);
-                                setMessages(prev => [...prev, {
-                                  sender: 'bot',
-                                  text: `Dạ rồi ạ! Tôi đã thêm sản phẩm **${p.name}** (~${formatPrice(p.price)}) vào giỏ hàng cho bạn thành công! 🛒✨`,
-                                  time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-                                }]);
+                                navigate(`/product/${prodId}`);
+                                setIsOpen(false); // Close chatbot overlay to show detail page cleanly
                               }}
                               style={{
-                                padding: '0.3rem 0.55rem',
-                                fontSize: '0.72rem',
-                                fontWeight: 800,
-                                borderRadius: '6px',
-                                border: 'none',
-                                backgroundColor: '#16a34a',
-                                color: '#ffffff',
-                                cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.2rem'
+                                gap: '0.6rem',
+                                flex: 1,
+                                minWidth: 0,
+                                cursor: 'pointer'
                               }}
+                              title={`Xem trang chi tiết sản phẩm: ${p.name}`}
                             >
-                              <ShoppingCart size={12} /> Thêm Giỏ
-                            </button>
+                              <img
+                                src={p.image || `https://placehold.co/40x40`}
+                                alt={p.name}
+                                style={{ width: '44px', height: '44px', objectFit: 'contain', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', flexShrink: 0 }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{ fontSize: '0.8rem', fontWeight: 800, color: '#2563eb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}
+                                >
+                                  {p.name}
+                                </div>
+                                <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 800 }}>{formatPrice(p.price)}</div>
+                              </div>
+                            </div>
+
+                            {/* Action Button: Thêm Giỏ */}
+                            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexShrink: 0 }}>
+                              <button
+                                onClick={() => {
+                                  addToCart(p, 1);
+                                  setMessages(prev => [...prev, {
+                                    sender: 'bot',
+                                    text: `Dạ rồi ạ! Tôi đã thêm sản phẩm **${p.name}** (~${formatPrice(p.price)}) vào giỏ hàng cho bạn thành công! 🛒✨`,
+                                    time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                                  }]);
+                                }}
+                                style={{
+                                  padding: '0.35rem 0.65rem',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  backgroundColor: '#16a34a',
+                                  color: '#ffffff',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.2rem'
+                                }}
+                              >
+                                <ShoppingCart size={12} /> Thêm Giỏ
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 

@@ -359,26 +359,27 @@ export default function Dashboard() {
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '1rem 1.35rem',
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #3730a3 100%)',
-          border: '1px solid #6366f1',
+          background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+          border: '1px solid #fde68a',
           borderRadius: '14px',
-          boxShadow: '0 8px 24px rgba(79, 70, 229, 0.25)',
+          boxShadow: '0 4px 16px rgba(245, 158, 11, 0.12)',
           flexWrap: 'wrap', gap: '0.85rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{
-              width: '42px', height: '42px', backgroundColor: 'rgba(255,255,255,0.15)',
-              borderRadius: '10px', color: '#fbbf24', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', flexShrink: 0
+              width: '42px', height: '42px', backgroundColor: '#f59e0b',
+              borderRadius: '10px', color: '#ffffff', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
             }}>
               <Bell size={22} style={{ animation: 'pulse 2s infinite' }} />
             </div>
             <div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '0.3px' }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: 900, color: '#92400e', margin: 0, letterSpacing: '0.3px' }}>
                 🔔 CẦN CEO DUYỆT BÁO GIÁ MUA HÀNG
               </h4>
-              <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: '#e0e7ff', lineHeight: 1.4 }}>
-                Có <strong style={{ color: '#fef08a', fontSize: '0.95rem', fontWeight: 800 }}>{quotedOrders.length} đơn hàng</strong> từ Nhà Cung Cấp đã gửi báo giá chi tiết, đang chờ Ban Giám Đốc duyệt!
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: '#b45309', lineHeight: 1.4 }}>
+                Có <strong style={{ color: '#78350f', fontSize: '0.95rem', fontWeight: 900 }}>{quotedOrders.length} đơn hàng</strong> từ Nhà Cung Cấp đã gửi báo giá chi tiết, đang chờ Ban Giám Đốc duyệt!
               </p>
             </div>
           </div>
@@ -388,7 +389,8 @@ export default function Dashboard() {
             style={{
               padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 800,
               borderRadius: '10px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.4rem',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', color: '#ffffff', border: 'none', cursor: 'pointer'
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#ffffff', border: 'none', cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
             }}
           >
             Vào Mua Hàng Duyệt Ngay <ArrowRight size={16} />

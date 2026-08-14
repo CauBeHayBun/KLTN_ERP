@@ -20,7 +20,9 @@
         "có ai trực không",
         "dạ chào shop ạ",
         "tư vấn cho mình bộ pc",
-        "shop tư vấn em với"
+        "shop tư vấn em với",
+        "shop ơi",
+        "ad ơi"
       ]
     },
     {
@@ -79,7 +81,11 @@
         "ráp máy 35tr làm blender 3d",
         "pc 40tr chạy ai llama vram 16gb",
         "ráp pc màu trắng full argb",
-        "cấu hình pc livestream vtuber"
+        "cấu hình pc livestream vtuber",
+        "build pc 12tr",
+        "dàn máy 18 triệu",
+        "tư vấn cấu hình máy tính 15tr",
+        "build dàn máy 25tr"
       ]
     },
     {
@@ -109,7 +115,23 @@
         "tìm card msi rtx 4070 super",
         "tìm ram corsair vengeance rgb",
         "tìm tản nhiệt deepcool ak620",
-        "có nguồn corsair 850w gold không"
+        "có nguồn corsair 850w gold không",
+        "cho xem các mẫu màn hình",
+        "bàn phím cơ giá bao nhiêu",
+        "card màn hình rẻ nhất"
+      ]
+    },
+    {
+      "intent": "game_advice",
+      "utterances": [
+        "chơi valorant cần máy bao nhiêu",
+        "cấu hình chơi gta 5 mượt",
+        "máy tính chơi fo4 fifa online",
+        "pc chơi lmht lol max setting",
+        "cần dàn pc chơi pubg 60fps",
+        "cấu hình chơi genshin impact",
+        "máy tính cho học sinh sinh viên học lập trình",
+        "cấu hình dựng phim premiere pro 4k"
       ]
     },
     {
@@ -177,7 +199,7 @@
     {
       "intent": "hardware_advice",
       "utterances": [
-        "nên chọn intel hay amd",
+        "nếu chọn intel hay amd",
         "so sánh i5 13400f và ryzen 5 7600",
         "chơi game chọn card nvidia hay radeon",
         "cần bao nhiêu ram để edit video 4k",

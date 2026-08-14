@@ -59,16 +59,11 @@ const getTransporter = () => {
   // Option 1: Gmail with App Password (GMAIL_USER + GMAIL_APP_PASSWORD)
   if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
     return nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      service: 'gmail',
       auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD.replace(/\s/g, '') // Remove spaces from App Password
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000
+      }
     });
   }
   // Option 2: Generic SMTP (SMTP_HOST + SMTP_USER)
@@ -128,59 +123,56 @@ const sendOrderConfirmationEmail = async ({ toEmail, customerName, orderId, item
       <title>Xác nhận đơn hàng #${orderId}</title>
       <style>
         @media only screen and (max-width: 480px) {
-          .email-card { border-radius: 12px !important; margin: 0 auto !important; width: 100% !important; }
-          .header-banner { padding: 24px 14px !important; }
-          .header-title { font-size: 19px !important; }
-          .body-content { padding: 18px 14px !important; }
+          .email-card { border-radius: 8px !important; margin: 0 auto !important; width: 100% !important; }
+          .header-banner { padding: 20px 16px !important; }
+          .body-content { padding: 16px 14px !important; }
           .summary-table td { padding: 4px 0 !important; font-size: 12.5px !important; }
-          .total-box { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; text-align: left !important; }
-          .total-amount { font-size: 20px !important; }
           .cta-btn { padding: 12px 20px !important; font-size: 13px !important; width: 100% !important; box-sizing: border-box !important; display: block !important; }
         }
       </style>
     </head>
-    <body style="margin: 0; padding: 16px 8px; background-color: #f1f5f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-      <div class="email-card" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.08); border: 1px solid #e2e8f0;">
+    <body style="margin: 0; padding: 24px 12px; background-color: #f8fafc; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div class="email-card" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(15,23,42,0.03);">
         
-        <!-- Header Banner with Super High Contrast Badge -->
-        <div class="header-banner" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #6366f1 100%); padding: 30px 20px; text-align: center; color: #ffffff;">
-          <div style="display: inline-block; background-color: #ffffff; color: #1e3a8a; border: 1px solid #93c5fd; padding: 4px 14px; border-radius: 20px; font-size: 11.5px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
-            ⚡ AETHER COMPUTER ERP
+        <!-- Header: Minimalist & Professional -->
+        <div class="header-banner" style="padding: 24px 24px 18px 24px; border-bottom: 2px solid #0f172a; background-color: #ffffff;">
+          <div style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
+            AETHER COMPUTER ERP
           </div>
-          <h1 class="header-title" style="margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.3px; color: #ffffff; line-height: 1.3;">
+          <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3;">
             XÁC NHẬN ĐƠN HÀNG THÀNH CÔNG
           </h1>
-          <p style="margin: 6px 0 0 0; color: #e2e8f0; font-size: 13px;">Cảm ơn bạn đã lựa chọn mua sắm tại Aether PC!</p>
+          <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">Cảm ơn bạn đã mua sắm tại Aether PC</p>
         </div>
 
         <!-- Body Content -->
-        <div class="body-content" style="padding: 24px 20px;">
+        <div class="body-content" style="padding: 24px;">
           
-          <p style="font-size: 14.5px; color: #1e293b; margin-top: 0; line-height: 1.5;">
-            Xin chào <strong style="color: #0f172a;">${customerName || 'Quý khách hàng'}</strong>,
+          <p style="font-size: 14px; color: #0f172a; margin-top: 0; line-height: 1.5;">
+            Xin chào <strong>${customerName || 'Quý khách hàng'}</strong>,
           </p>
-          <p style="font-size: 13.5px; color: #475569; line-height: 1.6; margin-bottom: 20px;">
-            Đơn hàng <strong style="color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 6px; border: 1px solid #dbeafe;">#${orderId}</strong> của bạn đã được ghi nhận thành công và đang được bộ phận Kho &amp; Bán hàng xử lý.
+          <p style="font-size: 13.5px; color: #334155; line-height: 1.6; margin-bottom: 20px;">
+            Đơn hàng <strong>#${orderId}</strong> đã được ghi nhận thành công và đang được bộ phận Kho &amp; Bán hàng xử lý.
           </p>
 
           <!-- Order Summary Card -->
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-            <div style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #2563eb; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
-              📋 Thông Tin Đơn Hàng
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+            <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #0f172a; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
+              Thông Tin Đơn Hàng
             </div>
             <table class="summary-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
               <tr>
                 <td style="color: #64748b; padding: 4px 0; width: 38%;">Mã đơn hàng:</td>
-                <td style="font-weight: 800; color: #0f172a; text-align: right;">#${orderId}</td>
+                <td style="font-weight: 700; color: #0f172a; text-align: right;">#${orderId}</td>
               </tr>
               <tr>
                 <td style="color: #64748b; padding: 4px 0;">Thời gian:</td>
                 <td style="font-weight: 600; color: #334155; text-align: right;">${new Date().toLocaleString('vi-VN')}</td>
               </tr>
               <tr>
-                <td style="color: #64748b; padding: 4px 0;">Thanh toán:</td>
+                <td style="color: #64748b; padding: 4px 0;">Hình thức thanh toán:</td>
                 <td style="font-weight: 700; color: #0f172a; text-align: right;">
-                  ${paymentMethod === 'BANK_TRANSFER' ? '<span style="color:#0284c7;">Chuyển khoản VietQR</span>' : '<span style="color:#16a34a;">COD (Tiền mặt)</span>'}
+                  ${paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản VietQR' : 'COD (Tiền mặt khi nhận hàng)'}
                 </td>
               </tr>
               <tr>
@@ -188,24 +180,24 @@ const sendOrderConfirmationEmail = async ({ toEmail, customerName, orderId, item
                 <td style="font-weight: 600; color: #0f172a; text-align: right;">${shipFeeLabel}</td>
               </tr>
               <tr>
-                <td style="color: #64748b; padding: 4px 0;">Địa chỉ nhận:</td>
+                <td style="color: #64748b; padding: 4px 0;">Địa chỉ nhận hàng:</td>
                 <td style="font-weight: 600; color: #0f172a; text-align: right; word-break: break-word;">${shippingAddress || 'TP. Hồ Chí Minh'}</td>
               </tr>
             </table>
           </div>
 
-          <!-- Product Table (Mobile Fluid Responsive) -->
-          <div style="font-size: 13.5px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">
-            📦 Danh Sách Sản Phẩm Đặt Mua
+          <!-- Product Table -->
+          <div style="font-size: 12.5px; font-weight: 800; color: #0f172a; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Danh Sách Sản Phẩm
           </div>
-          <div style="border: 1px solid #e2e8f0; border-radius: 10px; overflow-x: auto; margin-bottom: 20px;">
+          <div style="border: 1px solid #334155; border-radius: 8px; overflow-x: auto; margin-bottom: 20px; background-color: #ffffff;">
             <table style="width: 100%; border-collapse: collapse; min-width: 100%;">
               <thead>
-                <tr style="background-color: #f1f5f9; color: #475569; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">
-                  <th style="padding: 9px 10px; text-align: left;">Sản phẩm</th>
-                  <th style="padding: 9px 6px; text-align: center; width: 35px;">SL</th>
-                  <th style="padding: 9px 10px; text-align: right; width: 85px;">Đơn giá</th>
-                  <th style="padding: 9px 10px; text-align: right; width: 95px;">Tổng</th>
+                <tr style="background-color: #0f172a; color: #ffffff; font-size: 11px; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid #1e293b;">
+                  <th style="padding: 8px 10px; text-align: left; color: #ffffff;">Sản phẩm</th>
+                  <th style="padding: 8px 6px; text-align: center; width: 35px; color: #ffffff;">SL</th>
+                  <th style="padding: 8px 10px; text-align: right; width: 85px; color: #ffffff;">Đơn giá</th>
+                  <th style="padding: 8px 10px; text-align: right; width: 95px; color: #ffffff;">Tổng</th>
                 </tr>
               </thead>
               <tbody>
@@ -214,15 +206,15 @@ const sendOrderConfirmationEmail = async ({ toEmail, customerName, orderId, item
             </table>
           </div>
 
-          <!-- Grand Total Table (100% Email Client Compatible Layout) -->
-          <table style="width: 100%; border-collapse: collapse; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #bbf7d0; border-radius: 12px; margin-bottom: 22px;">
+          <!-- Grand Total Table -->
+          <table style="width: 100%; border-collapse: collapse; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; margin-bottom: 22px;">
             <tr>
-              <td style="padding: 16px 18px; vertical-align: middle;">
-                <div style="font-size: 11.5px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.8px;">TỔNG CỘNG THANH TOÁN</div>
-                <div style="font-size: 11px; color: #15803d; margin-top: 2px;">(Đã bao gồm VAT &amp; Phí vận chuyển: ${isFreeshipAddress ? 'Miễn phí HN & TP.HCM' : '30.000 đ'})</div>
+              <td style="padding: 14px 16px; vertical-align: middle;">
+                <div style="font-size: 11px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">TỔNG CỘNG THANH TOÁN</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">(Đã bao gồm VAT &amp; Phí vận chuyển)</div>
               </td>
-              <td style="padding: 16px 18px; text-align: right; vertical-align: middle; white-space: nowrap;">
-                <div style="font-size: 22px; font-weight: 900; color: #dc2626; letter-spacing: -0.5px;">
+              <td style="padding: 14px 16px; text-align: right; vertical-align: middle; white-space: nowrap;">
+                <div style="font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px;">
                   ${formattedTotal}
                 </div>
               </td>
@@ -231,7 +223,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, customerName, orderId, item
 
           <!-- CTA Button -->
           <div style="text-align: center; margin: 24px 0 8px 0;">
-            <a href="http://localhost:3000/my-orders" class="cta-btn" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: 800; font-size: 13.5px; padding: 13px 28px; border-radius: 10px; text-decoration: none; box-shadow: 0 6px 16px rgba(37,99,235,0.25);">
+            <a href="http://localhost:3000/my-orders" class="cta-btn" target="_blank" style="display: inline-block; background-color: #0f172a; color: #ffffff; font-weight: 700; font-size: 13px; padding: 12px 26px; border-radius: 8px; text-decoration: none;">
               Tra Cứu Đơn Hàng Ngay →
             </a>
           </div>
@@ -239,10 +231,9 @@ const sendOrderConfirmationEmail = async ({ toEmail, customerName, orderId, item
         </div>
 
         <!-- Footer -->
-        <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 20px; text-align: center; color: #64748b; font-size: 12px; line-height: 1.6;">
-          <p style="margin: 0 0 4px 0; font-weight: 700; color: #334155;">AETHER COMPUTER JOINT STOCK COMPANY</p>
-          <p style="margin: 0 0 3px 0;">📞 Hotline CSKH: <strong style="color: #2563eb;">1900 6868</strong> | ✉️ Email: <strong style="color: #2563eb;">support@aether-erp.vn</strong></p>
-          <p style="margin: 0; font-size: 11px; color: #94a3b8;">Giờ làm việc: 8:00 - 21:00 (Tất cả các ngày trong tuần)</p>
+        <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #64748b; font-size: 12px; line-height: 1.6;">
+          <p style="margin: 0 0 4px 0; font-weight: 700; color: #0f172a;">AETHER COMPUTER JOINT STOCK COMPANY</p>
+          <p style="margin: 0 0 2px 0;">Hotline CSKH: <strong>1900 6868</strong> | Email: <strong>support@aether-erp.vn</strong></p>
         </div>
 
       </div>
@@ -290,7 +281,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, customerName, orderId, item
 /**
  * Gửi email thông báo cập nhật trạng thái đơn hàng (CONFIRMED, SHIPPED, DELIVERED, CANCELLED,...)
  */
-const sendOrderStatusUpdateEmail = async ({ toEmail, customerName, orderId, status, note, items, totalAmount, proofPhoto, proofUrl, receiverNote, deliveredTime }) => {
+const sendOrderStatusUpdateEmail = async ({ toEmail, customerName, orderId, status, note, items, totalAmount, proofPhoto, proofUrl, receiverNote, deliveredTime, shippingFee }) => {
   const statusVN = STATUS_LABELS[status] || status;
   const formattedTotal = totalAmount ? (Number(totalAmount).toLocaleString('vi-VN') + ' đ') : '';
 
@@ -317,8 +308,88 @@ const sendOrderStatusUpdateEmail = async ({ toEmail, customerName, orderId, stat
   }
 
   const isDelivered = ['DELIVERED', 'COMPLETED'].includes(status);
-  const activeProofPhoto = proofPhoto || proofUrl || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80';
+  const rawProofPhoto = proofPhoto || proofUrl || null;
+  // Kiểm tra nếu ảnh là base64 → sẽ dùng CID attachment thay vì inline base64 (Gmail chặn data: URI)
+  const isBase64Proof = rawProofPhoto && rawProofPhoto.startsWith('data:');
+  const activeProofPhoto = isBase64Proof ? 'cid:proofimage' : (rawProofPhoto || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80');
   const deliveryTimestamp = deliveredTime || new Date().toLocaleString('vi-VN');
+
+  // Format order items table with enhanced field parsing and fallback
+  let orderItems = items || [];
+  if (typeof orderItems === 'string') {
+    try { orderItems = JSON.parse(orderItems); } catch(e) { orderItems = []; }
+  }
+
+  const itemsSubtotal = (orderItems || []).reduce((sum, item) => {
+    const rawPrice = item.price || item.unitPrice || item.total || 0;
+    const qty = item.quantity || item.qty || item.count || 1;
+    return sum + (Number(rawPrice) * Number(qty));
+  }, 0);
+
+  const calculatedFee = (totalAmount && itemsSubtotal > 0 && totalAmount > itemsSubtotal) ? (totalAmount - itemsSubtotal) : 0;
+  const shippingFeeVal = shippingFee !== undefined ? Number(shippingFee) : calculatedFee;
+
+  let itemsTableHtml = '';
+  if (Array.isArray(orderItems) && orderItems.length > 0) {
+    const itemsRows = orderItems.map((item, idx) => {
+      const pName = item.name || item.title || item.productName || item.product?.name || item.model || `Linh kiện máy tính #${item.productId || idx+1}`;
+      const pCat = item.category || item.cat || 'LINH KIỆN PC';
+      const rawPrice = item.price || item.unitPrice || item.total || (totalAmount ? totalAmount / orderItems.length : 0);
+      const pQty = item.quantity || item.qty || item.count || 1;
+      const pTotal = rawPrice ? ((rawPrice * pQty).toLocaleString('vi-VN') + ' đ') : (totalAmount ? (Number(totalAmount).toLocaleString('vi-VN') + ' đ') : 'Liên hệ');
+      const bgStyle = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+
+      return `
+        <tr style="background-color: ${bgStyle};">
+          <td style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+            <div style="display: inline-block; background-color: #0f172a; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px;">${pCat}</div>
+            <div style="font-weight: 700; color: #0f172a; font-size: 13.5px; line-height: 1.4;">${pName}</div>
+          </td>
+          <td style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #334155; font-size: 13.5px; text-align: center; vertical-align: middle;">
+            x${pQty}
+          </td>
+          <td style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #0f172a; font-size: 13.5px; text-align: right; vertical-align: middle;">
+            ${pTotal}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    itemsTableHtml = `
+      <div style="margin-bottom: 20px; border: 1px solid #334155; border-radius: 10px; overflow: hidden; background-color: #ffffff;">
+        <div style="background-color: #0f172a; border-bottom: 1px solid #1e293b; padding: 12px 16px; font-size: 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">
+          📦 DANH SÁCH SẢN PHẨM TRONG ĐƠN HÀNG (#${orderId})
+        </div>
+        <table style="width: 100%; border-collapse: collapse; text-align: left; background-color: #ffffff;">
+          <thead>
+            <tr style="background-color: #1e293b; font-size: 11px; color: #ffffff; text-transform: uppercase;">
+              <th style="padding: 10px 14px; font-weight: 800; color: #ffffff;">Tên Sản Phẩm</th>
+              <th style="padding: 10px 14px; font-weight: 800; text-align: center; width: 60px; color: #ffffff;">SL</th>
+              <th style="padding: 10px 14px; font-weight: 800; text-align: right; width: 120px; color: #ffffff;">Thành Tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsRows}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } else if (totalAmount) {
+    itemsTableHtml = `
+      <div style="margin-bottom: 20px; border: 1px solid #334155; border-radius: 10px; overflow: hidden; background-color: #ffffff;">
+        <div style="background-color: #0f172a; border-bottom: 1px solid #1e293b; padding: 12px 16px; font-size: 12px; font-weight: 800; color: #ffffff; text-transform: uppercase;">
+          📦 THÔNG TIN SẢN PHẨM ĐƠN HÀNG (#${orderId})
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; background-color: #ffffff;">
+          <tr style="background-color: #ffffff;">
+            <td style="padding: 12px 14px; color: #0f172a; font-weight: 700;">Linh kiện máy tính chính hãng AetherPC (Theo đơn #${orderId})</td>
+            <td style="padding: 12px 14px; color: #475569; font-weight: 700; text-align: center;">x1</td>
+            <td style="padding: 12px 14px; color: #0f172a; font-weight: 800; text-align: right;">${formattedTotal}</td>
+          </tr>
+        </table>
+      </div>
+    `;
+  }
 
   const proofSectionHtml = isDelivered ? `
     <!-- Proof of Delivery Section -->
@@ -359,70 +430,81 @@ const sendOrderStatusUpdateEmail = async ({ toEmail, customerName, orderId, stat
       <title>Cập nhật trạng thái đơn hàng #${orderId}</title>
       <style>
         @media only screen and (max-width: 480px) {
-          .email-card { border-radius: 12px !important; width: 100% !important; }
-          .header-banner { padding: 24px 14px !important; }
-          .header-title { font-size: 19px !important; }
-          .body-content { padding: 18px 14px !important; }
+          .email-card { border-radius: 8px !important; width: 100% !important; }
+          .header-banner { padding: 20px 16px !important; }
+          .body-content { padding: 16px 14px !important; }
           .cta-btn { padding: 12px 20px !important; font-size: 13px !important; width: 100% !important; box-sizing: border-box !important; display: block !important; }
         }
       </style>
     </head>
-    <body style="margin: 0; padding: 16px 8px; background-color: #f1f5f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-      <div class="email-card" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.08); border: 1px solid #e2e8f0;">
+    <body style="margin: 0; padding: 24px 12px; background-color: #f8fafc; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div class="email-card" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(15,23,42,0.03);">
         
-        <!-- Header Banner with Super High Contrast Badge -->
-        <div class="header-banner" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #6366f1 100%); padding: 30px 20px; text-align: center; color: #ffffff;">
-          <div style="display: inline-block; background-color: #ffffff; color: #1e3a8a; border: 1px solid #93c5fd; padding: 4px 14px; border-radius: 20px; font-size: 11.5px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
-            ⚡ AETHER COMPUTER ERP
+        <!-- Header: Minimalist & Professional -->
+        <div class="header-banner" style="padding: 24px 24px 18px 24px; border-bottom: 2px solid #0f172a; background-color: #ffffff;">
+          <div style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
+            AETHER COMPUTER ERP
           </div>
-          <h1 class="header-title" style="margin: 0; font-size: 21px; font-weight: 900; letter-spacing: -0.3px; color: #ffffff; line-height: 1.3;">
+          <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3;">
             CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG
           </h1>
-          <p style="margin: 6px 0 0 0; color: #e2e8f0; font-size: 13px;">Hành trình đơn hàng của bạn được cập nhật realtime</p>
+          <div style="margin-top: 4px; font-size: 13px; color: #64748b;">Mã đơn hàng: <strong style="color: #0f172a;">#${orderId}</strong></div>
         </div>
 
         <!-- Body Content -->
-        <div class="body-content" style="padding: 24px 20px;">
+        <div class="body-content" style="padding: 24px;">
           
-          <p style="font-size: 14.5px; color: #1e293b; margin-top: 0; line-height: 1.5;">
-            Xin chào <strong style="color: #0f172a;">${customerName || 'Quý khách hàng'}</strong>,
+          <p style="font-size: 14px; color: #0f172a; margin-top: 0; line-height: 1.5;">
+            Xin chào <strong>${customerName || 'Quý khách hàng'}</strong>,
           </p>
-          <p style="font-size: 13.5px; color: #475569; line-height: 1.6; margin-bottom: 20px;">
-            Đơn hàng <strong style="color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 6px; border: 1px solid #dbeafe;">#${orderId}</strong> vừa có tiến trình cập nhật trạng thái mới nhất:
+          <p style="font-size: 13.5px; color: #334155; line-height: 1.6; margin-bottom: 20px;">
+            Đơn hàng <strong>#${orderId}</strong> vừa được cập nhật tiến trình mới nhất:
           </p>
 
-          <!-- Status Highlight Card -->
-          <div style="background-color: ${statusBg}; border: 1.5px solid ${statusBorder}; border-radius: 14px; padding: 20px 16px; text-align: center; margin-bottom: 20px;">
-            <div style="font-size: 30px; margin-bottom: 4px;">${statusIcon}</div>
-            <div style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">Trạng Thái Mới Nhất</div>
-            <div style="font-size: 21px; font-weight: 900; color: ${statusColor}; margin-top: 3px; letter-spacing: -0.3px;">${statusVN}</div>
-            ${note ? `<div style="margin-top: 10px; font-size: 13px; color: #334155; font-style: italic; background: rgba(255,255,255,0.7); padding: 8px 12px; border-radius: 8px; border: 1px solid ${statusBorder};">"${note}"</div>` : ''}
+          <!-- Minimal Status Box -->
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; text-align: center;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b;">Trạng Thái Mới Nhất</div>
+            <div style="font-size: 18px; font-weight: 800; color: #0f172a; margin-top: 4px;">${statusVN}</div>
+            ${note ? `<div style="margin-top: 8px; font-size: 12.5px; color: #475569; font-style: italic;">"${note}"</div>` : ''}
           </div>
+
+          ${itemsTableHtml}
 
           ${proofSectionHtml}
 
-          <!-- Metadata Box -->
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+          <!-- Metadata Box with Shipping Fee Breakdown -->
+          <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; font-size: 13px;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="color: #64748b; padding: 4px 0; width: 40%;">Mã đơn hàng:</td>
-                <td style="font-weight: 800; color: #0f172a; text-align: right;">#${orderId}</td>
+                <td style="color: #64748b; padding: 4px 0; width: 45%;">Mã đơn hàng:</td>
+                <td style="font-weight: 700; color: #0f172a; text-align: right;">#${orderId}</td>
               </tr>
               <tr>
-                <td style="color: #64748b; padding: 4px 0;">Thời gian:</td>
+                <td style="color: #64748b; padding: 4px 0;">Thời gian cập nhật:</td>
                 <td style="font-weight: 600; color: #334155; text-align: right;">${new Date().toLocaleString('vi-VN')}</td>
               </tr>
-              ${formattedTotal ? `
+              ${itemsSubtotal > 0 ? `
               <tr>
-                <td style="color: #64748b; padding: 4px 0;">Tổng tiền đơn hàng:</td>
-                <td style="font-weight: 800; color: #2563eb; text-align: right;">${formattedTotal}</td>
+                <td style="color: #64748b; padding: 4px 0;">Tạm tính linh kiện:</td>
+                <td style="font-weight: 600; color: #334155; text-align: right;">${itemsSubtotal.toLocaleString('vi-VN')} đ</td>
+              </tr>` : ''}
+              <tr>
+                <td style="color: #64748b; padding: 4px 0;">Phí giao hàng:</td>
+                <td style="font-weight: 700; color: ${shippingFeeVal > 0 ? '#0f172a' : '#16a34a'}; text-align: right;">
+                  ${shippingFeeVal > 0 ? `+${shippingFeeVal.toLocaleString('vi-VN')} đ` : 'MIỄN PHÍ'}
+                </td>
+              </tr>
+              ${formattedTotal ? `
+              <tr style="border-top: 1px dashed #cbd5e1;">
+                <td style="color: #0f172a; padding: 8px 0 4px 0; font-weight: 800; font-size: 14px;">Tổng thanh toán:</td>
+                <td style="font-weight: 900; color: #0f172a; text-align: right; font-size: 16px; padding-top: 8px;">${formattedTotal}</td>
               </tr>` : ''}
             </table>
           </div>
 
           <!-- CTA Button -->
           <div style="text-align: center; margin: 24px 0 8px 0;">
-            <a href="http://localhost:3000/my-orders" class="cta-btn" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: 800; font-size: 13.5px; padding: 13px 28px; border-radius: 10px; text-decoration: none; box-shadow: 0 6px 16px rgba(37,99,235,0.25);">
+            <a href="http://localhost:3000/my-orders" class="cta-btn" target="_blank" style="display: inline-block; background-color: #0f172a; color: #ffffff; font-weight: 700; font-size: 13px; padding: 12px 26px; border-radius: 8px; text-decoration: none;">
               Xem Chi Tiết Đơn Hàng →
             </a>
           </div>
@@ -430,10 +512,9 @@ const sendOrderStatusUpdateEmail = async ({ toEmail, customerName, orderId, stat
         </div>
 
         <!-- Footer -->
-        <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 20px; text-align: center; color: #64748b; font-size: 12px; line-height: 1.6;">
-          <p style="margin: 0 0 4px 0; font-weight: 700; color: #334155;">AETHER COMPUTER JOINT STOCK COMPANY</p>
-          <p style="margin: 0 0 3px 0;">📞 Hotline CSKH: <strong style="color: #2563eb;">1900 6868</strong> | ✉️ Email: <strong style="color: #2563eb;">support@aether-erp.vn</strong></p>
-          <p style="margin: 0; font-size: 11px; color: #94a3b8;">Giờ làm việc: 8:00 - 21:00 (Tất cả các ngày trong tuần)</p>
+        <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #64748b; font-size: 12px; line-height: 1.6;">
+          <p style="margin: 0 0 4px 0; font-weight: 700; color: #0f172a;">AETHER COMPUTER JOINT STOCK COMPANY</p>
+          <p style="margin: 0 0 2px 0;">Hotline CSKH: <strong>1900 6868</strong> | Email: <strong>support@aether-erp.vn</strong></p>
         </div>
 
       </div>
@@ -460,13 +541,29 @@ const sendOrderStatusUpdateEmail = async ({ toEmail, customerName, orderId, stat
   if (transporter) {
     try {
       const senderEmail = getSenderEmail();
-      await transporter.sendMail({
+      // Build mail options với CID attachment nếu ảnh proof là base64
+      const mailOptions = {
         from: `"AetherPC - Hệ Thống ERP" <${senderEmail}>`,
         to: emailData.toEmail,
         subject: emailData.subject,
         html: htmlContent
-      });
-      console.log(`[EmailService] ✅ Gửi email cập nhật trạng thái #${orderId} → ${statusVN} tới ${emailData.toEmail} thành công!`);
+      };
+      // Attach ảnh proof dưới dạng CID inline attachment (Gmail hỗ trợ hiển thị)
+      if (isDelivered && isBase64Proof && rawProofPhoto) {
+        const matches = rawProofPhoto.match(/^data:image\/(\w+);base64,(.+)$/);
+        if (matches) {
+          const ext = matches[1]; // jpeg, png, etc.
+          const base64Data = matches[2];
+          mailOptions.attachments = [{
+            filename: `proof_delivery_${orderId}.${ext}`,
+            content: Buffer.from(base64Data, 'base64'),
+            cid: 'proofimage',
+            contentType: `image/${ext}`
+          }];
+        }
+      }
+      await transporter.sendMail(mailOptions);
+      console.log(`[EmailService] ✅ Gửi email cập nhật trạng thái #${orderId} → ${statusVN} tới ${emailData.toEmail} thành công!${isBase64Proof ? ' (Kèm ảnh proof CID attachment)' : ''}`);
     } catch (err) {
       console.error('[EmailService] ❌ Lỗi gửi email cập nhật trạng thái:', err.message);
     }
@@ -490,40 +587,39 @@ const sendWelcomeEmail = async ({ toEmail, customerName }) => {
       <title>Chào mừng bạn đến với Aether Computer ERP</title>
       <style>
         @media only screen and (max-width: 480px) {
-          .email-card { border-radius: 12px !important; width: 100% !important; }
-          .header-banner { padding: 24px 14px !important; }
-          .header-title { font-size: 19px !important; }
-          .body-content { padding: 18px 14px !important; }
+          .email-card { border-radius: 8px !important; width: 100% !important; }
+          .header-banner { padding: 20px 16px !important; }
+          .body-content { padding: 16px 14px !important; }
           .cta-btn { padding: 12px 20px !important; font-size: 13px !important; width: 100% !important; box-sizing: border-box !important; display: block !important; }
         }
       </style>
     </head>
-    <body style="margin: 0; padding: 16px 8px; background-color: #f1f5f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-      <div class="email-card" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.08); border: 1px solid #e2e8f0;">
+    <body style="margin: 0; padding: 24px 12px; background-color: #f8fafc; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <div class="email-card" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(15,23,42,0.03);">
         
-        <!-- Header Banner -->
-        <div class="header-banner" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #6366f1 100%); padding: 30px 20px; text-align: center; color: #ffffff;">
-          <div style="display: inline-block; background-color: #ffffff; color: #1e3a8a; border: 1px solid #93c5fd; padding: 4px 14px; border-radius: 20px; font-size: 11.5px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">
-            ⚡ AETHER COMPUTER ERP
+        <!-- Header: Minimalist & Professional -->
+        <div class="header-banner" style="padding: 24px 24px 18px 24px; border-bottom: 2px solid #0f172a; background-color: #ffffff;">
+          <div style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
+            AETHER COMPUTER ERP
           </div>
-          <h1 class="header-title" style="margin: 0; font-size: 22px; font-weight: 900; color: #ffffff;">
-            CHÀO MỪNG THÀNH VIÊN MỚI!
+          <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3;">
+            CHÀO MỪNG THÀNH VIÊN MỚI
           </h1>
-          <p style="margin: 6px 0 0 0; color: #e2e8f0; font-size: 13px;">Tài khoản mua sắm của bạn đã được khởi tạo thành công</p>
+          <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">Tài khoản mua sắm của bạn đã được khởi tạo thành công</p>
         </div>
 
         <!-- Body Content -->
-        <div class="body-content" style="padding: 24px 20px;">
-          <p style="font-size: 14.5px; color: #1e293b; margin-top: 0;">
-            Xin chào <strong style="color: #0f172a;">${customerName || 'Quý khách hàng'}</strong>,
+        <div class="body-content" style="padding: 24px;">
+          <p style="font-size: 14px; color: #0f172a; margin-top: 0; line-height: 1.5;">
+            Xin chào <strong>${customerName || 'Quý khách hàng'}</strong>,
           </p>
-          <p style="font-size: 13.5px; color: #475569; line-height: 1.6;">
-            Cảm ơn bạn đã đăng ký tài khoản tại <strong>Aether Computer ERP</strong>. Bây giờ bạn có thể trải nghiệm mua sắm linh kiện máy tính cao cấp, tích lũy điểm thưởng thành viên và theo dõi tiến trình đơn hàng realtime!
+          <p style="font-size: 13.5px; color: #334155; line-height: 1.6;">
+            Cảm ơn bạn đã đăng ký tài khoản tại <strong>Aether Computer ERP</strong>. Bây giờ bạn có thể trải nghiệm mua sắm linh kiện máy tính cao cấp, tích lũy điểm thưởng thành viên và theo dõi tiến trình đơn hàng realtime.
           </p>
 
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 20px 0;">
-            <div style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: #2563eb; margin-bottom: 8px;">
-              🎁 Đặc Quyền Thành Viên Của Bạn:
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin: 20px 0;">
+            <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #0f172a; margin-bottom: 8px;">
+              Đặc Quyền Thành Viên Của Bạn:
             </div>
             <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #334155; line-height: 1.7;">
               <li>Tích lũy 1 điểm cho mỗi 10.000đ chi tiêu (nâng hạng Bạc, Vàng, Kim Cương).</li>
@@ -534,16 +630,16 @@ const sendWelcomeEmail = async ({ toEmail, customerName }) => {
           </div>
 
           <div style="text-align: center; margin: 24px 0 8px 0;">
-            <a href="http://localhost:3000" class="cta-btn" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: 800; font-size: 13.5px; padding: 13px 28px; border-radius: 10px; text-decoration: none;">
+            <a href="http://localhost:3000" class="cta-btn" target="_blank" style="display: inline-block; background-color: #0f172a; color: #ffffff; font-weight: 700; font-size: 13px; padding: 12px 26px; border-radius: 8px; text-decoration: none;">
               Khám Phá Sản Phẩm Ngay →
             </a>
           </div>
         </div>
 
         <!-- Footer -->
-        <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 20px; text-align: center; color: #64748b; font-size: 12px;">
-          <p style="margin: 0 0 4px 0; font-weight: 700; color: #334155;">AETHER COMPUTER JOINT STOCK COMPANY</p>
-          <p style="margin: 0;">📞 Hotline: <strong style="color: #2563eb;">1900 6868</strong> | ✉️ Support: <strong style="color: #2563eb;">support@aether-erp.vn</strong></p>
+        <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #64748b; font-size: 12px; line-height: 1.6;">
+          <p style="margin: 0 0 4px 0; font-weight: 700; color: #0f172a;">AETHER COMPUTER JOINT STOCK COMPANY</p>
+          <p style="margin: 0 0 2px 0;">Hotline: <strong>1900 6868</strong> | Email: <strong>support@aether-erp.vn</strong></p>
         </div>
 
       </div>

@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import {
   HeadphonesIcon, AlertCircle, MessageSquare, RefreshCw, CheckCircle,
   Clock, X, Plus, User, Phone, Mail, ChevronDown, Filter, Search, 
-  ArrowRight, Package, Tag, Send
+  ArrowRight, Package, Tag, Send, Eye
 } from 'lucide-react';
 
 const PRIORITY_COLORS = { HIGH: '#ef4444', MEDIUM: '#f59e0b', LOW: '#10b981' };
@@ -63,6 +63,7 @@ export default function CustomerService() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showAddTicket, setShowAddTicket] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [viewDetailTicket, setViewDetailTicket] = useState(null);
   const [selectedReturnDetail, setSelectedReturnDetail] = useState(null);
   const [resolution, setResolution] = useState('');
   const [csNote, setCsNote] = useState('');
@@ -313,30 +314,45 @@ export default function CustomerService() {
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '6px', borderLeft: '3px solid var(--border-glass)' }}>
                 {ticket.description}
               </p>
+              {ticket.evidenceUrl && (
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>📷 Ảnh minh chứng đính kèm:</span>
+                  <img src={ticket.evidenceUrl} alt="Minh chứng" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-glass)', cursor: 'pointer' }} onClick={() => setPreviewImage(ticket.evidenceUrl)} />
+                </div>
+              )}
               {ticket.resolution && (
                 <p style={{ fontSize: '0.8rem', color: '#10b981', margin: 0, padding: '0.75rem', backgroundColor: 'rgba(16,185,129,0.05)', borderRadius: '6px', borderLeft: '3px solid #10b981' }}>
                   ✓ Hướng xử lý: {ticket.resolution}
                 </p>
               )}
               {/* Actions */}
-              {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && (
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {ticket.status === 'OPEN' && (
-                    <button onClick={() => updateComplaintStatus(ticket.id, 'IN_PROGRESS', user?.name)}
-                      className="btn btn-secondary" style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}>
-                      Nhận xử lý
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  onClick={() => setViewDetailTicket(ticket)}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}
+                >
+                  <Eye size={13} /> Xem chi tiết
+                </button>
+                {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && (
+                  <>
+                    {ticket.status === 'OPEN' && (
+                      <button onClick={() => updateComplaintStatus(ticket.id, 'IN_PROGRESS', user?.name)}
+                        className="btn btn-secondary" style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}>
+                        Nhận xử lý
+                      </button>
+                    )}
+                    <button onClick={() => { setSelectedTicket(ticket); setResolution(''); }}
+                      className="btn btn-primary" style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}>
+                      Giải quyết
                     </button>
-                  )}
-                  <button onClick={() => { setSelectedTicket(ticket); setResolution(''); }}
-                    className="btn btn-primary" style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}>
-                    Giải quyết
-                  </button>
-                  <button onClick={() => updateComplaintStatus(ticket.id, 'CLOSED', ticket.assignedTo)}
-                    className="btn" style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-                    Đóng
-                  </button>
-                </div>
-              )}
+                    <button onClick={() => updateComplaintStatus(ticket.id, 'CLOSED', ticket.assignedTo)}
+                      className="btn" style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                      Đóng
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -781,6 +797,78 @@ export default function CustomerService() {
       {previewImage && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setPreviewImage(null)}>
           <img src={previewImage} alt="Phóng to ảnh" style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '12px', boxShadow: '0 0 30px rgba(0,0,0,0.8)' }} />
+        </div>
+      )}
+
+      {/* Modal: Xem Chi Tiết Ticket CSKH */}
+      {viewDetailTicket && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="card-glass" style={{ width: '100%', maxWidth: '580px', padding: '1.75rem', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', color: '#0f172a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <strong style={{ fontSize: '1.1rem', color: '#2563eb' }}>{viewDetailTicket.id}</strong>
+                <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, backgroundColor: `${STATUS_COLORS[viewDetailTicket.status]}22`, color: STATUS_COLORS[viewDetailTicket.status] }}>
+                  {STATUS_LABELS[viewDetailTicket.status] || viewDetailTicket.status}
+                </span>
+                <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, backgroundColor: `${PRIORITY_COLORS[viewDetailTicket.priority]}22`, color: PRIORITY_COLORS[viewDetailTicket.priority] }}>
+                  Ưu tiên: {viewDetailTicket.priority}
+                </span>
+              </div>
+              <button onClick={() => setViewDetailTicket(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Tiêu đề vấn đề</div>
+                <h4 style={{ margin: '0.2rem 0 0', fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>{viewDetailTicket.subject || viewDetailTicket.title}</h4>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', backgroundColor: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                <div><span style={{ color: '#64748b', fontWeight: 600 }}>Khách hàng:</span> <strong style={{ color: '#0f172a' }}>{viewDetailTicket.customerName}</strong></div>
+                <div><span style={{ color: '#64748b', fontWeight: 600 }}>Số điện thoại:</span> <strong style={{ color: '#0f172a' }}>{viewDetailTicket.phone || 'Chưa có'}</strong></div>
+                <div><span style={{ color: '#64748b', fontWeight: 600 }}>Email:</span> <strong style={{ color: '#0f172a' }}>{viewDetailTicket.email || 'Chưa có'}</strong></div>
+                <div><span style={{ color: '#64748b', fontWeight: 600 }}>Mã đơn liên quan:</span> <strong style={{ color: '#2563eb' }}>{viewDetailTicket.orderId || 'Không có'}</strong></div>
+                <div><span style={{ color: '#64748b', fontWeight: 600 }}>Ngày gửi:</span> <strong style={{ color: '#0f172a' }}>{viewDetailTicket.date}</strong></div>
+                <div><span style={{ color: '#64748b', fontWeight: 600 }}>NV Phụ trách:</span> <strong style={{ color: '#7c3aed' }}>{viewDetailTicket.assignedTo || 'Chưa phân công'}</strong></div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, marginBottom: '0.3rem' }}>Nội dung khiếu nại chi tiết:</div>
+                <div style={{ padding: '0.85rem', backgroundColor: '#f1f5f9', borderRadius: '10px', color: '#1e293b', borderLeft: '4px solid #3b82f6', lineHeight: 1.5 }}>
+                  {viewDetailTicket.description}
+                </div>
+              </div>
+
+              {viewDetailTicket.evidenceUrl && (
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, marginBottom: '0.3rem' }}>📷 Ảnh / Minh chứng đính kèm:</div>
+                  <img src={viewDetailTicket.evidenceUrl} alt="Minh chứng sự cố"
+                    style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                    onClick={() => setPreviewImage(viewDetailTicket.evidenceUrl)}
+                  />
+                </div>
+              )}
+
+              {viewDetailTicket.resolution ? (
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 800, marginBottom: '0.3rem' }}>✓ Kết quả / Hướng xử lý từ CSKH:</div>
+                  <div style={{ padding: '0.85rem', backgroundColor: '#f0fdf4', borderRadius: '10px', color: '#166534', borderLeft: '4px solid #16a34a', fontWeight: 600, lineHeight: 1.5 }}>
+                    {viewDetailTicket.resolution}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: '0.65rem 0.85rem', backgroundColor: '#fef3c7', borderRadius: '8px', color: '#92400e', fontSize: '0.78rem', fontWeight: 600 }}>
+                  ⏳ Ticket đang chờ nhân viên CSKH xử lý và phản hồi.
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', paddingTop: '0.85rem', borderTop: '1px solid #e2e8f0' }}>
+              <button onClick={() => setViewDetailTicket(null)} className="btn btn-secondary" style={{ borderRadius: '8px', padding: '0.5rem 1.25rem' }}>Đóng</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

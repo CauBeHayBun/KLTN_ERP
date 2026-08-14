@@ -30,7 +30,7 @@ const getCategoryNameVi = (cat) => {
 
 export default function ActorNotificationBar() {
   const navigate = useNavigate();
-  const { user, isCEO, isPurchasing, isAccountant, isWarehouse, isWarehouseManager, isSales, isSalesManager, isAssembly, isHR, isAdmin } = useAuth();
+  const { user, isCEO, isPurchasing, isAccountant, isWarehouse, isWarehouseManager, isSales, isSalesManager, isAssembly, isHR, isAdmin, isQC } = useAuth();
   const { purchaseOrders = [], inventory = [], orders = [], receipts = [] } = useERP() || {};
 
   const [showModal, setShowModal] = useState(false);
@@ -120,6 +120,17 @@ export default function ActorNotificationBar() {
     badgeText = `${pendingQuotedPOs} Đơn Chờ CEO`;
     badgeColor = '#fbbf24';
     icon = <ShieldAlert size={18} style={{ color: badgeColor }} />;
+  } else if (isQC || role === 'QC' || role === 'QA') {
+    const pendingQaCount = (purchaseOrders || []).filter(po => ['CONFIRMED_BY_SUPPLIER', 'PO', 'APPROVED', 'PENDING_QA', 'SHIPPED', 'DELIVERED', 'RFQ_SENT', 'SENT'].includes(po.status)).length;
+    bannerTitle = 'Trung Tâm Kiểm Định Chất Lượng QA/QC (Quality Control Task Center)';
+    bannerDesc = pendingQaCount > 0
+      ? `🔬 Có ${pendingQaCount} lô hàng mới từ NCC giao tới, cần thực hiện nghiệm thu chất lượng!`
+      : 'Tất cả các lô hàng nhập đã được kiểm định hoàn tất!';
+    actionText = 'Kiểm Định Ngay';
+    actionPath = '/admin/quality-control';
+    badgeText = `${pendingQaCount} Lô Chờ QA/QC`;
+    badgeColor = '#2563eb';
+    icon = <ShieldAlert size={18} style={{ color: badgeColor }} />;
   } else if (isSales || isSalesManager) {
     bannerTitle = 'Trung Tâm Nhiệm Vụ Bán Hàng & Đơn Hàng (Sales Task Center)';
     bannerDesc = pendingDeliveryOrders > 0
@@ -140,14 +151,19 @@ export default function ActorNotificationBar() {
       window.dispatchEvent(new Event('open-low-stock-modal'));
     }
     if (actionPath) {
-      navigate(actionPath, { state: { showLowStockList: true, timestamp: Date.now() } });
+      if (isQC || role === 'QC' || role === 'QA') {
+        navigate(actionPath, { state: { openInspection: true, timestamp: Date.now() } });
+      } else {
+        navigate(actionPath, { state: { showLowStockList: true, timestamp: Date.now() } });
+      }
     }
   };
 
   const handleOpenRFQForProduct = (prod) => {
     setShowModal(false);
-    navigate('/admin/purchasing', { state: { createRFQ: true, product: prod, timestamp: Date.now() } });
-    window.dispatchEvent(new CustomEvent('open-rfq-prefill-modal', { detail: { product: prod } }));
+    const targetQty = prod?.requestedQty || prod?.quantity;
+    navigate('/admin/purchasing', { state: { createRFQ: true, product: prod, quantity: targetQty, timestamp: Date.now() } });
+    window.dispatchEvent(new CustomEvent('open-rfq-prefill-modal', { detail: { product: prod, quantity: targetQty } }));
   };
 
   return (

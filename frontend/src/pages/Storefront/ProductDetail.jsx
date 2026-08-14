@@ -467,11 +467,11 @@ export default function ProductDetail() {
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({reviews.length} đánh giá)</span>
               {product.available && product.stockQuantity > 0 ? (
                 <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600 }}>
-                  ✓ Còn hàng (Tồn kho: {product.stockQuantity})
+                  ✓ Còn {product.stockQuantity} sản phẩm
                 </span>
               ) : product.available && product.stockQuantity === 0 ? (
                 <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--warning)', fontWeight: 600 }}>
-                  ✓ Hàng đặt trước (Tồn kho: 0)
+                  ✓ Hàng đặt trước
                 </span>
               ) : (
                 <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--danger)', fontWeight: 600 }}>

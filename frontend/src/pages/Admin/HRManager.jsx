@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
+import { useAuth } from '../../context/AuthContext';
 import { 
   Users, UserPlus, CheckCircle, Clock, XCircle, DollarSign, CalendarCheck, 
   Key, Eye, EyeOff, Search, FileEdit, Award, Sparkles, Check, X, Calendar, 
@@ -12,6 +13,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 export default function HRManager() {
   const erp = useERP() || {};
+  const { isCEO } = useAuth();
   const { 
     employees = [], 
     updateAttendanceLog = () => {}, 
@@ -257,28 +259,30 @@ export default function HRManager() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddEmpModal(true)}
-          style={{
-            backgroundColor: '#4f46e5',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '10px',
-            padding: '0.65rem 1.3rem',
-            fontWeight: 800,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            boxShadow: '0 4px 12px rgba(79,70,229,0.25)',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#4338ca'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#4f46e5'}
-        >
-          <UserPlus size={18} /> Thêm Nhân Viên Mới
-        </button>
+        {!isCEO && (
+          <button
+            onClick={() => setShowAddEmpModal(true)}
+            style={{
+              backgroundColor: '#4f46e5',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '0.65rem 1.3rem',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              boxShadow: '0 4px 12px rgba(79,70,229,0.25)',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#4338ca'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#4f46e5'}
+          >
+            <UserPlus size={18} /> Thêm Nhân Viên Mới
+          </button>
+        )}
       </div>
 
       {/* Account Created Success Alert */}
@@ -436,17 +440,19 @@ export default function HRManager() {
               <span style={{ fontSize: '0.85rem', color: '#4f46e5', fontWeight: 800 }}>({selectedDate})</span>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={() => {
-                  (employees || []).forEach(emp => emp && updateAttendanceLog(emp.id, selectedDate, 'PRESENT'));
-                  alert(`✅ Đã điểm danh CÓ MẶT toàn bộ nhân viên ngày ${selectedDate}!`);
-                }}
-                style={{ padding: '0.5rem 1rem', borderRadius: '8px', backgroundColor: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
-              >
-                Tự Động Chấm Có Mặt Hàng Loạt
-              </button>
-            </div>
+            {!isCEO && (
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  onClick={() => {
+                    (employees || []).forEach(emp => emp && updateAttendanceLog(emp.id, selectedDate, 'PRESENT'));
+                    alert(`✅ Đã điểm danh CÓ MẶT toàn bộ nhân viên ngày ${selectedDate}!`);
+                  }}
+                  style={{ padding: '0.5rem 1rem', borderRadius: '8px', backgroundColor: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  Tự Động Chấm Có Mặt Hàng Loạt
+                </button>
+              </div>
+            )}
           </div>
 
           <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
@@ -478,41 +484,45 @@ export default function HRManager() {
                         {status === 'UNMARKED' && <span style={{ backgroundColor: '#f1f5f9', color: '#64748b', padding: '4px 12px', borderRadius: '20px', fontWeight: 600, fontSize: '0.78rem' }}>Chưa Chấm</span>}
                       </td>
                       <td style={{ padding: '0.85rem 1rem', textAlign: 'center', width: '280px', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => updateAttendanceLog(emp.id, selectedDate, 'PRESENT')}
-                            style={{
-                              padding: '0.35rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
-                              backgroundColor: status === 'PRESENT' ? '#16a34a' : '#f0fdf4',
-                              color: status === 'PRESENT' ? '#ffffff' : '#16a34a',
-                              border: '1px solid #bbf7d0'
-                            }}
-                          >
-                            Có Mặt
-                          </button>
-                          <button
-                            onClick={() => updateAttendanceLog(emp.id, selectedDate, 'LATE')}
-                            style={{
-                              padding: '0.35rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
-                              backgroundColor: status === 'LATE' ? '#d97706' : '#fef3c7',
-                              color: status === 'LATE' ? '#ffffff' : '#d97706',
-                              border: '1px solid #fde68a'
-                            }}
-                          >
-                            Đi Trễ
-                          </button>
-                          <button
-                            onClick={() => updateAttendanceLog(emp.id, selectedDate, 'ABSENT')}
-                            style={{
-                              padding: '0.35rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
-                              backgroundColor: status === 'ABSENT' ? '#dc2626' : '#fee2e2',
-                              color: status === 'ABSENT' ? '#ffffff' : '#dc2626',
-                              border: '1px solid #fecaca'
-                            }}
-                          >
-                            Vắng
-                          </button>
-                        </div>
+                        {isCEO ? (
+                          <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Chế độ xem báo cáo</span>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => updateAttendanceLog(emp.id, selectedDate, 'PRESENT')}
+                              style={{
+                                padding: '0.35rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
+                                backgroundColor: status === 'PRESENT' ? '#16a34a' : '#f0fdf4',
+                                color: status === 'PRESENT' ? '#ffffff' : '#16a34a',
+                                border: '1px solid #bbf7d0'
+                              }}
+                            >
+                              Có Mặt
+                            </button>
+                            <button
+                              onClick={() => updateAttendanceLog(emp.id, selectedDate, 'LATE')}
+                              style={{
+                                padding: '0.35rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
+                                backgroundColor: status === 'LATE' ? '#d97706' : '#fef3c7',
+                                color: status === 'LATE' ? '#ffffff' : '#d97706',
+                                border: '1px solid #fde68a'
+                              }}
+                            >
+                              Đi Trễ
+                            </button>
+                            <button
+                              onClick={() => updateAttendanceLog(emp.id, selectedDate, 'ABSENT')}
+                              style={{
+                                padding: '0.35rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
+                                backgroundColor: status === 'ABSENT' ? '#dc2626' : '#fee2e2',
+                                color: status === 'ABSENT' ? '#ffffff' : '#dc2626',
+                                border: '1px solid #fecaca'
+                              }}
+                            >
+                              Vắng
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -720,30 +730,57 @@ export default function HRManager() {
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={() => {
-                  submitPayrolls(calculatedPayrolls);
-                  alert('✅ Đã chốt và chuyển Bảng Lương tháng này sang bộ phận Kế Toán phê duyệt thành công!');
-                }}
-                disabled={isPayrollDisbursed}
-                style={{
-                  padding: '0.65rem 1.4rem',
-                  borderRadius: '10px',
-                  backgroundColor: isPayrollDisbursed ? '#94a3b8' : isPayrollSubmitted ? '#2563eb' : '#16a34a',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 900,
-                  fontSize: '0.85rem',
-                  cursor: isPayrollDisbursed ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  boxShadow: '0 4px 12px rgba(22,163,74,0.25)'
-                }}
-              >
-                <Send size={16} /> 
-                {isPayrollDisbursed ? 'Đã Thanh Toán Xong (Kế Toán)' : isPayrollSubmitted ? 'Gửi Lại Bảng Lương Sang Kế Toán' : 'Chốt & Gửi Bảng Lương Sang Kế Toán'}
-              </button>
+              {isCEO ? (
+                <button
+                  onClick={() => {
+                    if (erp.approvePayrollByCEO) erp.approvePayrollByCEO();
+                    alert('✅ CEO đã phê duyệt Quỹ Lương tháng thành công! Chuyển trạng thái sang Kế Toán chi trả.');
+                  }}
+                  disabled={isPayrollDisbursed}
+                  style={{
+                    padding: '0.65rem 1.4rem',
+                    borderRadius: '10px',
+                    backgroundColor: isPayrollDisbursed ? '#94a3b8' : '#10b981',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: 900,
+                    fontSize: '0.85rem',
+                    cursor: isPayrollDisbursed ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 4px 12px rgba(16,185,129,0.25)'
+                  }}
+                >
+                  <ShieldCheck size={16} /> 
+                  {isPayrollDisbursed ? 'Đã Chi Trả Lương Xong' : 'CEO Phê Duyệt Quỹ Lương Month'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    submitPayrolls(calculatedPayrolls);
+                    alert('✅ Đã chốt và chuyển Bảng Lương tháng này sang bộ phận Kế Toán phê duyệt thành công!');
+                  }}
+                  disabled={isPayrollDisbursed}
+                  style={{
+                    padding: '0.65rem 1.4rem',
+                    borderRadius: '10px',
+                    backgroundColor: isPayrollDisbursed ? '#94a3b8' : isPayrollSubmitted ? '#2563eb' : '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: 900,
+                    fontSize: '0.85rem',
+                    cursor: isPayrollDisbursed ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 4px 12px rgba(22,163,74,0.25)'
+                  }}
+                >
+                  <Send size={16} /> 
+                  {isPayrollDisbursed ? 'Đã Thanh Toán Xong (Kế Toán)' : isPayrollSubmitted ? 'Gửi Lại Bảng Lương Sang Kế Toán' : 'Chốt & Gửi Bảng Lương Sang Kế Toán'}
+                </button>
+              )}
             </div>
           </div>
 
@@ -771,8 +808,12 @@ export default function HRManager() {
                     </td>
                     <td style={{ padding: '0.85rem', textAlign: 'right', fontWeight: 700, color: '#334155' }}>{formatPrice(p.baseSalary)}</td>
                     <td style={{ padding: '0.85rem', textAlign: 'center' }}>
-                      <span style={{ color: '#16a34a', fontWeight: 800 }}>{p.presentDays} ngày</span>
-                      {p.lateDays > 0 && <span style={{ color: '#dc2626', marginLeft: '6px', fontWeight: 800 }}>({p.lateDays} trễ)</span>}
+                      <div style={{ color: '#16a34a', fontWeight: 800 }}>{p.presentDays} ngày</div>
+                      {p.lateDays > 0 && (
+                        <div style={{ color: '#dc2626', fontWeight: 800, fontSize: '0.75rem', marginTop: '2px' }}>
+                          ({p.lateDays} trễ)
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '0.85rem', textAlign: 'right', color: '#2563eb', fontWeight: 700 }}>+{formatPrice(p.salesCommission)}</td>
                     <td style={{ padding: '0.85rem', textAlign: 'right', color: '#7c3aed', fontWeight: 700 }}>+{formatPrice(p.assemblyBonus)}</td>

@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { api } from '../services/api';
+import { SUPPLIER_DEMO_ACCOUNTS } from '../config/supplierDemoAccounts';
 
 const AuthContext = createContext(null);
 
@@ -19,10 +20,19 @@ const MOCK_USERS = {
   'warehouse_manager': { token: 'mock-token-wm', user: { username: 'warehouse_manager', role: 'WAREHOUSE_MANAGER', fullname: 'Quản Lý Kho', id: 10 } },
   'purchasing': { token: 'mock-token-purchasing', user: { username: 'purchasing', role: 'PURCHASING', fullname: 'Nhân Viên Mua Hàng', id: 11 } },
   'supplier': { token: 'mock-token-supplier', user: { username: 'supplier', role: 'SUPPLIER', fullname: 'Nhà Cung Cấp ABC', code: 'supplier', id: 12 } },
-  'customer_b2b': { token: 'mock-token-b2b', user: { username: 'customer_b2b', role: 'CUSTOMER', fullname: 'Khách Doanh Nghiệp', tier: 'B2B', id: 13, phone: '0122222222' } },
   'cskh': { token: 'mock-token-cskh', user: { username: 'cskh', role: 'CSKH', fullname: 'Nguyễn CSKH (Chăm Sóc KH)', id: 14 } },
-  'delivery': { token: 'mock-token-delivery', user: { username: 'delivery', role: 'DELIVERY', fullname: 'Trần Giao Hàng (Vận Chuyển)', id: 15 } }
+  'delivery': { token: 'mock-token-delivery', user: { username: 'delivery', role: 'DELIVERY', fullname: 'Trần Giao Hàng (Shipper 1)', id: 15 } },
+  'delivery2': { token: 'mock-token-delivery2', user: { username: 'delivery2', role: 'DELIVERY', fullname: 'Nguyễn Văn Shipper (Shipper 2)', id: 17 } },
+  'qc': { token: 'mock-token-qc', user: { username: 'qc', role: 'QC', fullname: 'Nguyễn Văn QC (Kiểm Soát Chất Lượng)', id: 16 } }
 };
+
+SUPPLIER_DEMO_ACCOUNTS.forEach(({ role, label }) => {
+  const key = role.toLowerCase();
+  MOCK_USERS[key] = {
+    token: `mock-token-${key}`,
+    user: { username: role, role: 'SUPPLIER', fullname: label.replace('NCC — ', ''), name: label.replace('NCC — ', ''), code: role, id: role }
+  };
+});
 
 const calculateCustomerLoyaltyInfo = (userObj) => {
   if (!userObj) return null;
@@ -112,7 +122,8 @@ export const AuthProvider = ({ children }) => {
       // 1. First attempt to sign in using backend API
       const lowerUser = username.toLowerCase();
       const isEmployee = 
-        ['ceo', 'admin', 'sales_manager', 'sales', 'warehouse_manager', 'warehouse', 'purchasing', 'supplier', 'assembly', 'hr', 'accounting', 'cskh', 'delivery'].includes(lowerUser) || 
+        ['ceo', 'admin', 'sales_manager', 'sales', 'warehouse_manager', 'warehouse', 'purchasing', 'supplier', 'assembly', 'hr', 'accounting', 'cskh', 'delivery'].includes(lowerUser) ||
+        lowerUser.startsWith('sup-') ||
         lowerUser.endsWith('@kltn-erp.vn') || 
         lowerUser.startsWith('emp-');
       
@@ -323,7 +334,8 @@ export const AuthProvider = ({ children }) => {
     isSupplier: user?.role === 'SUPPLIER',
     isCustomer: user?.role === 'CUSTOMER' || !user,
     isCskh: user?.role === 'CSKH',
-    isDelivery: user?.role === 'DELIVERY'
+    isDelivery: user?.role === 'DELIVERY',
+    isQC: ['QC', 'QA', 'QUALITY_CONTROL'].includes(user?.role)
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -235,17 +235,28 @@ export default function OrderDetailModal({ order, onClose }) {
                   </strong>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ flex: '0 0 100px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Tạm tính:</span>
-                  <span style={{ flex: 1, textAlign: 'right', fontWeight: 700, color: '#334155' }}>{fmt(order.subtotal || order.totalAmount)}</span>
-                </div>
+                {(() => {
+                  const itemsSubtotal = (items || []).reduce((sum, i) => sum + (Number(i.price || i.unitPrice || 0) * Number(i.quantity || 1)), 0);
+                  const effectiveSubtotal = order.subtotal || (itemsSubtotal > 0 ? itemsSubtotal : order.totalAmount);
+                  const calculatedFee = order.totalAmount > effectiveSubtotal ? order.totalAmount - effectiveSubtotal : 0;
+                  const effectiveShippingFee = order.shippingFee !== undefined ? order.shippingFee : calculatedFee;
 
-                {order.shippingFee > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ flex: '0 0 100px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Phí vận chuyển:</span>
-                    <span style={{ flex: 1, textAlign: 'right', fontWeight: 700, color: '#334155' }}>+{fmt(order.shippingFee)}</span>
-                  </div>
-                )}
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ flex: '0 0 120px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Tạm tính linh kiện:</span>
+                        <span style={{ flex: 1, textAlign: 'right', fontWeight: 700, color: '#334155' }}>{fmt(effectiveSubtotal)}</span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ flex: '0 0 120px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Phí giao hàng:</span>
+                        <span style={{ flex: 1, textAlign: 'right', fontWeight: 700, color: effectiveShippingFee > 0 ? '#0f172a' : '#16a34a' }}>
+                          {effectiveShippingFee > 0 ? `+${fmt(effectiveShippingFee)}` : 'MIỄN PHÍ'}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {/* Total Box */}
                 <div style={{ 

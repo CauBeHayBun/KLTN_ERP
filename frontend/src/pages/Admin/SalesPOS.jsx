@@ -43,7 +43,7 @@ const isDateInRange = (dateVal, startDate, endDate) => {
 
 export default function SalesPOS() {
   const { inventory, processCheckout, orders = [], ledger = [], updateOrderStatus } = useERP();
-  const { user } = useAuth();
+  const { user, isCEO } = useAuth();
   const products = inventory || [];
   
   const isManager = ['SALES_MANAGER', 'CEO', 'ADMIN'].includes(user?.role);
@@ -345,14 +345,16 @@ export default function SalesPOS() {
                 <FileText size={16} />
                 In Báo Cáo
               </button>
-              <button 
-                onClick={() => setViewMode('pos')} 
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.1rem', fontSize: '0.875rem' }}
-              >
-                <ShoppingCart size={16} />
-                Vào Quầy Bán Hàng
-              </button>
+              {!isCEO && (
+                <button 
+                  onClick={() => setViewMode('pos')} 
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.1rem', fontSize: '0.875rem' }}
+                >
+                  <ShoppingCart size={16} />
+                  Vào Quầy Bán Hàng
+                </button>
+              )}
             </div>
           </div>
 

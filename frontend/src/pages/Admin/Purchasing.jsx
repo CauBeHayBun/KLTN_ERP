@@ -98,7 +98,7 @@ export default function Purchasing() {
   // Create PO Form State
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [selectedSuppliersList, setSelectedSuppliersList] = useState(['', '']);
-  const [isMultiSupplierRFQ, setIsMultiSupplierRFQ] = useState(true);
+  const [isMultiSupplierRFQ, setIsMultiSupplierRFQ] = useState(false);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
   const [poItems, setPoItems] = useState([]);
   
@@ -109,6 +109,17 @@ export default function Purchasing() {
   const [quantity, setQuantity] = useState(1);
   const [unitCost, setUnitCost] = useState('');
   const searchComboboxRef = useRef(null);
+  const lastHandledRfqKeyRef = useRef(null);
+
+  const handleOpenCreateModal = () => {
+    setSelectedSupplier('');
+    setSelectedSuppliersList(['', '']);
+    setIsMultiSupplierRFQ(false);
+    setExpectedDeliveryDate('');
+    setPoItems([]);
+    try { window.history.replaceState({}, document.title); } catch (_) {}
+    setShowCreateModal(true);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -137,19 +148,52 @@ export default function Purchasing() {
         api.get('/purchasing/suppliers'),
         api.get('/purchasing/products')
       ]);
-      if (ordersRes?.success) setOrders(ordersRes.data || []);
-      if (suppliersRes?.success) {
-        const sList = suppliersRes.data || [];
-        setSuppliers(sList);
-        if (sList.length > 0 && !selectedSupplier) setSelectedSupplier(sList[0]?.code || '');
-        if (sList.length >= 2 && selectedSuppliersList.every(s => s === '')) {
-          setSelectedSuppliersList([sList[0]?.code || '', sList[1]?.code || '']);
+
+      let finalOrders = [];
+      if (ordersRes?.success && Array.isArray(ordersRes.data) && ordersRes.data.length > 0) {
+        finalOrders = ordersRes.data;
+      } else {
+        try { finalOrders = JSON.parse(localStorage.getItem('erp_pos') || '[]'); } catch (_) {}
+        if (!finalOrders || finalOrders.length === 0) {
+          finalOrders = erpContext.purchaseOrders || [];
         }
       }
-      if (productsRes?.success) setProducts(productsRes.data || []);
+      setOrders(finalOrders);
+
+      let finalSuppliers = [];
+      if (suppliersRes?.success && Array.isArray(suppliersRes.data) && suppliersRes.data.length > 0) {
+        finalSuppliers = suppliersRes.data;
+      } else {
+        finalSuppliers = erpContext.suppliers || [
+          { code: 's1', name: 'Samsung Vina Electronics' },
+          { code: 's2', name: 'Mai Hoàng Distribution' },
+          { code: 's3', name: 'Intel Vietnam' }
+        ];
+      }
+      setSuppliers(finalSuppliers);
+
+      let finalProducts = [];
+      if (productsRes?.success && Array.isArray(productsRes.data) && productsRes.data.length > 0) {
+        finalProducts = productsRes.data;
+      } else {
+        finalProducts = erpContext.products || [];
+      }
+      setProducts(finalProducts);
     } catch (err) {
       console.warn('API error:', err.message);
-      setError('Lỗi kết nối tới server.');
+      let fallbackOrders = [];
+      try { fallbackOrders = JSON.parse(localStorage.getItem('erp_pos') || '[]'); } catch (_) {}
+      if (!fallbackOrders || fallbackOrders.length === 0) {
+        fallbackOrders = erpContext.purchaseOrders || [];
+      }
+      if (fallbackOrders.length > 0) {
+        setOrders(fallbackOrders);
+      } else {
+        setError('Lỗi kết nối tới server.');
+      }
+
+      if (erpContext.suppliers?.length > 0) setSuppliers(erpContext.suppliers);
+      if (erpContext.products?.length > 0) setProducts(erpContext.products);
     }
     setLoading(false);
   };
@@ -168,25 +212,28 @@ export default function Purchasing() {
     return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('vi-VN');
   };
 
-  const handleOpenRFQForProduct = (prod) => {
+  const handleOpenRFQForProduct = (prod, customQty) => {
     setShowCreateModal(true);
     if (prod) {
       const prodId = String(prod.productId || prod.id || '');
       setProductSearchQuery(prod.name || '');
       setSelectedProduct(prodId || '');
-      const recQty = Math.max((prod.threshold || 5) * 2 - (Number(prod.stock) || 0), 5);
-      const estCost = prod.price ? Math.round(Number(prod.price) * 0.75) : 0;
+
+      const parsedCustomQty = Number(customQty || prod.requestedQty || prod.quantity || prod.alertQty);
+      const recQty = (parsedCustomQty && !isNaN(parsedCustomQty) && parsedCustomQty > 0)
+        ? parsedCustomQty
+        : Math.max((prod.threshold || 5) * 2 - (Number(prod.stock) || 0), 5);
       
       setQuantity(recQty);
-      setUnitCost(estCost ? String(estCost) : '');
+      setUnitCost('');
       
       setPoItems([{
         productId: prodId,
         name: prod.name,
         productName: prod.name,
         quantity: recQty,
-        unitCost: estCost,
-        totalCost: recQty * estCost
+        unitCost: 0,
+        totalCost: 0
       }]);
 
       if (prod.supplier && suppliers.length > 0) {
@@ -198,22 +245,31 @@ export default function Purchasing() {
 
   useEffect(() => {
     if (selectedProduct) {
-      const prod = products.find(p => p.productId === selectedProduct || String(p.id) === String(selectedProduct));
-      if (prod) setUnitCost(Math.round(parseFloat(prod.price) * 0.75));
+      setUnitCost('');
     }
-  }, [selectedProduct, products]);
+  }, [selectedProduct]);
 
   // Auto-open RFQ Modal when navigating from Notification/ActorBar
   useEffect(() => {
     if (location.state?.createRFQ && location.state?.product) {
-      handleOpenRFQForProduct(location.state.product);
+      const rfqKey = location.state.timestamp || `${location.state.product.productId || location.state.product.id}_${location.key}`;
+      if (lastHandledRfqKeyRef.current !== rfqKey) {
+        lastHandledRfqKeyRef.current = rfqKey;
+        const targetQty = location.state.quantity || location.state.product?.requestedQty;
+        handleOpenRFQForProduct(location.state.product, targetQty);
+        try { window.history.replaceState({}, document.title); } catch (_) {}
+      }
     }
-  }, [location.state, location.key, products, suppliers]);
+  }, [location.state, location.key]);
 
   useEffect(() => {
     const handlePrefillRFQEvent = (e) => {
       const prod = e.detail?.product || e.detail?.itemData || e.detail;
-      if (prod) handleOpenRFQForProduct(prod);
+      const targetQty = e.detail?.quantity || e.detail?.requestedQty || prod?.requestedQty || prod?.quantity;
+      if (prod) {
+        handleOpenRFQForProduct(prod, targetQty);
+        try { window.history.replaceState({}, document.title); } catch (_) {}
+      }
     };
 
     window.addEventListener('open-rfq-prefill-modal', handlePrefillRFQEvent);
@@ -221,7 +277,7 @@ export default function Purchasing() {
     return () => {
       window.removeEventListener('open-rfq-prefill-modal', handlePrefillRFQEvent);
     };
-  }, [products, suppliers]);
+  }, []);
 
   const handleAddItem = () => {
     if (!selectedProduct) return;
@@ -283,7 +339,7 @@ export default function Purchasing() {
           items: poItems.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
-            unitCost: item.unitCost || 0
+            unitCost: 0
           }))
         };
         const res = await api.post('/purchasing/orders', payload);
@@ -294,6 +350,7 @@ export default function Purchasing() {
       setSelectedSupplier('');
       setExpectedDeliveryDate('');
       setPoItems([]);
+      try { window.history.replaceState({}, document.title); } catch (_) {}
       fetchData();
       alert(`🎉 Đã khởi tạo đồng thời ${createdCount} Yêu Cầu Báo Giá (RFQ) gửi tới các Nhà Cung Cấp đối tác để so sánh đơn giá tối ưu!`);
     } catch (err) {
@@ -470,14 +527,21 @@ export default function Purchasing() {
     }
   };
 
-  const filteredOrders = orders.filter(po => {
-    const matchesSearch = (po.poNumber || po.id || '').toString().toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (po.supplier?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (po.supplierCode || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || po.status === statusFilter;
-    const matchesDate = isDateInRange(po.createdAt || po.date || po.issueDate, poStartDate, poEndDate);
-    return matchesSearch && matchesStatus && matchesDate;
-  });
+  const filteredOrders = orders
+    .filter(po => {
+      const matchesSearch = (po.poNumber || po.id || '').toString().toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (po.supplier?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (po.supplierCode || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'ALL' || po.status === statusFilter;
+      const matchesDate = isDateInRange(po.createdAt || po.date || po.issueDate, poStartDate, poEndDate);
+      return matchesSearch && matchesStatus && matchesDate;
+    })
+    .sort((a, b) => {
+      const dA = new Date(a.createdAt || a.date || a.issueDate || 0);
+      const dB = new Date(b.createdAt || b.date || b.issueDate || 0);
+      if (dB.getTime() !== dA.getTime()) return dB.getTime() - dA.getTime();
+      return String(b.poNumber || b.id || '').localeCompare(String(a.poNumber || a.id || ''), 'vi', { numeric: true });
+    });
 
   const activeOrders = orders.filter(po => ['PO', 'DONE'].includes(po.status));
   const totalSpent = activeOrders.reduce((sum, po) => sum + parseFloat(po.totalAmount || 0), 0);
@@ -515,7 +579,7 @@ export default function Purchasing() {
                 <span>So Sánh Báo Giá NCC</span>
               </button>
 
-              <button onClick={() => setShowCreateModal(true)} className="btn btn-primary shadow-glow hover-scale" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.85rem', padding: '0.45rem 1.1rem', borderRadius: '8px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+              <button onClick={handleOpenCreateModal} className="btn btn-primary shadow-glow hover-scale" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.85rem', padding: '0.45rem 1.1rem', borderRadius: '8px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
                 <Plus size={16} />
                 <span>Tạo Yêu Cầu Báo Giá (RFQ)</span>
               </button>
@@ -847,7 +911,11 @@ export default function Purchasing() {
                       </td>
                       <td style={{ padding: '0.7rem 1rem', fontWeight: 700, textAlign: 'left', fontSize: '0.88rem' }}
                         onClick={() => { setSelectedPO(po); setViewMode('PO'); }}>
-                        {formatCurrency(po.totalAmount)}
+                        {['RFQ', 'RFQ_SENT'].includes(po.status) ? (
+                          <span style={{ color: '#d97706', fontStyle: 'italic', fontWeight: 600 }}>Chờ NCC báo giá</span>
+                        ) : (
+                          formatCurrency(po.totalAmount)
+                        )}
                       </td>
                       <td style={{ padding: '0.7rem 1rem', textAlign: 'left' }}
                         onClick={() => { setSelectedPO(po); setViewMode('PO'); }}>
@@ -1137,41 +1205,102 @@ export default function Purchasing() {
 
                 {/* Right: Pipeline Stepper + Close */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  {/* Pipeline Stepper */}
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    {['RFQ', 'RFQ_SENT', 'QUOTED', 'PO', 'DONE'].map((st, idx, arr) => {
-                      const steps = ['RFQ', 'RFQ_SENT', 'QUOTED', 'PO', 'DONE'];
-                      const currentIdx = steps.indexOf(selectedPO.status);
-                      const isActive = idx === currentIdx;
-                      const isPassed = idx < currentIdx && selectedPO.status !== 'CANCELLED';
-                      const isFuture = idx > currentIdx || selectedPO.status === 'CANCELLED';
-                      return (
-                        <React.Fragment key={st}>
-                          <div style={{
-                            display: 'flex', alignItems: 'center', gap: '0.4rem',
-                            padding: '0.45rem 0.9rem',
-                            fontSize: '0.78rem', fontWeight: 600,
-                            background: isActive ? 'var(--primary)' : (isPassed ? '#e0e7ff' : '#f1f5f9'),
-                            color: isActive ? '#fff' : (isPassed ? '#4338ca' : '#64748b'),
-                            borderRadius: '20px',
-                            border: isActive ? '1px solid var(--primary)' : (isPassed ? '1px solid #c7d2fe' : '1px solid #e2e8f0'),
-                            transition: 'all 0.2s',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {isPassed && <Check size={13} style={{ flexShrink: 0 }} />}
-                            {getStatusText(st)}
-                          </div>
-                          {idx < arr.length - 1 && (
-                            <div style={{
-                              width: '24px', height: '2px',
-                              background: isPassed ? '#c7d2fe' : '#e2e8f0',
-                              flexShrink: 0
-                            }} />
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
+                  {/* Pipeline Stepper (7 Steps matching Warehouse GRN Stepper) */}
+                  {(() => {
+                    const pipelineSteps = [
+                      { key: 'RFQ', label: '1. YCBG (RFQ)' },
+                      { key: 'RFQ_SENT', label: '2. Đã Gửi YCBG' },
+                      { key: 'QUOTED', label: '3. Đã Báo Giá' },
+                      { key: 'PO', label: '4. Đơn PO' },
+                      { key: 'QC', label: '5. Kiểm Định QC' },
+                      { key: 'READY', label: '6. Chờ Nhập Kho' },
+                      { key: 'DONE', label: '7. Đã Nhập Kho' }
+                    ];
+
+                    const stepsList = ['RFQ', 'RFQ_SENT', 'QUOTED', 'PO', 'QC', 'READY', 'DONE'];
+
+                    let qaLog = null;
+                    try {
+                      const qaLogs = JSON.parse(localStorage.getItem('erp_qa_inspection_logs') || '[]');
+                      const poNum = selectedPO.poNumber || selectedPO.id;
+                      qaLog = qaLogs.find(l => l.poNumber === poNum || String(l.poNumber) === String(selectedPO.id));
+                    } catch (e) {}
+
+                    const poStatus = qaLog?.status || selectedPO.status;
+                    let currentKey = 'PO';
+
+                    if (['RECEIVED', 'DONE', 'COMPLETED'].includes(poStatus) || selectedPO.warehouseStatus === 'RECEIVED') {
+                      currentKey = 'DONE';
+                    } else if (['QA_PASSED', 'QA_PARTIAL'].includes(poStatus)) {
+                      currentKey = 'READY';
+                    } else if (['PENDING_QA', 'QA_REJECTED', 'SHIPPED', 'DELIVERED'].includes(poStatus) || qaLog) {
+                      currentKey = 'QC';
+                    } else if (['RFQ', 'RFQ_SENT', 'QUOTED', 'PO', 'CONFIRMED_BY_SUPPLIER', 'APPROVED'].includes(poStatus)) {
+                      if (['CONFIRMED_BY_SUPPLIER', 'APPROVED', 'PO'].includes(poStatus)) currentKey = 'PO';
+                      else currentKey = poStatus;
+                    }
+
+                    const currentIdx = stepsList.indexOf(currentKey);
+
+                    return (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justify: 'space-between',
+                        gap: '0.25rem',
+                        backgroundColor: '#ffffff',
+                        padding: '0.4rem 0.65rem',
+                        borderRadius: '16px',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 2px 6px rgba(15,23,42,0.03)'
+                      }}>
+                        {pipelineSteps.map((step, idx, arr) => {
+                          const isActive = idx === currentIdx;
+                          const isPassed = idx < currentIdx && selectedPO.status !== 'CANCELLED';
+
+                          let activeBg = '#2563eb';
+                          let activeShadow = '0 0 10px rgba(37, 99, 235, 0.4)';
+                          if (step.key === 'DONE') {
+                            activeBg = '#16a34a';
+                            activeShadow = '0 0 10px rgba(22, 163, 74, 0.4)';
+                          } else if (step.key === 'READY') {
+                            activeBg = '#0284c7';
+                            activeShadow = '0 0 10px rgba(2, 132, 199, 0.4)';
+                          } else if (step.key === 'QC') {
+                            activeBg = '#d97706';
+                            activeShadow = '0 0 10px rgba(217, 119, 6, 0.4)';
+                          }
+
+                          return (
+                            <React.Fragment key={step.key}>
+                              <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem',
+                                padding: '0.35rem 0.55rem',
+                                fontSize: '0.73rem', fontWeight: isActive ? 800 : (isPassed ? 700 : 500),
+                                background: isActive ? activeBg : (isPassed ? '#eff6ff' : '#f8fafc'),
+                                color: isActive ? '#ffffff' : (isPassed ? '#1d4ed8' : '#94a3b8'),
+                                borderRadius: '16px',
+                                border: isActive ? `1.5px solid ${activeBg}` : (isPassed ? '1px solid #bfdbfe' : '1px solid #e2e8f0'),
+                                boxShadow: isActive ? activeShadow : 'none',
+                                transition: 'all 0.25s ease',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {isPassed && <Check size={12} style={{ flexShrink: 0 }} />}
+                                {step.label}
+                              </div>
+                              {idx < arr.length - 1 && (
+                                <div style={{
+                                  width: '12px', height: '2px',
+                                  background: isPassed ? '#93c5fd' : '#e2e8f0',
+                                  borderRadius: '1px', flexShrink: 0
+                                }} />
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   {/* Close Button */}
                   <button onClick={() => setSelectedPO(null)} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', cursor: 'pointer', padding: '0.45rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'} onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}>
@@ -1254,13 +1383,25 @@ export default function Purchasing() {
                           <td style={{ textAlign: 'left', padding: '1rem', color: '#64748b' }}>{item.product?.productId || item.productId}</td>
                           <td style={{ fontWeight: 600, textAlign: 'left', padding: '1rem', color: '#0f172a' }}>{item.product?.name}</td>
                           <td style={{ textAlign: 'center', padding: '1rem', color: '#0f172a', fontWeight: 700 }}>{item.quantity}</td>
-                          <td style={{ textAlign: 'right', padding: '1rem', color: '#475569' }}>{formatCurrency(item.unitCost)}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--primary)', padding: '1rem' }}>{formatCurrency(item.totalCost)}</td>
+                          <td style={{ textAlign: 'right', padding: '1rem', color: '#475569' }}>
+                            {['RFQ', 'RFQ_SENT'].includes(selectedPO.status) && (!item.unitCost || Number(item.unitCost) === 0)
+                              ? <span style={{ color: '#d97706', fontStyle: 'italic' }}>Chờ báo giá</span>
+                              : formatCurrency(item.unitCost)}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--primary)', padding: '1rem' }}>
+                            {['RFQ', 'RFQ_SENT'].includes(selectedPO.status) && (!item.totalCost || Number(item.totalCost) === 0)
+                              ? <span style={{ color: '#d97706', fontStyle: 'italic' }}>Chờ báo giá</span>
+                              : formatCurrency(item.totalCost)}
+                          </td>
                         </tr>
                       ))}
                       <tr style={{ backgroundColor: '#f8fafc' }}>
                         <td colSpan="4" style={{ textAlign: 'right', fontWeight: 800, padding: '1rem', color: '#0f172a' }}>TỔNG CỘNG:</td>
-                        <td style={{ textAlign: 'right', fontSize: '1.25rem', fontWeight: 800, color: 'var(--success)', padding: '1rem' }}>{formatCurrency(selectedPO.totalAmount)}</td>
+                        <td style={{ textAlign: 'right', fontSize: '1.25rem', fontWeight: 800, color: 'var(--success)', padding: '1rem' }}>
+                          {['RFQ', 'RFQ_SENT'].includes(selectedPO.status) && (!selectedPO.totalAmount || Number(selectedPO.totalAmount) === 0)
+                            ? <span style={{ color: '#d97706', fontStyle: 'italic', fontSize: '1rem' }}>Chờ NCC báo giá</span>
+                            : formatCurrency(selectedPO.totalAmount)}
+                        </td>
                       </tr>
                     </tbody>
                   </table>

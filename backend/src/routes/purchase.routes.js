@@ -25,7 +25,7 @@ router.get('/orders', authMiddleware(), getPurchaseOrders);
 router.post('/orders', authMiddleware(['PURCHASING', 'CEO', 'ADMIN']), createPurchaseOrder);
 
 // @route   PATCH /api/v1/purchasing/orders/:id/status
-router.patch('/orders/:id/status', authMiddleware(['PURCHASING', 'CEO', 'ADMIN', 'ACCOUNTANT', 'SUPPLIER']), updatePurchaseOrderStatus);
+router.patch('/orders/:id/status', authMiddleware(['PURCHASING', 'CEO', 'ADMIN', 'ACCOUNTANT', 'SUPPLIER', 'QC', 'QA']), updatePurchaseOrderStatus);
 
 // @route   POST /api/v1/purchasing/orders/:id/bills
 router.post('/orders/:id/bills', authMiddleware(['ACCOUNTANT', 'CEO', 'ADMIN']), createVendorBill);

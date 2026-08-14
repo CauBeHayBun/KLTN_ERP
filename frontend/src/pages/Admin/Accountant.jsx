@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useERP } from '../../context/ERPContext';
+import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import ActorNotificationBar from '../../components/ActorNotificationBar';
 import { 
@@ -50,6 +51,7 @@ const isDateInRange = (dateVal, startDate, endDate) => {
 };
 
 export default function Accountant() {
+  const { isCEO } = useAuth();
   const { 
     ledger = [], 
     employees = [], 
@@ -356,29 +358,31 @@ export default function Accountant() {
             <Printer size={18} /> In Báo Cáo Lãi Lỗ
           </button>
 
-          <button
-            onClick={() => setShowManualModal(true)}
-            style={{
-              backgroundColor: '#16a34a',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '0.65rem 1.25rem',
-              fontWeight: 800,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 4px 12px rgba(22,163,74,0.25)',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#15803d'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#16a34a'}
-          >
-            <PlusCircle size={18} /> Lập Phiếu Thu / Chi
-          </button>
+          {!isCEO && (
+            <button
+              onClick={() => setShowManualModal(true)}
+              style={{
+                backgroundColor: '#16a34a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '0.65rem 1.25rem',
+                fontWeight: 800,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 12px rgba(22,163,74,0.25)',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#15803d'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#16a34a'}
+            >
+              <PlusCircle size={18} /> Lập Phiếu Thu / Chi
+            </button>
+          )}
         </div>
       </div>
 

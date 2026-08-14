@@ -5,7 +5,7 @@ import { useCart } from '../../context/CartContext';
 import {
   ShoppingBag, Cpu, LogIn, LogOut, LayoutDashboard,
   ChevronDown, Tag, Newspaper, Building2, Users,
-  Wrench, Star, X, Menu, Package, Heart, Key, Award, Mail
+  Wrench, Star, X, Menu, Package, Heart, Key, Award, Mail, HelpCircle
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -425,8 +425,16 @@ export default function Header() {
                   }}>
                     {(user.fullname || user.name || 'K').charAt(0)}
                   </div>
-                  <span>{user.fullname || user.name || 'Khách hàng'}</span>
-                  <ChevronDown size={14} style={{ opacity: 0.7, transition: 'transform 0.2s', transform: userDropdownOpen ? 'rotate(180deg)' : 'none' }} />
+                  <span style={{ 
+                    maxWidth: '140px', 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    whiteSpace: 'nowrap',
+                    display: 'inline-block'
+                  }} title={user.fullname || user.name}>
+                    {(user.fullname || user.name || 'Khách hàng').split(' (')[0]}
+                  </span>
+                  <ChevronDown size={14} style={{ opacity: 0.7, transition: 'transform 0.2s', flexShrink: 0, transform: userDropdownOpen ? 'rotate(180deg)' : 'none' }} />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -577,52 +585,78 @@ export default function Header() {
                           Đổi mật khẩu
                         </button>
 
-                        <Link 
-                          to="/my-orders"
-                          onClick={() => setUserDropdownOpen(false)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            padding: '0.6rem 0.75rem',
-                            borderRadius: '8px',
-                            color: '#334155',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                            textDecoration: 'none',
-                            transition: 'all 0.15s'
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#334155'; }}
-                        >
-                          <Package size={16} color="#475569" />
-                          Đơn hàng của tôi
-                        </Link>
-
+                        {/* Customer-Only Menu Links */}
                         {user.role === 'CUSTOMER' && (
-                          <Link 
-                            to="/member-tier"
-                            onClick={() => setUserDropdownOpen(false)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.6rem',
-                              padding: '0.6rem 0.75rem',
-                              borderRadius: '8px',
-                              color: '#334155',
-                              fontSize: '0.85rem',
-                              fontWeight: 600,
-                              textDecoration: 'none',
-                              transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#334155'; }}
-                          >
-                            <Award size={16} color="#475569" />
-                            Đặc quyền thành viên
-                          </Link>
+                          <>
+                            <Link 
+                              to="/my-orders"
+                              onClick={() => setUserDropdownOpen(false)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                padding: '0.6rem 0.75rem',
+                                borderRadius: '8px',
+                                color: '#334155',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                textDecoration: 'none',
+                                transition: 'all 0.15s'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#334155'; }}
+                            >
+                              <Package size={16} color="#475569" />
+                              Đơn hàng của tôi
+                            </Link>
+
+                            <Link 
+                              to="/my-orders?complaint=true"
+                              onClick={() => setUserDropdownOpen(false)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                padding: '0.6rem 0.75rem',
+                                borderRadius: '8px',
+                                color: '#ef4444',
+                                fontSize: '0.85rem',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                transition: 'all 0.15s'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              <HelpCircle size={16} color="#ef4444" />
+                              Gửi khiếu nại & hỗ trợ
+                            </Link>
+
+                            <Link 
+                              to="/member-tier"
+                              onClick={() => setUserDropdownOpen(false)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                padding: '0.6rem 0.75rem',
+                                borderRadius: '8px',
+                                color: '#334155',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                textDecoration: 'none',
+                                transition: 'all 0.15s'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#334155'; }}
+                            >
+                              <Award size={16} color="#475569" />
+                              Đặc quyền thành viên
+                            </Link>
+                          </>
                         )}
 
+                        {/* Enterprise / Employee Admin Link */}
                         {showAdminLink && (
                           <Link 
                             to="/admin"
@@ -634,16 +668,45 @@ export default function Header() {
                               padding: '0.6rem 0.75rem',
                               borderRadius: '8px',
                               color: '#2563eb',
+                              backgroundColor: '#eff6ff',
                               fontSize: '0.85rem',
                               textDecoration: 'none',
-                              fontWeight: 700,
-                              transition: 'all 0.15s'
+                              fontWeight: 800,
+                              transition: 'all 0.15s',
+                              border: '1px solid #bfdbfe'
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
                           >
                             <LayoutDashboard size={16} color="#2563eb" />
                             Bảng quản trị (ERP)
+                          </Link>
+                        )}
+
+                        {/* Supplier Portal Link */}
+                        {user.role === 'SUPPLIER' && (
+                          <Link 
+                            to="/supplier/portal"
+                            onClick={() => setUserDropdownOpen(false)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              padding: '0.6rem 0.75rem',
+                              borderRadius: '8px',
+                              color: '#2563eb',
+                              backgroundColor: '#eff6ff',
+                              fontSize: '0.85rem',
+                              textDecoration: 'none',
+                              fontWeight: 800,
+                              transition: 'all 0.15s',
+                              border: '1px solid #bfdbfe'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
+                          >
+                            <LayoutDashboard size={16} color="#2563eb" />
+                            Cổng Nhà Cung Cấp
                           </Link>
                         )}
                       </div>

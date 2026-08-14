@@ -36,6 +36,7 @@ import MyPayroll from './pages/Admin/MyPayroll';
 import SupplierPortal from './pages/SupplierPortal';
 import CustomerService from './pages/Admin/CustomerService';
 import Delivery from './pages/Admin/Delivery';
+import QualityControl from './pages/Admin/QualityControl';
 
 // 1. Layout for Storefront Customer Views
 const StorefrontLayout = () => {
@@ -59,8 +60,8 @@ const AdminLayout = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Verify that they are indeed an employee (including HR and Accounting actors)
-  const isEmployee = ['CEO', 'SALES', 'SALES_MANAGER', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'ASSEMBLY', 'HR', 'ACCOUNTANT', 'PURCHASING', 'ADMIN', 'CSKH', 'DELIVERY'].includes(user.role);
+  // Verify that they are indeed an employee (including HR, Accounting, QA/QC actors)
+  const isEmployee = ['CEO', 'SALES', 'SALES_MANAGER', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'ASSEMBLY', 'HR', 'ACCOUNTANT', 'PURCHASING', 'ADMIN', 'CSKH', 'DELIVERY', 'QC', 'QA', 'QUALITY_CONTROL'].includes(user?.role);
   if (!isEmployee) {
     return <Navigate to="/" replace />;
   }
@@ -114,6 +115,10 @@ const AdminIndexRedirect = () => {
       return <Navigate to="/admin/accounting" replace />;
     case 'PURCHASING':
       return <Navigate to="/admin/purchasing" replace />;
+    case 'QC':
+    case 'QA':
+    case 'QUALITY_CONTROL':
+      return <Navigate to="/admin/quality-control" replace />;
     case 'ADMIN':
       return <Navigate to="/admin/system" replace />;
     case 'CSKH':
@@ -186,7 +191,7 @@ export default function App() {
                 } />
                 
                 <Route path="assembly" element={
-                  <ProtectedRoute allowedRoles={['CEO', 'ASSEMBLY', 'ADMIN']}>
+                  <ProtectedRoute allowedRoles={['ASSEMBLY', 'ADMIN']}>
                     <Assembly />
                   </ProtectedRoute>
                 } />
@@ -209,6 +214,12 @@ export default function App() {
                   </ProtectedRoute>
                 } />
 
+                <Route path="quality-control" element={
+                  <ProtectedRoute allowedRoles={['QC', 'QA', 'QUALITY_CONTROL', 'CEO', 'ADMIN', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'PURCHASING']}>
+                    <QualityControl />
+                  </ProtectedRoute>
+                } />
+
                 <Route path="system" element={
                   <ProtectedRoute allowedRoles={['ADMIN']}>
                     <SystemAdmin />
@@ -216,13 +227,13 @@ export default function App() {
                 } />
 
                 <Route path="cskh" element={
-                  <ProtectedRoute allowedRoles={['CEO', 'CSKH', 'ADMIN', 'SALES_MANAGER']}>
+                  <ProtectedRoute allowedRoles={['CSKH', 'ADMIN', 'SALES_MANAGER']}>
                     <CustomerService />
                   </ProtectedRoute>
                 } />
 
                 <Route path="delivery" element={
-                  <ProtectedRoute allowedRoles={['CEO', 'DELIVERY', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'ADMIN']}>
+                  <ProtectedRoute allowedRoles={['DELIVERY', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'ADMIN']}>
                     <Delivery />
                   </ProtectedRoute>
                 } />

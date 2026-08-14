@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useERP } from '../../context/ERPContext';
 import { 
-  ShoppingCart, Trash2, ArrowLeft, CreditCard, Sparkles, 
+  ShoppingCart, ShoppingBag, Trash2, ArrowLeft, CreditCard, Sparkles, 
   MapPin, User, Phone, Lock, LogIn, UserPlus, CheckCircle, 
   ShieldCheck, Truck, RotateCcw, AlertCircle, Copy, Check, QrCode, Banknote, Mail,
   ChevronDown, Search
@@ -83,7 +83,7 @@ const matchesSearch = (label, query) => {
 function SearchableSelect({ value, onChange, options, placeholder, disabled }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const wrapperRef = React.useRef(null);
+  const wrapperRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -229,11 +229,103 @@ function SearchableSelect({ value, onChange, options, placeholder, disabled }) {
   );
 }
 
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price || 0);
+};
+
 export default function Cart() {
-  const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
-  const { user, login } = useAuth();
-  const { processCheckout } = useERP();
+  const cartContext = useCart() || {};
+  const {
+    cartItems = [],
+    updateQuantity = () => {},
+    removeFromCart = () => {},
+    removeSelectedFromCart = () => {},
+    cartTotal = 0,
+    clearCart = () => {}
+  } = cartContext;
+
+  const auth = useAuth() || {};
+  const { user, login } = auth;
+  const erpContext = useERP() || {};
+  const processCheckout = erpContext.processCheckout || (() => {});
   const navigate = useNavigate();
+
+  const getProductId = (p) => {
+    if (!p) return undefined;
+    return p.id ?? p.product_id ?? p.productId;
+  };
+
+  // Helper for item key with safe navigation
+  const getItemKey = (item) => {
+    if (!item || !item.product) return null;
+    const pId = getProductId(item.product);
+    if (pId === undefined || pId === null) return null;
+    return `${pId}-${JSON.stringify(item.selectedSpec || null)}`;
+  };
+
+  const validCartItems = (cartItems || []).filter(item => item && item.product && getProductId(item.product) !== undefined);
+
+  // Item Selection state for checkboxes
+  const [selectedKeys, setSelectedKeys] = useState({});
+
+  // Ensure newly added items are checked by default
+  useEffect(() => {
+    setSelectedKeys((prev) => {
+      const updated = { ...prev };
+      let changed = false;
+      validCartItems.forEach((item) => {
+        const key = getItemKey(item);
+        if (key && updated[key] === undefined) {
+          updated[key] = true;
+          changed = true;
+        }
+      });
+      return changed ? updated : prev;
+    });
+  }, [cartItems]);
+
+  const toggleSelectItem = (key) => {
+    if (!key) return;
+    setSelectedKeys((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const isAllSelected = validCartItems.length > 0 && validCartItems.every((item) => selectedKeys[getItemKey(item)]);
+
+  const toggleSelectAll = () => {
+    const nextState = !isAllSelected;
+    const newSelected = {};
+    validCartItems.forEach((item) => {
+      const key = getItemKey(item);
+      if (key) newSelected[key] = nextState;
+    });
+    setSelectedKeys(newSelected);
+  };
+
+  const handleDeleteSelected = () => {
+    const keysToRemove = validCartItems
+      .map(getItemKey)
+      .filter((key) => key && selectedKeys[key]);
+
+    if (keysToRemove.length === 0) {
+      alert('Vui lòng tích chọn ít nhất 1 sản phẩm để xóa!');
+      return;
+    }
+
+    if (window.confirm(`Bạn có chắc chắn muốn xóa ${keysToRemove.length} sản phẩm đã chọn khỏi giỏ hàng?`)) {
+      removeSelectedFromCart(keysToRemove);
+    }
+  };
+
+  // Selected items & total calculation
+  const selectedCartItems = validCartItems.filter((item) => selectedKeys[getItemKey(item)]);
+  const selectedCartCount = selectedCartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  const selectedCartTotal = selectedCartItems.reduce((sum, item) => {
+    const price = item?.product?.price || 0;
+    return sum + price * (item.quantity || 1);
+  }, 0);
 
   // Form states
   const [customerName, setCustomerName] = useState(user?.fullname || user?.name || '');
@@ -327,7 +419,7 @@ export default function Cart() {
 
   // Shipping calculation (Free shipping for Hà Nội & TP.HCM or FREESHIP coupon, otherwise 30.000đ)
   const isFreeShipEligible = (selectedProvince && isFreeShipCity(selectedProvince)) || activeCoupon?.code === 'FREESHIP';
-  const shippingFee = cartItems.length > 0 ? (isFreeShipEligible ? 0 : 30000) : 0;
+  const shippingFee = selectedCartItems.length > 0 ? (isFreeShipEligible ? 0 : 30000) : 0;
 
   const handleApplyCoupon = (e) => {
     e.preventDefault();
@@ -337,14 +429,14 @@ export default function Cart() {
     if (!code) return;
 
     if (code === 'AETHER10') {
-      if (cartTotal < 2000000) {
+      if (selectedCartTotal < 2000000) {
         setCouponError('Mã AETHER10 chỉ áp dụng cho đơn hàng từ 2.000.000đ.');
         return;
       }
       setActiveCoupon({ code, type: 'percent' });
       setCouponSuccess('Áp dụng mã AETHER10 giảm 10% thành công!');
     } else if (code === 'NEWPC200K') {
-      if (cartTotal < 5000000) {
+      if (selectedCartTotal < 5000000) {
         setCouponError('Mã NEWPC200K chỉ áp dụng cho đơn hàng từ 5.000.000đ.');
         return;
       }
@@ -368,11 +460,11 @@ export default function Cart() {
   const couponDiscount = (() => {
     if (!activeCoupon) return 0;
     if (activeCoupon.code === 'AETHER10') {
-      if (cartTotal < 2000000) return 0;
-      return Math.round(cartTotal * 0.1);
+      if (selectedCartTotal < 2000000) return 0;
+      return Math.round(selectedCartTotal * 0.1);
     }
     if (activeCoupon.code === 'NEWPC200K') {
-      if (cartTotal < 5000000) return 0;
+      if (selectedCartTotal < 5000000) return 0;
       return 200000;
     }
     if (activeCoupon.code === 'FREESHIP') {
@@ -397,8 +489,8 @@ export default function Cart() {
     memberTierName = 'Kim Cương';
   }
 
-  const memberDiscountAmount = Math.round(cartTotal * memberDiscountPercent);
-  const finalTotal = Math.max(0, cartTotal + shippingFee - couponDiscount - memberDiscountAmount);
+  const memberDiscountAmount = Math.round(selectedCartTotal * memberDiscountPercent);
+  const finalTotal = Math.max(0, selectedCartTotal + shippingFee - couponDiscount - memberDiscountAmount);
 
   const formatPrice = (price) => {
     if (price === null || price === undefined || isNaN(price)) return '0 đ';
@@ -407,7 +499,10 @@ export default function Cart() {
 
   const handleCheckout = async (e) => {
     e.preventDefault();
-    if (cartItems.length === 0) return;
+    if (selectedCartItems.length === 0) {
+      alert('Vui lòng tích chọn ít nhất 1 sản phẩm trong giỏ hàng để thực hiện thanh toán!');
+      return;
+    }
 
     if (!user) {
       alert('Vui lòng đăng nhập tài khoản để thực hiện thanh toán!');
@@ -423,7 +518,7 @@ export default function Cart() {
     setCheckingOut(true);
 
     try {
-      const itemsForERP = cartItems.map(item => ({
+      const itemsForERP = selectedCartItems.map(item => ({
         productId: item.product.id,
         quantity: item.quantity,
         price: item.product.price,
@@ -459,10 +554,19 @@ export default function Cart() {
 
       setInvoice(invoiceData);
 
-      // Gửi email xác nhận thật qua backend /orders/email-notify (bắt buộc await để phát lệnh HTTP ngay)
+      // Gửi email xác nhận thật qua backend /orders/email-notify
       if (targetEmail) {
         try {
-          // Note: Backend order.controller.js automatically sends email upon order creation
+          await api.post('/orders/email-notify', {
+            type: 'ORDER_CONFIRMATION',
+            toEmail: targetEmail,
+            customerName: customerName,
+            orderId,
+            items: itemsForERP,
+            totalAmount: finalTotal,
+            paymentMethod,
+            shippingAddress: fullAddress
+          });
           console.log(`[EmailService] ✅ Đã phát lệnh gửi email xác nhận thành công tới ${targetEmail}`);
         } catch (emailErr) {
           console.warn('[EmailService] ❌ Lỗi gửi email xác nhận:', emailErr.message);
@@ -489,7 +593,7 @@ export default function Cart() {
         } catch (e) {}
       }
 
-      clearCart();
+      removeSelectedFromCart(selectedCartItems.map(getItemKey));
     } catch (err) {
       alert('Không thể hoàn tất thanh toán. Vui lòng kiểm tra lại kết nối!');
     } finally {
@@ -653,7 +757,7 @@ export default function Cart() {
         </Link>
       </div>
 
-      {cartItems.length === 0 ? (
+      {validCartItems.length === 0 ? (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '4rem 2rem', textAlign: 'center', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
           <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
             <ShoppingCart size={40} />
@@ -671,80 +775,200 @@ export default function Cart() {
           <div>
             <div style={{ backgroundColor: '#ffffff', borderRadius: '18px', padding: '1.5rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9' }}>
-                <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem' }}>Danh Sách Sản Phẩm</span>
-                <button onClick={clearCart} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <Trash2 size={14} /> Xóa tất cả
-                </button>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontWeight: 800, color: '#0f172a', fontSize: '1rem', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    style={{ width: '18px', height: '18px', accentColor: '#2563eb', cursor: 'pointer' }}
+                  />
+                  <span>Chọn tất cả ({selectedCartItems.length}/{validCartItems.length} sản phẩm)</span>
+                </label>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <button
+                    onClick={handleDeleteSelected}
+                    disabled={selectedCartItems.length === 0}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: selectedCartItems.length === 0 ? '#cbd5e1' : '#ef4444',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: selectedCartItems.length === 0 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
+                    }}
+                    title="Xóa các sản phẩm được chọn"
+                  >
+                    <Trash2 size={14} /> Xóa SP đã chọn
+                  </button>
+
+                  <span style={{ color: '#cbd5e1' }}>|</span>
+
+                  <button onClick={clearCart} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    Xóa tất cả
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {cartItems.map((item, idx) => (
-                  <div key={`${item.product.id}-${idx}`} style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', padding: '1.1rem', borderRadius: '14px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <Link to={`/product/${item.product.id}`} style={{ flexShrink: 0, textDecoration: 'none' }}>
-                      <div style={{ width: '76px', height: '76px', backgroundColor: '#ffffff', borderRadius: '12px', padding: '0.4rem', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img
-                          src={item.product.image || `https://placehold.co/80x80/f8fafc/94a3b8?text=${item.product.category}`}
-                          alt={item.product.name}
-                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                        />
-                      </div>
-                    </Link>
+                {validCartItems.map((item, idx) => {
+                  const pId = getProductId(item.product);
+                  const itemKey = getItemKey(item);
+                  const isChecked = !!selectedKeys[itemKey];
+                  const price = item.product.price ?? item.product.unitPrice ?? 0;
+                  const qty = item.quantity || 1;
 
-                    <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', backgroundColor: '#eff6ff', padding: '3px 8px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {item.product.category}
-                      </span>
-                      <Link to={`/product/${item.product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#0f172a', margin: '0.35rem 0 0.2rem', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {item.product.name}
-                        </h4>
-                      </Link>
-                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Thương hiệu: <strong style={{ color: '#334155' }}>{item.product.brand || 'Chính hãng'}</strong></span>
-                    </div>
-
-                    {/* Quantity modifier */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSpec)}
-                        style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
-                        title="Giảm số lượng"
-                      >−</button>
-                      <span style={{ minWidth: '28px', textAlign: 'center', fontWeight: 800, fontSize: '0.98rem', color: '#0f172a' }}>{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSpec)}
-                        style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
-                        title="Tăng số lượng"
-                      >+</button>
-                    </div>
-
-                    {/* Item Total Price */}
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#dc2626', textDecoration: 'none', whiteSpace: 'nowrap', minWidth: '105px', textAlign: 'right' }}>
-                      {formatPrice(item.product.price * item.quantity)}
-                    </div>
-
-                    {/* Delete button (horizontal inline) */}
-                    <button 
-                      onClick={() => removeFromCart(item.product.id, item.selectedSpec)} 
-                      style={{ 
-                        backgroundColor: '#fef2f2', 
-                        border: '1px solid #fecaca', 
-                        color: '#ef4444', 
-                        cursor: 'pointer', 
-                        padding: '0.4rem 0.65rem', 
-                        borderRadius: '8px', 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        gap: '0.3rem', 
-                        fontSize: '0.8rem', 
-                        fontWeight: 700,
-                        flexShrink: 0
-                      }} 
-                      title="Xóa sản phẩm này"
+                  return (
+                    <div
+                      key={`${pId}-${idx}`}
+                      style={{
+                        display: 'flex',
+                        gap: '1rem',
+                        alignItems: 'center',
+                        padding: '1.1rem',
+                        borderRadius: '14px',
+                        backgroundColor: isChecked ? '#ffffff' : '#f8fafc',
+                        border: `2px solid ${isChecked ? '#3b82f6' : '#e2e8f0'}`,
+                        boxShadow: isChecked ? '0 4px 14px rgba(59,130,246,0.06)' : 'none',
+                        transition: 'all 0.15s ease'
+                      }}
                     >
-                      <Trash2 size={14} /> Xóa
-                    </button>
+                      {/* Item Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSelectItem(itemKey)}
+                        style={{ width: '20px', height: '20px', accentColor: '#2563eb', cursor: 'pointer', flexShrink: 0 }}
+                      />
+
+                      {/* Product Image */}
+                      <Link to={`/product/${pId}`} style={{ flexShrink: 0, textDecoration: 'none' }}>
+                        <div style={{ width: '76px', height: '76px', backgroundColor: '#ffffff', borderRadius: '12px', padding: '0.4rem', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <img
+                            src={item.product.image || item.product.imageUrl || `https://placehold.co/80x80/f8fafc/94a3b8?text=${item.product.category || 'PC'}`}
+                            alt={item.product.name || item.product.productName || 'Sản phẩm'}
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                          />
+                        </div>
+                      </Link>
+
+                      {/* Product Title & Brand */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', backgroundColor: '#eff6ff', padding: '3px 8px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {item.product.category || item.product.categoryName || 'Linh kiện'}
+                        </span>
+                        <Link to={`/product/${pId}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#0f172a', margin: '0.35rem 0 0.2rem', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {item.product.name || item.product.productName || 'Sản phẩm'}
+                          </h4>
+                        </Link>
+                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Thương hiệu: <strong style={{ color: '#334155' }}>{item.product.brand || item.product.brandName || 'Chính hãng'}</strong></span>
+                      </div>
+
+                      {/* Quantity modifier */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                        <button
+                          onClick={() => updateQuantity(pId, qty - 1, item.selectedSpec)}
+                          style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+                          title="Giảm số lượng"
+                        >−</button>
+                        <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>{qty}</span>
+                        <button
+                          onClick={() => updateQuantity(pId, qty + 1, item.selectedSpec)}
+                          style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+                          title="Tăng số lượng"
+                        >+</button>
+                      </div>
+
+                      {/* Item Total Price */}
+                      <div style={{ fontSize: '1.08rem', fontWeight: 900, color: '#dc2626', textDecoration: 'none', whiteSpace: 'nowrap', minWidth: '100px', textAlign: 'right', flexShrink: 0 }}>
+                        {formatPrice(price * qty)}
+                      </div>
+
+                      {/* Delete button */}
+                      <button 
+                        onClick={() => removeFromCart(pId, item.selectedSpec)} 
+                        style={{ 
+                          backgroundColor: '#fef2f2', 
+                          border: '1px solid #fecaca', 
+                          color: '#ef4444', 
+                          cursor: 'pointer', 
+                          padding: '0.4rem 0.65rem', 
+                          borderRadius: '8px', 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '0.3rem', 
+                          fontSize: '0.8rem', 
+                          fontWeight: 700,
+                          flexShrink: 0
+                        }} 
+                        title="Xóa sản phẩm này"
+                      >
+                        <Trash2 size={14} /> Xóa
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ELEGANT & BALANCED TOTAL SUMMARY BAR */}
+              <div style={{
+                marginTop: '1.25rem',
+                padding: '1.25rem 1.5rem',
+                borderRadius: '16px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    backgroundColor: '#eff6ff',
+                    color: '#2563eb',
+                    display: 'grid',
+                    placeItems: 'center',
+                    border: '1px solid #dbeafe',
+                    flexShrink: 0
+                  }}>
+                    <ShoppingBag size={20} style={{ display: 'block' }} />
                   </div>
-                ))}
+
+                  <div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span>Tạm tính sản phẩm đã chọn</span>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: '#2563eb',
+                        backgroundColor: '#eff6ff',
+                        padding: '2px 9px',
+                        borderRadius: '12px',
+                        border: '1px solid #bfdbfe'
+                      }}>
+                        {selectedCartItems.length} sản phẩm
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                      Đã bao gồm thuế GTGT (VAT)
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right', marginLeft: 'auto', marginRight: '77px', flexShrink: 0 }}>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#dc2626', fontFamily: 'var(--font-title)', letterSpacing: '-0.5px', whiteSpace: 'nowrap', marginRight: '-20px' }}>
+                    {formatPrice(selectedCartTotal)}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1037,8 +1261,8 @@ export default function Cart() {
                   {/* Summary Breakdown */}
                   <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.82rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                      <span>Tạm tính ({cartItems.length} SP):</span>
-                      <span style={{ fontWeight: 700, color: '#0f172a' }}>{formatPrice(cartTotal)}</span>
+                      <span>Tạm tính ({selectedCartItems.length} SP đã chọn):</span>
+                      <span style={{ fontWeight: 700, color: '#0f172a' }}>{formatPrice(selectedCartTotal)}</span>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', color: '#64748b' }}>

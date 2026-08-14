@@ -58,8 +58,13 @@ const FAIL_PRESETS = [
   'Hàng bị hư hỏng / móp méo khi vận chuyển'
 ];
 
+const PROOF_PHOTO_PRESETS = [
+  { id: 1, name: 'Minh chứng mặc định 1', url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80' },
+  { id: 2, name: 'Minh chứng mặc định 2', url: 'https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?w=600&auto=format&fit=crop&q=80' }
+];
+
 export default function Delivery() {
-  const { orders, updateOrderStatus } = useERP();
+  const { orders, updateOrderStatus, claimOrderForDelivery } = useERP();
   const { user } = useAuth();
   const [tab, setTab] = useState('pending');
   const [search, setSearch] = useState('');
@@ -79,32 +84,64 @@ export default function Delivery() {
   const [proofPhoto, setProofPhoto] = useState('');
   const [receiverNote, setReceiverNote] = useState('');
 
+  const isManagerOrAdmin = ['CEO', 'ADMIN', 'WAREHOUSE_MANAGER', 'SALES_MANAGER'].includes(user?.role);
+  const userIdStr = String(user?.id || user?.username || '');
+
   const dateFilteredMyOrders = (orders || []).filter(o => 
     o && ['READY_TO_SHIP', 'SHIPPED', 'DELIVERED', 'SHIPPING_FAILED'].includes(o.status) &&
     isDateInRange(o.deliveredDate || o.date || o.createdAt, deliveryStartDate, deliveryEndDate)
   );
 
-  const readyCount = dateFilteredMyOrders.filter(o => o.status === 'READY_TO_SHIP').length;
-  const activeCount = dateFilteredMyOrders.filter(o => o.status === 'SHIPPED').length;
-  const failedCount = dateFilteredMyOrders.filter(o => o.status === 'SHIPPING_FAILED').length;
-  const doneCount = dateFilteredMyOrders.filter(o => o.status === 'DELIVERED').length;
+  const readyCount = dateFilteredMyOrders.filter(o => 
+    o.status === 'READY_TO_SHIP' && 
+    (isManagerOrAdmin || !o.assignedShipperId || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username)
+  ).length;
+
+  const activeCount = dateFilteredMyOrders.filter(o => 
+    o.status === 'SHIPPED' && 
+    (isManagerOrAdmin || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username)
+  ).length;
+
+  const failedCount = dateFilteredMyOrders.filter(o => 
+    o.status === 'SHIPPING_FAILED' && 
+    (isManagerOrAdmin || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username)
+  ).length;
+
+  const doneCount = dateFilteredMyOrders.filter(o => 
+    o.status === 'DELIVERED' && 
+    (isManagerOrAdmin || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username)
+  ).length;
 
   const filteredOrders = dateFilteredMyOrders.filter(o => {
     const matchSearch = !search || o.orderId?.toLowerCase().includes(search.toLowerCase())
       || o.customerName?.toLowerCase().includes(search.toLowerCase())
       || o.phone?.includes(search);
-    if (tab === 'pending') return matchSearch && o.status === 'READY_TO_SHIP';
-    if (tab === 'active') return matchSearch && o.status === 'SHIPPED';
-    if (tab === 'failed') return matchSearch && o.status === 'SHIPPING_FAILED';
-    if (tab === 'done') return matchSearch && o.status === 'DELIVERED';
-    return matchSearch;
+    
+    // Shipper ownership check
+    const isAssignedToMe = !o.assignedShipperId || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username || isManagerOrAdmin;
+    const isMyActiveOrder = String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username || isManagerOrAdmin;
+
+    if (tab === 'pending') return matchSearch && o.status === 'READY_TO_SHIP' && isAssignedToMe;
+    if (tab === 'active') return matchSearch && o.status === 'SHIPPED' && isMyActiveOrder;
+    if (tab === 'failed') return matchSearch && o.status === 'SHIPPING_FAILED' && isMyActiveOrder;
+    if (tab === 'done') return matchSearch && o.status === 'DELIVERED' && isMyActiveOrder;
+    return matchSearch && isAssignedToMe;
   });
 
   const fmt = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 
   const handlePickup = (orderId) => {
-    updateOrderStatus(orderId, 'SHIPPED', `Đã lấy hàng và đang giao – NV: ${user?.fullname || user?.name || 'Giao hàng'}`);
-    alert(`✅ Đã nhận đơn ${orderId}. Chuyển sang trạng thái đang giao hàng.`);
+    if (typeof claimOrderForDelivery === 'function') {
+      const res = claimOrderForDelivery(orderId, user);
+      if (res.success) {
+        alert(res.message);
+      } else {
+        alert(res.message);
+      }
+    } else {
+      updateOrderStatus(orderId, 'SHIPPED', `Đã lấy hàng và đang giao – NV: ${user?.fullname || user?.name || 'Giao hàng'}`);
+      alert(`✅ Đã nhận đơn ${orderId}. Chuyển sang trạng thái đang giao hàng.`);
+    }
   };
 
   const handleOpenDeliverModal = (orderId) => {
@@ -521,6 +558,12 @@ export default function Delivery() {
                       {statusInfo.label}
                     </span>
                   </div>
+
+                  {order.assignedShipperName && (
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.2rem 0.5rem', borderRadius: '6px', width: 'fit-content', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Truck size={12} /> Giao bởi: {order.assignedShipperName}
+                    </div>
+                  )}
 
                   {/* Customer info */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.8125rem' }}>

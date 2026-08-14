@@ -5,6 +5,7 @@ import {
   LogIn, Key, User as UserIcon, AlertTriangle, UserPlus, 
   ArrowLeft, ShieldAlert
 } from 'lucide-react';
+import { SUPPLIER_DEMO_ACCOUNTS } from '../config/supplierDemoAccounts';
 
 const DEMO_ACCOUNTS = [
   { role: 'ceo', label: 'Giám Đốc (CEO)' },
@@ -14,13 +15,19 @@ const DEMO_ACCOUNTS = [
   { role: 'warehouse_manager', label: 'Quản Lý Kho' },
   { role: 'warehouse', label: 'Thủ Kho' },
   { role: 'purchasing', label: 'NV Mua Hàng' },
-  { role: 'supplier', label: 'Nhà Cung Cấp' },
   { role: 'assembly', label: 'Kỹ Thuật Lắp Ráp' },
   { role: 'hr', label: 'Quản Lý Nhân Sự' },
   { role: 'accounting', label: 'Kế Toán Tài Chính' },
   { role: 'cskh', label: 'Chăm Sóc KH' },
-  { role: 'delivery', label: 'NV Giao Hàng' },
-  { role: 'customer_b2b', label: 'Khách Doanh Nghiệp' },
+  { role: 'delivery', label: 'Shipper 1 (Đội 1)' },
+  { role: 'delivery2', label: 'Shipper 2 (Đội 2)' },
+  { role: 'qc', label: 'Kiểm Định QA/QC' },
+  { role: 'customer', label: 'Khách Hàng' }
+];
+
+const SUPPLIER_LOGIN_ACCOUNTS = [
+  { role: 'supplier', label: 'Nhà Cung Cấp ABC' },
+  ...SUPPLIER_DEMO_ACCOUNTS
 ];
 
 export default function Login() {
@@ -88,7 +95,7 @@ export default function Login() {
         setLoading(true);
         // Sign In (Customer or Employee)
         const loggedUser = await login(username, password);
-        if (['CEO', 'SALES', 'SALES_MANAGER', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'PURCHASING', 'ASSEMBLY', 'HR', 'ACCOUNTANT', 'ADMIN', 'SUPPLIER', 'CSKH', 'DELIVERY'].includes(loggedUser.role)) {
+        if (['CEO', 'SALES', 'SALES_MANAGER', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'PURCHASING', 'ASSEMBLY', 'HR', 'ACCOUNTANT', 'ADMIN', 'SUPPLIER', 'CSKH', 'DELIVERY', 'QC', 'QA'].includes(loggedUser.role)) {
           // Redirect employee to admin panel based on role
           if (loggedUser.role === 'CEO') navigate('/admin/dashboard');
           else if (loggedUser.role === 'SALES' || loggedUser.role === 'SALES_MANAGER') navigate('/admin/sales');
@@ -96,6 +103,7 @@ export default function Login() {
           else if (loggedUser.role === 'HR') navigate('/admin/hr');
           else if (loggedUser.role === 'ACCOUNTANT') navigate('/admin/accounting');
           else if (loggedUser.role === 'PURCHASING') navigate('/admin/purchasing');
+          else if (loggedUser.role === 'QC' || loggedUser.role === 'QA') navigate('/admin/quality-control');
           else if (loggedUser.role === 'ADMIN') navigate('/admin/system');
           else if (loggedUser.role === 'CSKH') navigate('/admin/cskh');
           else if (loggedUser.role === 'DELIVERY') navigate('/admin/delivery');
@@ -508,13 +516,12 @@ export default function Login() {
                   </p>
                 </div>
 
+                <div style={{ maxHeight: '380px', overflowY: 'auto', padding: '4px 4px 4px 2px' }}>
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                   gap: '0.55rem',
-                  maxHeight: '380px',
-                  overflowY: 'auto',
-                  padding: '4px 4px 4px 2px'
+                  padding: '0'
                 }}>
                   {DEMO_ACCOUNTS.map(demo => (
                     <button
@@ -552,6 +559,47 @@ export default function Login() {
                       </span>
                     </button>
                   ))}
+                </div>
+                <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #cbd5e1' }}>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Tài Khoản Nhà Cung Cấp</h4>
+                  <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.25rem 0 0.7rem' }}>
+                    Mỗi tài khoản chỉ quản lý đơn hàng được gán cho đúng nhà cung cấp.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.55rem' }}>
+                    {SUPPLIER_LOGIN_ACCOUNTS.map(demo => (
+                      <button
+                        key={demo.role}
+                        onClick={() => fillCredentials(demo.role)}
+                        style={{
+                          backgroundColor: '#f8fafc',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '10px',
+                          padding: '0.65rem 0.85rem',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.15rem',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#eff6ff';
+                          e.currentTarget.style.borderColor = '#2563eb';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f8fafc';
+                          e.currentTarget.style.borderColor = '#bfdbfe';
+                          e.currentTarget.style.transform = 'none';
+                        }}
+                      >
+                        <strong style={{ fontSize: '0.85rem', color: '#0f172a', fontFamily: 'monospace', fontWeight: 700 }}>{demo.role}</strong>
+                        <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 500 }}>{demo.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 </div>
               </div>
             )}

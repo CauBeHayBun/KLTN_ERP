@@ -574,7 +574,7 @@ function ProductCard({ p, onAddCart, onCompare }) {
             background: 'rgba(16,185,129,0.9)', color: '#fff',
             fontSize: '0.65rem', fontWeight: 700,
             padding: '2px 6px', borderRadius: '4px',
-          }}>Tồn: {p.stockQuantity}</span>
+          }}>Còn {p.stockQuantity} sp</span>
         ) : p.available && p.stockQuantity === 0 ? (
           <span style={{
             position: 'absolute', top: '6px', right: '6px',
@@ -763,7 +763,7 @@ function BestSellerCard({ p, onAddCart, onCompare }) {
             background: 'rgba(16,185,129,0.9)', color: '#fff',
             fontSize: '0.65rem', fontWeight: 700,
             padding: '2px 6px', borderRadius: '4px',
-          }}>Tồn: {p.stockQuantity}</span>
+          }}>Còn {p.stockQuantity} sp</span>
         ) : p.available && p.stockQuantity === 0 ? (
           <span style={{
             position: 'absolute', top: '6px', right: '6px',
@@ -1754,7 +1754,7 @@ function ProductComparison({ products, onAddCart, onClose, initialProduct, clear
                         gap: '0.35rem'
                       }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: isStockAvailable ? '#16a34a' : (isPreOrder ? '#d97706' : '#dc2626') }} />
-                        {isStockAvailable ? `Còn hàng (${p.stockQuantity} sp)` : (isPreOrder ? 'Hết hàng' : 'Ngừng kinh doanh')}
+                        {isStockAvailable ? `Còn ${p.stockQuantity} sản phẩm` : (isPreOrder ? 'Hàng đặt trước' : 'Ngừng kinh doanh')}
                       </span>
                     </td>
                   );

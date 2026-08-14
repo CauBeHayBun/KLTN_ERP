@@ -1,26 +1,86 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { CheckCircle2, ShoppingBag, X } from 'lucide-react';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext(null);
 
 export const useCart = () => useContext(CartContext);
 
+const getProductId = (p) => {
+  if (!p) return undefined;
+  return p.id ?? p.product_id ?? p.productId;
+};
+
 export const CartProvider = ({ children }) => {
+  const auth = useAuth() || {};
+  const user = auth.user;
   const [cartItems, setCartItems] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Load cart items from localStorage on mount
-  useEffect(() => {
-    const storedCart = localStorage.getItem('cart');
-    if (storedCart) {
-      try {
-        setCartItems(JSON.parse(storedCart));
-      } catch (e) {
-        localStorage.removeItem('cart');
-      }
-    }
+  // User identifier for persistent cart per account
+  const userId = user ? (user.username || user.email || user.id || 'user') : 'guest';
+  const cartStorageKey = `cart_user_${userId}`;
+  
+  // Track initial load per user to avoid overwriting on mount
+  const isLoadedRef = useRef(false);
 
+  // Sync cart when user changes (login, logout, or account switch)
+  useEffect(() => {
+    isLoadedRef.current = false;
+    const storedUserCart = localStorage.getItem(cartStorageKey) || localStorage.getItem('cart');
+    
+    if (storedUserCart) {
+      try {
+        const parsed = JSON.parse(storedUserCart);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed
+            .filter(item => item && item.product && getProductId(item.product) !== undefined)
+            .map(item => ({
+              product: {
+                id: getProductId(item.product),
+                product_id: getProductId(item.product),
+                productId: getProductId(item.product),
+                name: item.product.name || item.product.productName || 'Sản phẩm',
+                price: Number(item.product.price ?? item.product.unitPrice ?? 0),
+                image: item.product.image || item.product.imageUrl || '',
+                category: item.product.category || item.product.categoryName || 'Linh kiện',
+                brand: item.product.brand || item.product.brandName || 'Chính hãng'
+              },
+              quantity: parseInt(item.quantity, 10) || 1,
+              selectedSpec: item.selectedSpec && typeof item.selectedSpec === 'object' && !item.selectedSpec.target ? item.selectedSpec : null
+            }));
+          setCartItems(cleaned);
+        } else {
+          setCartItems([]);
+        }
+      } catch (e) {
+        console.warn('Corrupt cart data detected, resetting:', e);
+        setCartItems([]);
+        try {
+          localStorage.removeItem(cartStorageKey);
+          localStorage.removeItem('cart');
+        } catch (err) {}
+      }
+    } else {
+      setCartItems([]);
+    }
+    isLoadedRef.current = true;
+  }, [userId, cartStorageKey]);
+
+  // Save cart items to user-specific localStorage key whenever cartItems changes
+  useEffect(() => {
+    if (!isLoadedRef.current) return;
+    try {
+      localStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
+      localStorage.setItem('cart', JSON.stringify(cartItems)); // Fallback sync
+    } catch (e) {
+      console.error('Error saving cart to localStorage:', e);
+    }
+  }, [cartItems, cartStorageKey]);
+
+  // Wishlist initialization & sync
+  useEffect(() => {
     const storedWishlist = localStorage.getItem('wishlist');
     if (storedWishlist) {
       try {
@@ -31,21 +91,18 @@ export const CartProvider = ({ children }) => {
     }
   }, []);
 
-  // Save cart items to localStorage on change
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
-  }, [cartItems]);
-
-  // Save wishlist to localStorage on change
-  useEffect(() => {
-    localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    try {
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    } catch (e) {}
   }, [wishlist]);
 
   const toggleWishlist = (product) => {
     setWishlist((prev) => {
-      const exists = prev.some((item) => String(item.id) === String(product.id));
+      const targetId = getProductId(product);
+      const exists = prev.some((item) => String(getProductId(item)) === String(targetId));
       if (exists) {
-        return prev.filter((item) => String(item.id) !== String(product.id));
+        return prev.filter((item) => String(getProductId(item)) !== String(targetId));
       } else {
         return [...prev, product];
       }
@@ -53,30 +110,73 @@ export const CartProvider = ({ children }) => {
   };
 
   const isInWishlist = (productId) => {
-    return wishlist.some((item) => String(item.id) === String(productId));
+    return wishlist.some((item) => String(getProductId(item)) === String(productId));
   };
 
-  const addToCart = (product, quantity = 1, selectedSpec = null) => {
+  const addToCart = (product, rawQuantity = 1, rawSpec = null) => {
     if (!product) return;
+
+    // 1. Sanitize quantity: ensure it's a valid positive integer
+    let parsedQty = parseInt(rawQuantity, 10);
+    if (isNaN(parsedQty) || parsedQty <= 0) {
+      parsedQty = 1;
+    }
+
+    // 2. Sanitize selectedSpec: if it's a React SyntheticEvent or non-serializable object, reset to null
+    let safeSpec = rawSpec;
+    if (
+      safeSpec &&
+      (typeof safeSpec !== 'object' ||
+        safeSpec.nativeEvent ||
+        safeSpec.target ||
+        safeSpec.preventDefault ||
+        safeSpec._reactName)
+    ) {
+      safeSpec = null;
+    }
+
+    // 3. Clean product object to prevent non-serializable properties
+    const pId = getProductId(product);
+    if (pId === undefined || pId === null) return;
+
+    const cleanProduct = {
+      id: pId,
+      product_id: pId,
+      productId: pId,
+      name: product.name || product.productName || 'Sản phẩm',
+      price: Number(product.price ?? product.unitPrice ?? product.originalPrice ?? 0),
+      image: product.image || product.imageUrl || '',
+      category: product.category || product.categoryName || 'Linh kiện',
+      brand: product.brand || product.brandName || 'Chính hãng',
+      stock_quantity: product.stock_quantity ?? product.stock ?? 50
+    };
+
+    const specKey = safeSpec ? JSON.stringify(safeSpec) : null;
+
     setCartItems((prevItems) => {
-      const existingIndex = prevItems.findIndex(
-        (item) => item.product.id === product.id && JSON.stringify(item.selectedSpec) === JSON.stringify(selectedSpec)
-      );
+      const existingIndex = prevItems.findIndex((item) => {
+        if (!item || !item.product) return false;
+        const itemId = getProductId(item.product);
+        const itemSpecKey = item.selectedSpec ? JSON.stringify(item.selectedSpec) : null;
+        return String(itemId) === String(pId) && itemSpecKey === specKey;
+      });
 
       if (existingIndex > -1) {
         const newItems = [...prevItems];
-        newItems[existingIndex].quantity += quantity;
+        const currentQty = parseInt(newItems[existingIndex].quantity, 10) || 1;
+        newItems[existingIndex].quantity = currentQty + parsedQty;
+        newItems[existingIndex].selectedSpec = safeSpec;
         return newItems;
       } else {
-        return [...prevItems, { product, quantity, selectedSpec }];
+        return [...prevItems, { product: cleanProduct, quantity: parsedQty, selectedSpec: safeSpec }];
       }
     });
 
-    // Trigger Toast Notification Popup
+    // Trigger Toast Notification Popup safely
     setToastMessage({
-      name: product.name || product.productName || 'Sản phẩm',
-      price: product.price ? Number(product.price).toLocaleString('vi-VN') + ' ₫' : '',
-      quantity
+      name: cleanProduct.name,
+      price: cleanProduct.price ? cleanProduct.price.toLocaleString('vi-VN') + ' ₫' : '',
+      quantity: parsedQty
     });
 
     setTimeout(() => {
@@ -87,8 +187,19 @@ export const CartProvider = ({ children }) => {
   const removeFromCart = (productId, selectedSpec = null) => {
     setCartItems((prevItems) =>
       prevItems.filter(
-        (item) => !(item.product.id === productId && JSON.stringify(item.selectedSpec) === JSON.stringify(selectedSpec))
+        (item) => !(String(getProductId(item.product)) === String(productId) && JSON.stringify(item.selectedSpec) === JSON.stringify(selectedSpec))
       )
+    );
+  };
+
+  const removeSelectedFromCart = (selectedKeysArray) => {
+    if (!Array.isArray(selectedKeysArray)) return;
+    setCartItems((prevItems) =>
+      prevItems.filter((item) => {
+        const pId = getProductId(item.product);
+        const key = `${pId}-${JSON.stringify(item.selectedSpec || null)}`;
+        return !selectedKeysArray.includes(key);
+      })
     );
   };
 
@@ -99,8 +210,8 @@ export const CartProvider = ({ children }) => {
     }
     setCartItems((prevItems) =>
       prevItems.map((item) =>
-        item.product.id === productId && JSON.stringify(item.selectedSpec) === JSON.stringify(selectedSpec)
-          ? { ...item, quantity }
+        String(getProductId(item.product)) === String(productId) && JSON.stringify(item.selectedSpec) === JSON.stringify(selectedSpec)
+          ? { ...item, quantity: parseInt(quantity, 10) || 1 }
           : item
       )
     );
@@ -110,17 +221,18 @@ export const CartProvider = ({ children }) => {
     setCartItems([]);
   };
 
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const cartCount = cartItems.reduce((sum, item) => sum + (parseInt(item.quantity, 10) || 1), 0);
   
   const cartTotal = cartItems.reduce((sum, item) => {
-    const price = item.product.price || 0;
-    return sum + price * item.quantity;
+    const price = Number(item?.product?.price ?? item?.product?.unitPrice ?? 0);
+    return sum + price * (parseInt(item.quantity, 10) || 1);
   }, 0);
 
   const value = {
     cartItems,
     addToCart,
     removeFromCart,
+    removeSelectedFromCart,
     updateQuantity,
     clearCart,
     cartCount,
