@@ -1,0 +1,206 @@
+[
+  {
+    "name": "Công ty TNHH Synnex FPT",
+    "code": "SUP-FPT",
+    "email": "contact@fpt.com.vn",
+    "phone": "02473007300",
+    "address": "Tòa nhà FPT, Phố Duy Tân, Cầu Giấy, Hà Nội",
+    "supplied_brands": [
+      "ASUS",
+      "Cooler Master",
+      "Corsair",
+      "Crucial",
+      "Deepcool",
+      "GIGABYTE",
+      "Jonsbo",
+      "Kingston",
+      "Seagate",
+      "Western Digital"
+    ],
+    "created_at": "2024-09-29T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Công ty Cổ phần Máy tính Viễn Sơn",
+    "code": "SUP-VIENSON",
+    "email": "info@vienson.com.vn",
+    "phone": "02838326085",
+    "address": "175 Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "ASUS",
+      "Cooler Master",
+      "Corsair",
+      "GIGABYTE",
+      "Jonsbo",
+      "Lian Li",
+      "MSI",
+      "Thermalright"
+    ],
+    "created_at": "2025-02-11T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Công ty TNHH Tin học Mai Hoàng",
+    "code": "SUP-MAIHOANG",
+    "email": "sales@maihoang.com.vn",
+    "phone": "02435377109",
+    "address": "241 Phố Vọng, Hai Bà Trưng, Hà Nội",
+    "supplied_brands": [
+      "Corsair",
+      "G.Skill",
+      "Kingston",
+      "MSI"
+    ],
+    "created_at": "2025-03-05T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Công ty Thương mại Quốc tế Thủy Linh",
+    "code": "SUP-THUYLINH",
+    "email": "info@thuylinh.vn",
+    "phone": "02435665588",
+    "address": "33 Thái Hà, Đống Đa, Hà Nội",
+    "supplied_brands": [
+      "Crucial",
+      "GIGABYTE",
+      "Intel",
+      "Kingston",
+      "Samsung"
+    ],
+    "created_at": "2024-09-03T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Công ty TNHH Kỹ thuật Tin học Kha Thiên",
+    "code": "SUP-KTC",
+    "email": "ktc@ktc.com.vn",
+    "phone": "02838404567",
+    "address": "384/1 Vạn Kiếp, Bình Thạnh, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "Corsair",
+      "Western Digital"
+    ],
+    "created_at": "2024-12-31T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Công ty Cổ phần Đầu tư Công nghệ Anh Ngọc",
+    "code": "SUP-ANHNGOC",
+    "email": "contact@anhngoc.vn",
+    "phone": "02439763189",
+    "address": "12 Cát Linh, Đống Đa, Hà Nội",
+    "supplied_brands": [
+      "Kingston"
+    ],
+    "created_at": "2025-01-08T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Intel Vietnam Authorized Distributor",
+    "code": "SUP-INTEL-VN",
+    "email": "disti.vietnam@intel.com",
+    "phone": "02838252000",
+    "address": "Tòa nhà Saigon Centre, 65 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "Intel"
+    ],
+    "created_at": "2025-01-13T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "AMD Southeast Asia Pte Ltd (VN Representative)",
+    "code": "SUP-AMD-VN",
+    "email": "vietnam.sales@amd.com",
+    "phone": "02839101212",
+    "address": "Tòa nhà Lim Tower, 9-11 Tôn Đức Thắng, Quận 1, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "AMD"
+    ],
+    "created_at": "2025-02-04T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "ASUS Vietnam Co., Ltd",
+    "code": "SUP-ASUS-VN",
+    "email": "support_vn@asus.com",
+    "phone": "18006588",
+    "address": "Tòa nhà Viettel Complex, 285 Cách Mạng Tháng Tám, Quận 10, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "ASUS"
+    ],
+    "created_at": "2024-09-04T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "MSI Vietnam Representative Office",
+    "code": "SUP-MSI-VN",
+    "email": "msivn@msi.com",
+    "phone": "02839257888",
+    "address": "Tòa nhà Royal Tower, 235 Nguyễn Văn Cừ, Quận 5, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "MSI"
+    ],
+    "created_at": "2025-02-13T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Samsung Vina Electronics Co., Ltd",
+    "code": "SUP-SAMSUNG-VN",
+    "email": "partner.support@samsung.com",
+    "phone": "1800588889",
+    "address": "Tòa nhà Bitexco Financial Tower, 2 Hải Triều, Quận 1, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "Samsung"
+    ],
+    "created_at": "2024-09-19T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "LG Electronics Vietnam",
+    "code": "SUP-LG-VN",
+    "email": "lg.vietnam@lge.com",
+    "phone": "18001503",
+    "address": "Tòa nhà Keangnam Landmark 72, Phạm Hùng, Nam Từ Liêm, Hà Nội",
+    "supplied_brands": [
+      "LG"
+    ],
+    "created_at": "2024-09-03T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Công ty TNHH Gigabyte Việt Nam",
+    "code": "SUP-GIGABYTE-VN",
+    "email": "support@gigabyte.vn",
+    "phone": "02838228585",
+    "address": "Tòa nhà Bitexco Office, 19-25 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "GIGABYTE"
+    ],
+    "created_at": "2024-10-23T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Công ty TNHH Corsair Vietnam Office",
+    "code": "SUP-CORSAIR-VN",
+    "email": "seasia@corsair.com",
+    "phone": "02862885999",
+    "address": "Tòa nhà Deutsches Haus, 33 Lê Duẩn, Quận 1, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "Corsair"
+    ],
+    "created_at": "2025-02-17T13:00:00",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Công ty TNHH Kingston Technology VN",
+    "code": "SUP-KINGSTON-VN",
+    "email": "sales_vietnam@kingston.com.vn",
+    "phone": "02838234567",
+    "address": "Tòa nhà mPlaza Saigon, 39 Lê Duẩn, Quận 1, TP. Hồ Chí Minh",
+    "supplied_brands": [
+      "Kingston"
+    ],
+    "created_at": "2024-10-11T13:00:00",
+    "status": "ACTIVE"
+  }
+]

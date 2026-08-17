@@ -1,0 +1,16 @@
+﻿supplier_id,code,name,email,phone,address,supplied_brands,created_at,status
+SUP-FPT,SUP-FPT,Công ty TNHH Synnex FPT,contact@fpt.com.vn,02473007300,"Tòa nhà FPT, Phố Duy Tân, Cầu Giấy, Hà Nội","ASUS, Cooler Master, Corsair, Crucial, Deepcool, GIGABYTE, Jonsbo, Kingston, Seagate, Western Digital",2024-09-29T13:00:00,ACTIVE
+SUP-VIENSON,SUP-VIENSON,Công ty Cổ phần Máy tính Viễn Sơn,info@vienson.com.vn,02838326085,"175 Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh","ASUS, Cooler Master, Corsair, GIGABYTE, Jonsbo, Lian Li, MSI, Thermalright",2025-02-11T13:00:00,ACTIVE
+SUP-MAIHOANG,SUP-MAIHOANG,Công ty TNHH Tin học Mai Hoàng,sales@maihoang.com.vn,02435377109,"241 Phố Vọng, Hai Bà Trưng, Hà Nội","Corsair, G.Skill, Kingston, MSI",2025-03-05T13:00:00,ACTIVE
+SUP-THUYLINH,SUP-THUYLINH,Công ty Thương mại Quốc tế Thủy Linh,info@thuylinh.vn,02435665588,"33 Thái Hà, Đống Đa, Hà Nội","Crucial, GIGABYTE, Intel, Kingston, Samsung",2024-09-03T13:00:00,ACTIVE
+SUP-KTC,SUP-KTC,Công ty TNHH Kỹ thuật Tin học Kha Thiên,ktc@ktc.com.vn,02838404567,"384/1 Vạn Kiếp, Bình Thạnh, TP. Hồ Chí Minh","Corsair, Western Digital",2024-12-31T13:00:00,ACTIVE
+SUP-ANHNGOC,SUP-ANHNGOC,Công ty Cổ phần Đầu tư Công nghệ Anh Ngọc,contact@anhngoc.vn,02439763189,"12 Cát Linh, Đống Đa, Hà Nội",Kingston,2025-01-08T13:00:00,ACTIVE
+SUP-INTEL-VN,SUP-INTEL-VN,Intel Vietnam Authorized Distributor,disti.vietnam@intel.com,02838252000,"Tòa nhà Saigon Centre, 65 Lê Lợi, Quận 1, TP. Hồ Chí Minh",Intel,2025-01-13T13:00:00,ACTIVE
+SUP-AMD-VN,SUP-AMD-VN,AMD Southeast Asia Pte Ltd (VN Representative),vietnam.sales@amd.com,02839101212,"Tòa nhà Lim Tower, 9-11 Tôn Đức Thắng, Quận 1, TP. Hồ Chí Minh",AMD,2025-02-04T13:00:00,ACTIVE
+SUP-ASUS-VN,SUP-ASUS-VN,"ASUS Vietnam Co., Ltd",support_vn@asus.com,18006588,"Tòa nhà Viettel Complex, 285 Cách Mạng Tháng Tám, Quận 10, TP. Hồ Chí Minh",ASUS,2024-09-04T13:00:00,ACTIVE
+SUP-MSI-VN,SUP-MSI-VN,MSI Vietnam Representative Office,msivn@msi.com,02839257888,"Tòa nhà Royal Tower, 235 Nguyễn Văn Cừ, Quận 5, TP. Hồ Chí Minh",MSI,2025-02-13T13:00:00,ACTIVE
+SUP-SAMSUNG-VN,SUP-SAMSUNG-VN,"Samsung Vina Electronics Co., Ltd",partner.support@samsung.com,1800588889,"Tòa nhà Bitexco Financial Tower, 2 Hải Triều, Quận 1, TP. Hồ Chí Minh",Samsung,2024-09-19T13:00:00,ACTIVE
+SUP-LG-VN,SUP-LG-VN,LG Electronics Vietnam,lg.vietnam@lge.com,18001503,"Tòa nhà Keangnam Landmark 72, Phạm Hùng, Nam Từ Liêm, Hà Nội",LG,2024-09-03T13:00:00,ACTIVE
+SUP-GIGABYTE-VN,SUP-GIGABYTE-VN,Công ty TNHH Gigabyte Việt Nam,support@gigabyte.vn,02838228585,"Tòa nhà Bitexco Office, 19-25 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",GIGABYTE,2024-10-23T13:00:00,ACTIVE
+SUP-CORSAIR-VN,SUP-CORSAIR-VN,Công ty TNHH Corsair Vietnam Office,seasia@corsair.com,02862885999,"Tòa nhà Deutsches Haus, 33 Lê Duẩn, Quận 1, TP. Hồ Chí Minh",Corsair,2025-02-17T13:00:00,ACTIVE
+SUP-KINGSTON-VN,SUP-KINGSTON-VN,Công ty TNHH Kingston Technology VN,sales_vietnam@kingston.com.vn,02838234567,"Tòa nhà mPlaza Saigon, 39 Lê Duẩn, Quận 1, TP. Hồ Chí Minh",Kingston,2024-10-11T13:00:00,ACTIVE

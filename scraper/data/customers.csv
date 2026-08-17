@@ -1,0 +1,501 @@
+﻿customer_id,name,gender,email,phone,address,city,tier,status,created_at
+CUST-0001,Vũ Ngọc Giang,FEMALE,giang.vu@yahoo.com,0938908386,"11 Đường Nguyễn Văn Cừ, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2025-03-20T13:00:00
+CUST-0002,Hồ Khánh Vy,FEMALE,vy.ho@vnu.edu.vn,0935116155,"132 Đường Võ Nguyên Giáp, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2024-11-28T13:00:00
+CUST-0003,Trần Ngọc Long,MALE,long.tran@yahoo.com,0979310341,"469 Đường Phan Đăng Lưu, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-12-05T13:00:00
+CUST-0004,Lê Phương Thảo,FEMALE,thao.le@fpt.edu.vn,0851928327,"62 Đường Trần Hưng Đạo, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-24T13:00:00
+CUST-0005,Ngô Khánh Lan,FEMALE,lan.ngo@outlook.com.vn,0939537672,"443 Đường Kim Mã, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-11-17T13:00:00
+CUST-0006,Phan Quỳnh Nhi,FEMALE,nhi.phan@gmail.com,0771012269,"546 Đường Trần Văn Khéo, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-08-30T13:00:00
+CUST-0007,Dương Ngọc Nam,MALE,nam.duong@fpt.edu.vn,0858451462,"524 Đường 3 Tháng 2, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,GOLD,ACTIVE,2025-01-08T13:00:00
+CUST-0008,Dương Duy Sơn,MALE,son.duong@fpt.edu.vn,0985288095,"319 Đường Quang Trung, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-02-06T13:00:00
+CUST-0009,Lý Hữu Tuấn,MALE,tuan.ly@outlook.com.vn,0771822782,"221 Đường Tô Hiệu, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,GOLD,ACTIVE,2025-02-27T13:00:00
+CUST-0010,Hồ Thảo Vân,FEMALE,van.ho@gmail.com,0778713315,"230 Đường Trần Hưng Đạo, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-10T13:00:00
+CUST-0011,Phạm Thị Hà,FEMALE,ha.pham@hust.edu.vn,0918347382,"253 Đường Tô Hiệu, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2024-11-13T13:00:00
+CUST-0012,Phạm Thảo Trúc,FEMALE,truc.pham@hust.edu.vn,0976670106,"201 Đường Nguyễn Văn Linh, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-10-23T13:00:00
+CUST-0013,Lê Khánh Yến,FEMALE,yen.le@gmail.com,0931781080,"502 Đường Tố Hữu, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-11-16T13:00:00
+CUST-0014,Lý Diệu Trang,FEMALE,trang.ly@yahoo.com,0384746872,"67 Đường Lê Duẩn, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-05-11T13:00:00
+CUST-0015,Nguyễn Quang Khánh,MALE,khanh.nguyen@hust.edu.vn,0980812191,"257 Đường Xuân Thủy, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-05-20T13:00:00
+CUST-0016,Bùi Thảo Trinh,FEMALE,trinh.bui@fpt.edu.vn,0838543534,"473 Đường Kim Mã, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-05-03T13:00:00
+CUST-0017,Nguyễn Vy Mai,FEMALE,mai.nguyen@yahoo.com,0918384251,"453 Đường Nguyễn Văn Linh, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-01-06T13:00:00
+CUST-0018,Bùi Lâm Khánh,MALE,khanh.bui@hust.edu.vn,0908412411,"293 Đường Lê Hồng Phong, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-16T13:00:00
+CUST-0019,Phạm Đình Khánh,MALE,khanh.pham@outlook.com.vn,0774016400,"170 Đường Kim Mã, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-08-31T13:00:00
+CUST-0020,Hồ Thị Mai,FEMALE,mai.ho@fpt.edu.vn,0912805982,"378 Đường Kim Mã, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-05-20T13:00:00
+CUST-0021,Lý Thảo Hương,FEMALE,huong.ly@yahoo.com,0851586923,"188 Đường Nguyễn Trãi, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-12-21T13:00:00
+CUST-0022,Ngô Lâm Phong,MALE,phong.ngo@fpt.edu.vn,0862160733,"233 Đường Nguyễn Văn Linh, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-03-03T13:00:00
+CUST-0023,Vũ Ngọc Thảo,FEMALE,thao.vu@yahoo.com,0978685014,"116 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-15T13:00:00
+CUST-0024,Hồ Hoàng Long,MALE,long.ho@gmail.com,0791693406,"377 Đường Trần Hưng Đạo, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-22T13:00:00
+CUST-0025,Bùi Ngọc Ngọc,FEMALE,ngoc.bui@yahoo.com,0794656482,"183 Đường Trần Văn Khéo, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-01-06T13:00:00
+CUST-0026,Vũ Văn Việt,MALE,viet.vu@fpt.edu.vn,0863699577,"178 Đường Trần Duy Hưng, Quận Ba Đình, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-01-15T13:00:00
+CUST-0027,Đặng Duy Trung,MALE,trung.đang@yahoo.com,0913433200,"471 Đường Đại lộ Hòa Bình, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-03-02T13:00:00
+CUST-0028,Hồ Anh Anh,MALE,anh.ho@fpt.edu.vn,0932016328,"472 Đường Lê Lợi, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-10-15T13:00:00
+CUST-0029,Đỗ Quang Long,MALE,long.đo@hust.edu.vn,0977986872,"258 Đường Nguyễn Văn Cừ, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2025-01-19T13:00:00
+CUST-0030,Ngô Anh Phong,MALE,phong.ngo@vnu.edu.vn,0867143455,"241 Đường 3 Tháng 2, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-03-23T13:00:00
+CUST-0031,Hồ Diệu Trúc,FEMALE,truc.ho@vnu.edu.vn,0978760366,"11 Đường Võ Văn Tần, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,GOLD,ACTIVE,2025-01-08T13:00:00
+CUST-0032,Ngô Diệu Hạnh,FEMALE,hanh.ngo@gmail.com,0799373467,"174 Đường Trần Văn Khéo, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2025-04-05T13:00:00
+CUST-0033,Bùi Hoàng Tùng,MALE,tung.bui@outlook.com.vn,0830162720,"470 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-11-27T13:00:00
+CUST-0034,Hoàng Hoàng Huy,MALE,huy.hoang@hust.edu.vn,0917080531,"209 Đường Điện Biên Phủ, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-03-23T13:00:00
+CUST-0035,Phạm Thảo Mai,FEMALE,mai.pham@hust.edu.vn,0833745299,"115 Đường Phan Đăng Lưu, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-01-01T13:00:00
+CUST-0036,Bùi Hoàng Anh,MALE,anh.bui@vnu.edu.vn,0931931491,"384 Đường Nguyễn Kiệm, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-12-17T13:00:00
+CUST-0037,Nguyễn Anh Nam,MALE,nam.nguyen@vnu.edu.vn,0385726284,"451 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-01-23T13:00:00
+CUST-0038,Phan Hữu Huy,MALE,huy.phan@fpt.edu.vn,0773799650,"222 Đường Võ Nguyên Giáp, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-01-28T13:00:00
+CUST-0039,Phan Vy Thảo,FEMALE,thao.phan@vnu.edu.vn,0790831367,"507 Đường Trần Duy Hưng, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-06-01T13:00:00
+CUST-0040,Trần Diệu Hương,FEMALE,huong.tran@hust.edu.vn,0869578856,"469 Đường Lê Hồng Phong, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-02-01T13:00:00
+CUST-0041,Phạm Phương Hà,FEMALE,ha.pham@vnu.edu.vn,0918233749,"203 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-07T13:00:00
+CUST-0042,Lê Hồng Hạnh,FEMALE,hanh.le@gmail.com,0984008427,"495 Đường Võ Văn Tần, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-03-07T13:00:00
+CUST-0043,Nguyễn Linh Mai,FEMALE,mai.nguyen@vnu.edu.vn,0916719022,"126 Đường Nguyễn Văn Linh, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-11-08T13:00:00
+CUST-0044,Bùi Duy Phong,MALE,phong.bui@vnu.edu.vn,0796774964,"217 Đường Lạch Tray, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-25T13:00:00
+CUST-0045,Đỗ Phương Linh,FEMALE,linh.đo@outlook.com.vn,0791206797,"294 Đường Phan Đăng Lưu, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-10-20T13:00:00
+CUST-0046,Trần Đình Tùng,MALE,tung.tran@yahoo.com,0853618324,"319 Đường 3 Tháng 2, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-01-13T13:00:00
+CUST-0047,Võ Hồng Ngọc,FEMALE,ngoc.vo@gmail.com,0384887719,"261 Đường Nguyễn Văn Cừ, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-02-12T13:00:00
+CUST-0048,Đỗ Duy Tùng,MALE,tung.đo@outlook.com.vn,0904902787,"508 Đường Tố Hữu, Quận Ba Đình, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2024-10-12T13:00:00
+CUST-0049,Phan Mai Mai,FEMALE,mai.phan@fpt.edu.vn,0985674680,"336 Đường Phan Đăng Lưu, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-11-15T13:00:00
+CUST-0050,Dương Văn Duy,MALE,duy.duong@hust.edu.vn,0776038597,"278 Đường Mậu Thân, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-01-13T13:00:00
+CUST-0051,Võ Anh Nam,MALE,nam.vo@fpt.edu.vn,0909324808,"477 Đường Lê Lợi, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,GOLD,ACTIVE,2025-03-23T13:00:00
+CUST-0052,Võ Đình Khánh,MALE,khanh.vo@fpt.edu.vn,0866773782,"76 Đường Chùa Bộc, Quận Ba Đình, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-11-09T13:00:00
+CUST-0053,Phan Quang Huy,MALE,huy.phan@vnu.edu.vn,0904499727,"391 Đường Nguyễn Văn Cừ, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-12-27T13:00:00
+CUST-0054,Dương Hồng Hương,FEMALE,huong.duong@fpt.edu.vn,0836360576,"134 Đường Nguyễn Trãi, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-12-22T13:00:00
+CUST-0055,Dương Linh Mai,FEMALE,mai.duong@outlook.com.vn,0797026217,"341 Đường Lê Duẩn, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2024-09-09T13:00:00
+CUST-0056,Vũ Ngọc Kiệt,MALE,kiet.vu@fpt.edu.vn,0790913431,"175 Đường Võ Văn Tần, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-05-26T13:00:00
+CUST-0057,Nguyễn Thị Ngọc,FEMALE,ngoc.nguyen@hust.edu.vn,0975623869,"85 Đường Chùa Bộc, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-11-26T13:00:00
+CUST-0058,Bùi Anh Tùng,MALE,tung.bui96@vnu.edu.vn,0983747407,"358 Đường Trần Duy Hưng, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,PLATINUM,ACTIVE,2025-01-07T13:00:00
+CUST-0059,Đỗ Thành Huy,MALE,huy.đo@vnu.edu.vn,0774367136,"27 Đường Trần Hưng Đạo, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2024-11-19T13:00:00
+CUST-0060,Hoàng Thảo Hoa,FEMALE,hoa.hoang@vnu.edu.vn,0837439533,"45 Đường Lê Duẩn, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-10-27T13:00:00
+CUST-0061,Nguyễn Thành Minh,MALE,minh.nguyen@outlook.com.vn,0914562328,"173 Đường Lê Hồng Phong, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-10-06T13:00:00
+CUST-0062,Ngô Mai Mai,FEMALE,mai.ngo@fpt.edu.vn,0771236851,"470 Đường Lê Lợi, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-01-26T13:00:00
+CUST-0063,Bùi Thảo Vân,FEMALE,van.bui@yahoo.com,0913709859,"423 Đường Phan Đăng Lưu, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-05-17T13:00:00
+CUST-0064,Nguyễn Linh Mai,FEMALE,mai.nguyen@fpt.edu.vn,0913826758,"429 Đường Trần Hưng Đạo, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-10-02T13:00:00
+CUST-0065,Bùi Khánh Hoa,FEMALE,hoa.bui@vnu.edu.vn,0973773515,"287 Đường Võ Nguyên Giáp, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-04-08T13:00:00
+CUST-0066,Dương Hữu Sơn,MALE,son.duong@yahoo.com,0859005329,"243 Đường Điện Biên Phủ, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-03-26T13:00:00
+CUST-0067,Ngô Văn Huy,MALE,huy.ngo@gmail.com,0982842102,"336 Đường Hùng Vương, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-01-25T13:00:00
+CUST-0068,Nguyễn Diệu Nhi,FEMALE,nhi.nguyen@fpt.edu.vn,0911775891,"538 Đường Lạch Tray, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-25T13:00:00
+CUST-0069,Nguyễn Hoàng Khoa,MALE,khoa.nguyen@yahoo.com,0851771159,"337 Đường Phan Đăng Lưu, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-09-11T13:00:00
+CUST-0070,Hoàng Vy Trúc,FEMALE,truc.hoang@outlook.com.vn,0911836736,"102 Đường Trần Văn Khéo, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-12-31T13:00:00
+CUST-0071,Đỗ Quỳnh Chi,FEMALE,chi.đo@vnu.edu.vn,0911116152,"425 Đường Lê Lợi, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-11-05T13:00:00
+CUST-0072,Dương Văn Việt,MALE,viet.duong@hust.edu.vn,0834519832,"363 Đường Đại lộ Hòa Bình, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2024-12-03T13:00:00
+CUST-0073,Trần Duy Phong,MALE,phong.tran@gmail.com,0388998094,"352 Đường Kim Mã, Quận Đống Đa, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-09T13:00:00
+CUST-0074,Dương Thảo Phương,FEMALE,phuong.duong@fpt.edu.vn,0912018366,"324 Đường Trần Hưng Đạo, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2024-08-23T13:00:00
+CUST-0075,Bùi Thị Vy,FEMALE,vy.bui@vnu.edu.vn,0989014767,"225 Đường Nguyễn Văn Cừ, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2025-04-12T13:00:00
+CUST-0076,Phan Khánh Trinh,FEMALE,trinh.phan@gmail.com,0778403690,"145 Đường Bà Triệu, Quận Đống Đa, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-01-12T13:00:00
+CUST-0077,Phan Linh Trúc,FEMALE,truc.phan@gmail.com,0982683885,"451 Đường Đại lộ Hòa Bình, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-05-01T13:00:00
+CUST-0078,Dương Diệu Trinh,FEMALE,trinh.duong@vnu.edu.vn,0386416052,"95 Đường Nguyễn Văn Cừ, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-16T13:00:00
+CUST-0079,Phạm Diệu Nhi,FEMALE,nhi.pham@vnu.edu.vn,0916453521,"364 Đường Quang Trung, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-03-26T13:00:00
+CUST-0080,Phạm Khánh Giang,FEMALE,giang.pham@vnu.edu.vn,0989212779,"328 Đường Nguyễn Văn Cừ, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-05-06T13:00:00
+CUST-0081,Võ Khánh Thảo,FEMALE,thao.vo@gmail.com,0830581477,"83 Đường Phan Đăng Lưu, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-04-24T13:00:00
+CUST-0082,Bùi Hoàng Bách,MALE,bach.bui@fpt.edu.vn,0838079359,"466 Đường Lạch Tray, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-16T13:00:00
+CUST-0083,Hồ Thảo Linh,FEMALE,linh.ho@outlook.com.vn,0903778892,"423 Đường Võ Nguyên Giáp, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-05-14T13:00:00
+CUST-0084,Ngô Minh Tuấn,MALE,tuan.ngo@outlook.com.vn,0971864492,"322 Đường Quang Trung, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,GOLD,ACTIVE,2024-11-21T13:00:00
+CUST-0085,Lê Hữu Việt,MALE,viet.le@outlook.com.vn,0796528168,"189 Đường Phan Đăng Lưu, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,GOLD,ACTIVE,2024-12-17T13:00:00
+CUST-0086,Ngô Phương Vy,FEMALE,vy.ngo@hust.edu.vn,0981418880,"390 Đường Hùng Vương, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-03-09T13:00:00
+CUST-0087,Dương Duy Hải,MALE,hai.duong@hust.edu.vn,0770653794,"321 Đường Mậu Thân, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,GOLD,ACTIVE,2024-10-12T13:00:00
+CUST-0088,Lý Minh Tùng,MALE,tung.ly@yahoo.com,0777468862,"58 Đường Lê Hồng Phong, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-01T13:00:00
+CUST-0089,Đặng Thành Khánh,MALE,khanh.đang@fpt.edu.vn,0914124782,"362 Đường Võ Văn Tần, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,GOLD,ACTIVE,2024-11-09T13:00:00
+CUST-0090,Nguyễn Mai Hương,FEMALE,huong.nguyen@yahoo.com,0381530515,"488 Đường Kim Mã, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-30T13:00:00
+CUST-0091,Ngô Anh Long,MALE,long.ngo@vnu.edu.vn,0901043289,"248 Đường Nguyễn Văn Cừ, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-05-16T13:00:00
+CUST-0092,Phạm Trúc Anh,FEMALE,anh.pham@vnu.edu.vn,0771179808,"303 Đường Chùa Bộc, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-12-11T13:00:00
+CUST-0093,Phạm Đức Tuấn,MALE,tuan.pham@gmail.com,0795188888,"401 Đường Đại lộ Hòa Bình, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,PLATINUM,ACTIVE,2025-01-31T13:00:00
+CUST-0094,Hồ Trúc Lan,FEMALE,lan.ho@vnu.edu.vn,0973195205,"495 Đường Võ Nguyên Giáp, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-04-01T13:00:00
+CUST-0095,Trần Anh Dũng,MALE,dung.tran@fpt.edu.vn,0863030548,"42 Đường Lê Hồng Phong, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-03-04T13:00:00
+CUST-0096,Hoàng Trúc Hoa,FEMALE,hoa.hoang@fpt.edu.vn,0855415667,"514 Đường Võ Nguyên Giáp, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-09-17T13:00:00
+CUST-0097,Hoàng Thành Khoa,MALE,khoa.hoang@gmail.com,0916928451,"461 Đường Trần Hưng Đạo, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-11-03T13:00:00
+CUST-0098,Lê Minh Bách,MALE,bach.le@outlook.com.vn,0905964016,"36 Đường Trần Hưng Đạo, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-10-28T13:00:00
+CUST-0099,Nguyễn Phương Vân,FEMALE,van.nguyen@outlook.com.vn,0976909275,"547 Đường Mậu Thân, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-12-31T13:00:00
+CUST-0100,Đỗ Ngọc Trang,FEMALE,trang.đo@hust.edu.vn,0987868144,"507 Đường Nguyễn Văn Cừ, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-01T13:00:00
+CUST-0101,Dương Quỳnh Yến,FEMALE,yen.duong@yahoo.com,0915518844,"525 Đường Tràng Tiền, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-02-27T13:00:00
+CUST-0102,Ngô Trúc Chi,FEMALE,chi.ngo@vnu.edu.vn,0905895782,"412 Đường Phan Đăng Lưu, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,PLATINUM,ACTIVE,2024-10-07T13:00:00
+CUST-0103,Đặng Diệu Trinh,FEMALE,trinh.đang@yahoo.com,0912517785,"137 Đường Trần Hưng Đạo, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-12T13:00:00
+CUST-0104,Dương Quỳnh Ngọc,FEMALE,ngoc.duong@outlook.com.vn,0982535841,"133 Đường Kim Mã, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-09-09T13:00:00
+CUST-0105,Trần Đức Tùng,MALE,tung.tran@gmail.com,0832299590,"220 Đường Phan Đăng Lưu, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-11-08T13:00:00
+CUST-0106,Bùi Anh Duy,MALE,duy.bui@hust.edu.vn,0864736471,"430 Đường Võ Văn Tần, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-02-25T13:00:00
+CUST-0107,Phan Minh Trung,MALE,trung.phan@yahoo.com,0976258815,"465 Đường Nguyễn Văn Cừ, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-21T13:00:00
+CUST-0108,Nguyễn Diệu Anh,FEMALE,anh.nguyen@fpt.edu.vn,0383259532,"320 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-04-24T13:00:00
+CUST-0109,Vũ Quốc Sơn,MALE,son.vu@outlook.com.vn,0835004797,"446 Đường Lạch Tray, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-25T13:00:00
+CUST-0110,Hồ Diệu Vân,FEMALE,van.ho@outlook.com.vn,0906098358,"291 Đường Võ Văn Tần, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-04-10T13:00:00
+CUST-0111,Lê Hoàng Hoàng,MALE,hoang.le@vnu.edu.vn,0978523986,"145 Đường Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-10-10T13:00:00
+CUST-0112,Đặng Vy Nhi,FEMALE,nhi.đang@vnu.edu.vn,0985952694,"311 Đường Hùng Vương, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-06-01T13:00:00
+CUST-0113,Phan Ngọc Trúc,FEMALE,truc.phan@yahoo.com,0834097499,"541 Đường 3 Tháng 2, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-11-27T13:00:00
+CUST-0114,Lê Quốc Dũng,MALE,dung.le@fpt.edu.vn,0831307562,"68 Đường Trần Duy Hưng, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-09-17T13:00:00
+CUST-0115,Phạm Ngọc Kiệt,MALE,kiet.pham@outlook.com.vn,0796527858,"257 Đường Nguyễn Văn Linh, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-01-08T13:00:00
+CUST-0116,Phạm Đình Việt,MALE,viet.pham@gmail.com,0937575844,"409 Đường Tô Hiệu, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-03-27T13:00:00
+CUST-0117,Hoàng Hồng Lan,FEMALE,lan.hoang@vnu.edu.vn,0977473384,"250 Đường Lê Duẩn, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-09-11T13:00:00
+CUST-0118,Phạm Văn Nam,MALE,nam.pham@fpt.edu.vn,0385712082,"299 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-05-10T13:00:00
+CUST-0119,Lý Ngọc Tùng,MALE,tung.ly@fpt.edu.vn,0938026206,"43 Đường Kim Mã, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-08-23T13:00:00
+CUST-0120,Bùi Mai Ngọc,FEMALE,ngoc.bui24@outlook.com.vn,0778872874,"268 Đường Trần Duy Hưng, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-06-02T13:00:00
+CUST-0121,Hồ Khánh Trinh,FEMALE,trinh.ho@gmail.com,0853296685,"194 Đường Đại lộ Hòa Bình, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,PLATINUM,ACTIVE,2024-10-08T13:00:00
+CUST-0122,Phan Văn Huy,MALE,huy.phan@gmail.com,0383745499,"68 Đường Nguyễn Văn Linh, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-10-14T13:00:00
+CUST-0123,Hoàng Thảo Nhi,FEMALE,nhi.hoang@fpt.edu.vn,0861459332,"430 Đường Tràng Tiền, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-10-11T13:00:00
+CUST-0124,Ngô Ngọc Sơn,MALE,son.ngo@vnu.edu.vn,0939187851,"158 Đường Điện Biên Phủ, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-09-16T13:00:00
+CUST-0125,Võ Phương Trinh,FEMALE,trinh.vo@fpt.edu.vn,0771870728,"478 Đường Đại lộ Hòa Bình, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-01-03T13:00:00
+CUST-0126,Hồ Khánh Trang,FEMALE,trang.ho@gmail.com,0939106518,"298 Đường Nguyễn Thị Minh Khai, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-04-01T13:00:00
+CUST-0127,Ngô Thành Khoa,MALE,khoa.ngo@hust.edu.vn,0976766182,"407 Đường Nguyễn Văn Linh, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-15T13:00:00
+CUST-0128,Dương Thị Ngọc,FEMALE,ngoc.duong29@outlook.com.vn,0778686337,"37 Đường Xuân Thủy, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-11-07T13:00:00
+CUST-0129,Bùi Văn Phong,MALE,phong.bui@yahoo.com,0931190790,"244 Đường Võ Văn Tần, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-05-12T13:00:00
+CUST-0130,Lê Đình Phong,MALE,phong.le@hust.edu.vn,0835995342,"312 Đường Tô Hiệu, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-08-28T13:00:00
+CUST-0131,Bùi Đức Khoa,MALE,khoa.bui@fpt.edu.vn,0797056856,"193 Đường Tố Hữu, Quận Đống Đa, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-10-10T13:00:00
+CUST-0132,Phạm Đình Minh,MALE,minh.pham@fpt.edu.vn,0770866882,"343 Đường Bà Triệu, Quận Đống Đa, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-10-22T13:00:00
+CUST-0133,Dương Thu Giang,FEMALE,giang.duong@vnu.edu.vn,0904699013,"218 Đường Tô Hiệu, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2024-12-21T13:00:00
+CUST-0134,Hoàng Văn Sơn,MALE,son.hoang@vnu.edu.vn,0931739363,"482 Đường Võ Nguyên Giáp, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-12-08T13:00:00
+CUST-0135,Hoàng Thu Chi,FEMALE,chi.hoang@gmail.com,0771753556,"21 Đường Trần Hưng Đạo, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-11-08T13:00:00
+CUST-0136,Hoàng Mai Hương,FEMALE,huong.hoang@hust.edu.vn,0389378547,"365 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-09-03T13:00:00
+CUST-0137,Võ Thu Hoa,FEMALE,hoa.vo@gmail.com,0790100623,"522 Đường Bà Triệu, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-05-10T13:00:00
+CUST-0138,Bùi Duy Kiệt,MALE,kiet.bui@gmail.com,0857008860,"298 Đường Lê Hồng Phong, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-11-01T13:00:00
+CUST-0139,Ngô Đức Nam,MALE,nam.ngo@outlook.com.vn,0918233984,"387 Đường Lê Duẩn, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2024-10-17T13:00:00
+CUST-0140,Bùi Hồng Hương,FEMALE,huong.bui@fpt.edu.vn,0861016668,"89 Đường 3 Tháng 2, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-10-30T13:00:00
+CUST-0141,Đỗ Duy Nam,MALE,nam.đo@gmail.com,0790339740,"327 Đường Nguyễn Văn Linh, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-23T13:00:00
+CUST-0142,Bùi Hồng Phương,FEMALE,phuong.bui@outlook.com.vn,0914293968,"85 Đường Mậu Thân, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-12-14T13:00:00
+CUST-0143,Nguyễn Phương Lan,FEMALE,lan.nguyen@fpt.edu.vn,0979996504,"389 Đường Nguyễn Văn Cừ, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-11-27T13:00:00
+CUST-0144,Trần Đình Phong,MALE,phong.tran@outlook.com.vn,0911426265,"320 Đường Nguyễn Thị Minh Khai, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-01-22T13:00:00
+CUST-0145,Trần Quỳnh Trúc,FEMALE,truc.tran@outlook.com.vn,0778886101,"399 Đường Lê Hồng Phong, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-11-10T13:00:00
+CUST-0146,Vũ Thành Duy,MALE,duy.vu@outlook.com.vn,0939826224,"69 Đường Nguyễn Văn Linh, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-01-19T13:00:00
+CUST-0147,Vũ Trúc Lan,FEMALE,lan.vu@gmail.com,0974379937,"410 Đường Nguyễn Trãi, Quận Đống Đa, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-11-27T13:00:00
+CUST-0148,Ngô Anh Trung,MALE,trung.ngo@outlook.com.vn,0389245937,"303 Đường Tràng Tiền, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-10-01T13:00:00
+CUST-0149,Bùi Minh Anh,MALE,anh.bui@yahoo.com,0866519398,"219 Đường Tô Hiệu, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-11T13:00:00
+CUST-0150,Dương Lâm Khoa,MALE,khoa.duong@fpt.edu.vn,0857243426,"415 Đường Võ Văn Tần, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-11-07T13:00:00
+CUST-0151,Đặng Mai Hạnh,FEMALE,hanh.đang@vnu.edu.vn,0831135290,"113 Đường Trần Văn Khéo, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-01-28T13:00:00
+CUST-0152,Phạm Quang Duy,MALE,duy.pham@hust.edu.vn,0839375679,"30 Đường Lê Hồng Phong, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-09T13:00:00
+CUST-0153,Vũ Hữu Nam,MALE,nam.vu@outlook.com.vn,0985457387,"468 Đường Trần Văn Khéo, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-01-07T13:00:00
+CUST-0154,Nguyễn Hữu Hùng,MALE,hung.nguyen@outlook.com.vn,0971238282,"242 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-03-07T13:00:00
+CUST-0155,Lê Hoàng Anh,MALE,anh.le@hust.edu.vn,0909379660,"69 Đường Kim Mã, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-09-08T13:00:00
+CUST-0156,Lê Phương Yến,FEMALE,yen.le@fpt.edu.vn,0914785969,"365 Đường Lê Hồng Phong, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-03-13T13:00:00
+CUST-0157,Dương Lâm Việt,MALE,viet.duong@gmail.com,0839125134,"528 Đường Chùa Bộc, Quận Đống Đa, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-31T13:00:00
+CUST-0158,Bùi Quỳnh Chi,FEMALE,chi.bui@yahoo.com,0858282742,"59 Đường Hùng Vương, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-06-05T13:00:00
+CUST-0159,Võ Diệu Hạnh,FEMALE,hanh.vo@gmail.com,0797676772,"304 Đường Trần Hưng Đạo, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-02-14T13:00:00
+CUST-0160,Đặng Trúc Yến,FEMALE,yen.đang@vnu.edu.vn,0837881914,"228 Đường Võ Nguyên Giáp, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,PLATINUM,ACTIVE,2025-04-18T13:00:00
+CUST-0161,Hồ Lâm Phong,MALE,phong.ho@yahoo.com,0860745171,"443 Đường Tràng Tiền, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-30T13:00:00
+CUST-0162,Ngô Phương Hoa,FEMALE,hoa.ngo@hust.edu.vn,0835849825,"278 Đường Hùng Vương, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2024-09-19T13:00:00
+CUST-0163,Lý Hữu Minh,MALE,minh.ly@yahoo.com,0380422325,"280 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-11-29T13:00:00
+CUST-0164,Võ Trúc Lan,FEMALE,lan.vo@gmail.com,0388457759,"69 Đường Quang Trung, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-11-18T13:00:00
+CUST-0165,Phạm Quốc Kiệt,MALE,kiet.pham@fpt.edu.vn,0865458929,"106 Đường Lê Duẩn, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-10-17T13:00:00
+CUST-0166,Nguyễn Quỳnh Yến,FEMALE,yen.nguyen@gmail.com,0770632424,"385 Đường Lê Duẩn, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-03-17T13:00:00
+CUST-0167,Nguyễn Khánh Hương,FEMALE,huong.nguyen@vnu.edu.vn,0381103712,"14 Đường Trần Duy Hưng, Quận Ba Đình, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-12-16T13:00:00
+CUST-0168,Dương Diệu Vy,FEMALE,vy.duong@outlook.com.vn,0771361115,"141 Đường Võ Nguyên Giáp, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-03-28T13:00:00
+CUST-0169,Trần Văn Long,MALE,long.tran@hust.edu.vn,0852753269,"107 Đường Đại lộ Hòa Bình, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-07T13:00:00
+CUST-0170,Bùi Minh Khoa,MALE,khoa.bui@vnu.edu.vn,0972341389,"313 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-09-22T13:00:00
+CUST-0171,Phạm Đình Dũng,MALE,dung.pham@vnu.edu.vn,0937613791,"140 Đường Quang Trung, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-11-06T13:00:00
+CUST-0172,Phan Đức Kiệt,MALE,kiet.phan@gmail.com,0910910430,"518 Đường Nguyễn Văn Cừ, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2024-11-05T13:00:00
+CUST-0173,Hồ Thảo Hạnh,FEMALE,hanh.ho@yahoo.com,0799241418,"405 Đường Tràng Tiền, Quận Ba Đình, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-05-07T13:00:00
+CUST-0174,Hoàng Thành Phong,MALE,phong.hoang@gmail.com,0903161799,"17 Đường Lê Duẩn, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-06-04T13:00:00
+CUST-0175,Lê Mai Nhi,FEMALE,nhi.le@outlook.com.vn,0794252410,"274 Đường Đại lộ Hòa Bình, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2025-05-01T13:00:00
+CUST-0176,Võ Mai Hoa,FEMALE,hoa.vo@hust.edu.vn,0779252419,"50 Đường Nguyễn Thị Minh Khai, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-06-03T13:00:00
+CUST-0177,Phạm Mai Phương,FEMALE,phuong.pham@fpt.edu.vn,0982086353,"386 Đường Lê Duẩn, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-14T13:00:00
+CUST-0178,Lê Thu Hoa,FEMALE,hoa.le@fpt.edu.vn,0381744518,"303 Đường Điện Biên Phủ, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-01-05T13:00:00
+CUST-0179,Hồ Anh Hoàng,MALE,hoang.ho@gmail.com,0837383206,"14 Đường Tràng Tiền, Quận Ba Đình, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2025-06-09T13:00:00
+CUST-0180,Ngô Thành Việt,MALE,viet.ngo@hust.edu.vn,0913836702,"242 Đường Lê Duẩn, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2024-09-16T13:00:00
+CUST-0181,Vũ Minh Bách,MALE,bach.vu@vnu.edu.vn,0919182619,"247 Đường 3 Tháng 2, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-12-30T13:00:00
+CUST-0182,Lý Thành Trung,MALE,trung.ly@gmail.com,0977431329,"465 Đường Chùa Bộc, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-11-13T13:00:00
+CUST-0183,Trần Lâm Sơn,MALE,son.tran@hust.edu.vn,0774741124,"340 Đường Trần Hưng Đạo, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-02-02T13:00:00
+CUST-0184,Phan Thị Ngọc,FEMALE,ngoc.phan@gmail.com,0862067883,"129 Đường Mậu Thân, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-02-16T13:00:00
+CUST-0185,Lê Diệu Vân,FEMALE,van.le@yahoo.com,0851994101,"344 Đường Đại lộ Hòa Bình, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-10-16T13:00:00
+CUST-0186,Nguyễn Vy Trúc,FEMALE,truc.nguyen@yahoo.com,0387066253,"157 Đường Võ Nguyên Giáp, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-04T13:00:00
+CUST-0187,Đỗ Diệu Hạnh,FEMALE,hanh.đo@hust.edu.vn,0770146263,"396 Đường Lạch Tray, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2024-12-08T13:00:00
+CUST-0188,Võ Anh Hoàng,MALE,hoang.vo@vnu.edu.vn,0838564205,"64 Đường Kim Mã, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-10-11T13:00:00
+CUST-0189,Đặng Vy Hương,FEMALE,huong.đang@vnu.edu.vn,0981334803,"185 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-12-29T13:00:00
+CUST-0190,Ngô Minh Tùng,MALE,tung.ngo@vnu.edu.vn,0905992937,"43 Đường Võ Nguyên Giáp, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-10T13:00:00
+CUST-0191,Bùi Thu Chi,FEMALE,chi.bui@gmail.com,0905932525,"118 Đường 3 Tháng 2, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-12-05T13:00:00
+CUST-0192,Trần Thảo Phương,FEMALE,phuong.tran@hust.edu.vn,0831545226,"183 Đường Nguyễn Văn Cừ, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2024-08-26T13:00:00
+CUST-0193,Hồ Duy Hoàng,MALE,hoang.ho@hust.edu.vn,0939264422,"191 Đường Nguyễn Thị Minh Khai, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-02-16T13:00:00
+CUST-0194,Đỗ Anh Minh,MALE,minh.đo@fpt.edu.vn,0971355215,"260 Đường Điện Biên Phủ, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-12-12T13:00:00
+CUST-0195,Hoàng Thành Hùng,MALE,hung.hoang@outlook.com.vn,0906762676,"495 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-02-14T13:00:00
+CUST-0196,Lê Trúc Hoa,FEMALE,hoa.le30@hust.edu.vn,0860541152,"499 Đường Quang Trung, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-11-01T13:00:00
+CUST-0197,Đỗ Diệu Linh,FEMALE,linh.đo94@outlook.com.vn,0901533688,"55 Đường Lê Duẩn, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-09-01T13:00:00
+CUST-0198,Dương Thị Vân,FEMALE,van.duong@gmail.com,0906149731,"88 Đường Kim Mã, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-04-11T13:00:00
+CUST-0199,Hoàng Anh Kiệt,MALE,kiet.hoang@outlook.com.vn,0854186256,"274 Đường Nguyễn Trãi, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-01-26T13:00:00
+CUST-0200,Phạm Duy Dũng,MALE,dung.pham17@fpt.edu.vn,0981158693,"246 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-04-30T13:00:00
+CUST-0201,Vũ Thành Dũng,MALE,dung.vu@yahoo.com,0799899217,"134 Đường Bà Triệu, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-04-30T13:00:00
+CUST-0202,Đỗ Thảo Vy,FEMALE,vy.đo@vnu.edu.vn,0834511686,"474 Đường Hùng Vương, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2025-06-03T13:00:00
+CUST-0203,Ngô Duy Khánh,MALE,khanh.ngo@gmail.com,0381622999,"357 Đường Phan Đăng Lưu, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-01-25T13:00:00
+CUST-0204,Vũ Duy Long,MALE,long.vu@hust.edu.vn,0770246299,"344 Đường Trần Văn Khéo, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-05-15T13:00:00
+CUST-0205,Hồ Khánh Vân,FEMALE,van.ho@yahoo.com,0905444713,"280 Đường Trần Hưng Đạo, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-04-25T13:00:00
+CUST-0206,Phạm Diệu Chi,FEMALE,chi.pham@fpt.edu.vn,0795082148,"182 Đường Nguyễn Trãi, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-02-27T13:00:00
+CUST-0207,Dương Thị Yến,FEMALE,yen.duong@hust.edu.vn,0905345786,"386 Đường Điện Biên Phủ, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-10-24T13:00:00
+CUST-0208,Lê Anh Tùng,MALE,tung.le@fpt.edu.vn,0795524140,"231 Đường Điện Biên Phủ, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-02-24T13:00:00
+CUST-0209,Hoàng Quang Hùng,MALE,hung.hoang87@outlook.com.vn,0850722903,"362 Đường Võ Nguyên Giáp, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-18T13:00:00
+CUST-0210,Võ Thu Anh,FEMALE,anh.vo@vnu.edu.vn,0389108589,"498 Đường Lê Duẩn, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-01-19T13:00:00
+CUST-0211,Đỗ Khánh Thảo,FEMALE,thao.đo@fpt.edu.vn,0854328309,"514 Đường Lê Duẩn, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,PLATINUM,ACTIVE,2025-01-28T13:00:00
+CUST-0212,Lý Diệu Hoa,FEMALE,hoa.ly@vnu.edu.vn,0839353875,"190 Đường Hùng Vương, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-10-11T13:00:00
+CUST-0213,Lê Thành Duy,MALE,duy.le@outlook.com.vn,0985135346,"306 Đường Hùng Vương, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-04-10T13:00:00
+CUST-0214,Võ Thảo Trinh,FEMALE,trinh.vo@vnu.edu.vn,0839173816,"159 Đường Lê Duẩn, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-27T13:00:00
+CUST-0215,Phan Vy Yến,FEMALE,yen.phan@hust.edu.vn,0985217525,"285 Đường Võ Văn Tần, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-03-15T13:00:00
+CUST-0216,Bùi Anh Tuấn,MALE,tuan.bui@gmail.com,0989666676,"19 Đường Quang Trung, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-09-11T13:00:00
+CUST-0217,Phạm Thị Hương,FEMALE,huong.pham@outlook.com.vn,0935421689,"310 Đường Nguyễn Trãi, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2024-10-19T13:00:00
+CUST-0218,Hồ Quang Trung,MALE,trung.ho@gmail.com,0382575326,"221 Đường Chùa Bộc, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-09-24T13:00:00
+CUST-0219,Lê Hồng Hoa,FEMALE,hoa.le@hust.edu.vn,0384890901,"431 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-04-07T13:00:00
+CUST-0220,Đặng Hồng Vy,FEMALE,vy.đang@vnu.edu.vn,0930461849,"528 Đường Xuân Thủy, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-04-10T13:00:00
+CUST-0221,Hoàng Ngọc Chi,FEMALE,chi.hoang@outlook.com.vn,0939348356,"217 Đường Trần Duy Hưng, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-10-06T13:00:00
+CUST-0222,Phan Thị Lan,FEMALE,lan.phan@outlook.com.vn,0919721811,"275 Đường Kim Mã, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-04-19T13:00:00
+CUST-0223,Dương Thị Ngọc,FEMALE,ngoc.duong@hust.edu.vn,0975611002,"453 Đường Tràng Tiền, Quận Đống Đa, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2025-01-23T13:00:00
+CUST-0224,Lý Minh Trung,MALE,trung.ly@fpt.edu.vn,0981667467,"65 Đường Chùa Bộc, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,PLATINUM,ACTIVE,2025-03-20T13:00:00
+CUST-0225,Trần Vy Chi,FEMALE,chi.tran@hust.edu.vn,0837296590,"120 Đường Trần Duy Hưng, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-10-27T13:00:00
+CUST-0226,Nguyễn Thảo Hà,FEMALE,ha.nguyen@hust.edu.vn,0908993588,"259 Đường Tô Hiệu, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-11-24T13:00:00
+CUST-0227,Lê Quang Long,MALE,long.le@fpt.edu.vn,0900287721,"289 Đường Trần Hưng Đạo, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-15T13:00:00
+CUST-0228,Đặng Hoàng Phong,MALE,phong.đang@outlook.com.vn,0917797177,"110 Đường Nguyễn Thị Minh Khai, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-05-22T13:00:00
+CUST-0229,Đặng Hữu Long,MALE,long.đang@gmail.com,0834883755,"344 Đường Trần Duy Hưng, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-10-10T13:00:00
+CUST-0230,Hồ Thành Bách,MALE,bach.ho@vnu.edu.vn,0911305548,"173 Đường Lê Duẩn, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-11-12T13:00:00
+CUST-0231,Trần Phương Giang,FEMALE,giang.tran@gmail.com,0916373516,"473 Đường Tô Hiệu, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-09-24T13:00:00
+CUST-0232,Lê Văn Khánh,MALE,khanh.le@yahoo.com,0908697829,"334 Đường Tố Hữu, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-11-25T13:00:00
+CUST-0233,Vũ Thành Phong,MALE,phong.vu@vnu.edu.vn,0866547226,"227 Đường Lê Hồng Phong, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-12T13:00:00
+CUST-0234,Đỗ Thảo Vy,FEMALE,vy.đo@fpt.edu.vn,0852885158,"297 Đường Tô Hiệu, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2024-11-05T13:00:00
+CUST-0235,Ngô Ngọc Trang,FEMALE,trang.ngo@hust.edu.vn,0382003424,"307 Đường Lê Duẩn, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-09-05T13:00:00
+CUST-0236,Nguyễn Linh Mai,FEMALE,mai.nguyen@hust.edu.vn,0838386384,"431 Đường Nguyễn Kiệm, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,GOLD,ACTIVE,2024-12-31T13:00:00
+CUST-0237,Đặng Hồng Thảo,FEMALE,thao.đang@yahoo.com,0939735989,"186 Đường Trần Duy Hưng, Quận Đống Đa, TP. Hà Nội",Hà Nội,PLATINUM,ACTIVE,2025-05-02T13:00:00
+CUST-0238,Lê Thành Khánh,MALE,khanh.le84@outlook.com.vn,0916064842,"163 Đường Võ Văn Tần, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-12-26T13:00:00
+CUST-0239,Bùi Thảo Anh,FEMALE,anh.bui38@yahoo.com,0854798515,"430 Đường Trần Hưng Đạo, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-11-15T13:00:00
+CUST-0240,Trần Phương Hà,FEMALE,ha.tran@hust.edu.vn,0975439878,"461 Đường Quang Trung, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-02-05T13:00:00
+CUST-0241,Nguyễn Minh Anh,MALE,anh.nguyen@vnu.edu.vn,0916484085,"49 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-03-03T13:00:00
+CUST-0242,Phan Hữu Hải,MALE,hai.phan@yahoo.com,0798013361,"78 Đường Tô Hiệu, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-03-23T13:00:00
+CUST-0243,Nguyễn Mai Hoa,FEMALE,hoa.nguyen@yahoo.com,0911024819,"466 Đường Võ Nguyên Giáp, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-10-31T13:00:00
+CUST-0244,Phan Thảo Mai,FEMALE,mai.phan@vnu.edu.vn,0790919015,"93 Đường Phan Đăng Lưu, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-10-28T13:00:00
+CUST-0245,Vũ Thảo Trang,FEMALE,trang.vu@hust.edu.vn,0772832684,"16 Đường Tràng Tiền, Quận Đống Đa, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-08-29T13:00:00
+CUST-0246,Lê Thị Trinh,FEMALE,trinh.le@yahoo.com,0836881435,"169 Đường Mậu Thân, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-01-31T13:00:00
+CUST-0247,Phạm Thảo Trinh,FEMALE,trinh.pham@gmail.com,0908781414,"343 Đường Trần Duy Hưng, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-02-09T13:00:00
+CUST-0248,Trần Ngọc Giang,FEMALE,giang.tran@vnu.edu.vn,0977759492,"443 Đường Lê Hồng Phong, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-31T13:00:00
+CUST-0249,Phạm Thành Khoa,MALE,khoa.pham@outlook.com.vn,0865257775,"184 Đường Đại lộ Hòa Bình, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-29T13:00:00
+CUST-0250,Dương Quỳnh Hạnh,FEMALE,hanh.duong@vnu.edu.vn,0934110809,"42 Đường Mậu Thân, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-09-04T13:00:00
+CUST-0251,Lý Anh Minh,MALE,minh.ly@vnu.edu.vn,0976394278,"519 Đường Quang Trung, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-02-07T13:00:00
+CUST-0252,Dương Duy Hải,MALE,hai.duong71@outlook.com.vn,0792722992,"242 Đường Võ Văn Tần, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-12-02T13:00:00
+CUST-0253,Phạm Phương Nhi,FEMALE,nhi.pham@hust.edu.vn,0976770051,"274 Đường Lê Hồng Phong, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-03-12T13:00:00
+CUST-0254,Vũ Minh Tùng,MALE,tung.vu@outlook.com.vn,0851846386,"11 Đường Võ Nguyên Giáp, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-03-30T13:00:00
+CUST-0255,Võ Ngọc Nhi,FEMALE,nhi.vo@hust.edu.vn,0854322259,"343 Đường Nguyễn Kiệm, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-10-06T13:00:00
+CUST-0256,Đỗ Phương Trinh,FEMALE,trinh.đo@yahoo.com,0986030299,"155 Đường Nguyễn Trãi, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-01-28T13:00:00
+CUST-0257,Lý Diệu Anh,FEMALE,anh.ly@fpt.edu.vn,0830413797,"151 Đường Tố Hữu, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-03-08T13:00:00
+CUST-0258,Bùi Đình Hải,MALE,hai.bui@fpt.edu.vn,0855799136,"212 Đường Nguyễn Trãi, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-09-24T13:00:00
+CUST-0259,Đỗ Quỳnh Anh,FEMALE,anh.đo@gmail.com,0912799088,"6 Đường 3 Tháng 2, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-11-01T13:00:00
+CUST-0260,Đặng Thị Nhi,FEMALE,nhi.đang@fpt.edu.vn,0383765991,"243 Đường Trần Duy Hưng, Quận Đống Đa, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2025-04-28T13:00:00
+CUST-0261,Hoàng Quang Khoa,MALE,khoa.hoang58@hust.edu.vn,0863009818,"423 Đường Tràng Tiền, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-22T13:00:00
+CUST-0262,Vũ Đình Huy,MALE,huy.vu@fpt.edu.vn,0796959463,"188 Đường Tô Hiệu, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-08-29T13:00:00
+CUST-0263,Võ Khánh Trinh,FEMALE,trinh.vo@yahoo.com,0976213721,"58 Đường Lê Hồng Phong, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-06-07T13:00:00
+CUST-0264,Ngô Quỳnh Chi,FEMALE,chi.ngo14@hust.edu.vn,0836114351,"63 Đường Nguyễn Văn Cừ, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,GOLD,ACTIVE,2025-03-12T13:00:00
+CUST-0265,Đỗ Thị Giang,FEMALE,giang.đo@hust.edu.vn,0858430988,"41 Đường Chùa Bộc, Quận Ba Đình, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-06-09T13:00:00
+CUST-0266,Lê Khánh Phương,FEMALE,phuong.le@gmail.com,0976693801,"360 Đường Lê Hồng Phong, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,GOLD,ACTIVE,2025-01-19T13:00:00
+CUST-0267,Phạm Quốc Bách,MALE,bach.pham@vnu.edu.vn,0389042681,"124 Đường Quang Trung, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-01-29T13:00:00
+CUST-0268,Lý Lâm Tùng,MALE,tung.ly@hust.edu.vn,0867697357,"498 Đường Đại lộ Hòa Bình, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-05-06T13:00:00
+CUST-0269,Vũ Quốc Phong,MALE,phong.vu@outlook.com.vn,0976588043,"82 Đường Quang Trung, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-03-10T13:00:00
+CUST-0270,Võ Phương Trinh,FEMALE,trinh.vo39@yahoo.com,0862373334,"164 Đường Tràng Tiền, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-04-09T13:00:00
+CUST-0271,Lý Thảo Chi,FEMALE,chi.ly@fpt.edu.vn,0830807595,"192 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,PLATINUM,ACTIVE,2024-09-21T13:00:00
+CUST-0272,Hoàng Trúc Trinh,FEMALE,trinh.hoang@outlook.com.vn,0980867808,"473 Đường Mậu Thân, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,GOLD,ACTIVE,2024-09-17T13:00:00
+CUST-0273,Võ Thị Trang,FEMALE,trang.vo@outlook.com.vn,0853691559,"247 Đường Kim Mã, Quận Ba Đình, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-12-16T13:00:00
+CUST-0274,Phan Diệu Giang,FEMALE,giang.phan@yahoo.com,0385564729,"107 Đường Trần Hưng Đạo, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-02-09T13:00:00
+CUST-0275,Đặng Diệu Giang,FEMALE,giang.đang@hust.edu.vn,0982702672,"503 Đường Lê Hồng Phong, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-08-26T13:00:00
+CUST-0276,Dương Hoàng Nam,MALE,nam.duong@outlook.com.vn,0980347175,"268 Đường Hùng Vương, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-11-11T13:00:00
+CUST-0277,Trần Thảo Anh,FEMALE,anh.tran@hust.edu.vn,0939982455,"85 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-14T13:00:00
+CUST-0278,Võ Đức Hải,MALE,hai.vo@yahoo.com,0855699611,"329 Đường Trần Hưng Đạo, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-01-24T13:00:00
+CUST-0279,Bùi Đình Bách,MALE,bach.bui@yahoo.com,0979876220,"86 Đường Kim Mã, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-11-18T13:00:00
+CUST-0280,Trần Linh Hạnh,FEMALE,hanh.tran@yahoo.com,0900681149,"239 Đường Phan Đăng Lưu, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-01-15T13:00:00
+CUST-0281,Võ Đức Khánh,MALE,khanh.vo@outlook.com.vn,0980055778,"186 Đường Trần Hưng Đạo, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-10-19T13:00:00
+CUST-0282,Đỗ Duy Khoa,MALE,khoa.đo@fpt.edu.vn,0798457831,"271 Đường Võ Nguyên Giáp, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-06-04T13:00:00
+CUST-0283,Nguyễn Lâm Minh,MALE,minh.nguyen@gmail.com,0974780774,"12 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-03-05T13:00:00
+CUST-0284,Vũ Hoàng Anh,MALE,anh.vu@hust.edu.vn,0932663416,"296 Đường Kim Mã, Quận Ba Đình, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-09-10T13:00:00
+CUST-0285,Ngô Phương Lan,FEMALE,lan.ngo@hust.edu.vn,0982417974,"333 Đường Trần Hưng Đạo, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-15T13:00:00
+CUST-0286,Đặng Ngọc Ngọc,FEMALE,ngoc.đang@fpt.edu.vn,0862703120,"324 Đường Tố Hữu, Quận Đống Đa, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-09-27T13:00:00
+CUST-0287,Phan Trúc Hoa,FEMALE,hoa.phan@fpt.edu.vn,0971204618,"395 Đường Kim Mã, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-04-08T13:00:00
+CUST-0288,Ngô Hoàng Bách,MALE,bach.ngo@fpt.edu.vn,0930371837,"48 Đường Nguyễn Văn Linh, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2024-09-01T13:00:00
+CUST-0289,Đặng Linh Ngọc,FEMALE,ngoc.đang@gmail.com,0935031365,"127 Đường Kim Mã, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-02-05T13:00:00
+CUST-0290,Nguyễn Duy Kiệt,MALE,kiet.nguyen@hust.edu.vn,0832513271,"66 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-03-23T13:00:00
+CUST-0291,Hồ Hữu Minh,MALE,minh.ho@hust.edu.vn,0773585730,"261 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2024-10-04T13:00:00
+CUST-0292,Hồ Khánh Hạnh,FEMALE,hanh.ho@outlook.com.vn,0773928557,"75 Đường Trần Hưng Đạo, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-10-22T13:00:00
+CUST-0293,Hoàng Quang Hoàng,MALE,hoang.hoang@vnu.edu.vn,0770862095,"401 Đường Xuân Thủy, Quận Đống Đa, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-09-28T13:00:00
+CUST-0294,Ngô Duy Việt,MALE,viet.ngo@yahoo.com,0976511810,"211 Đường Nguyễn Trãi, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-03T13:00:00
+CUST-0295,Trần Thảo Phương,FEMALE,phuong.tran@yahoo.com,0857899405,"18 Đường Lạch Tray, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,GOLD,ACTIVE,2025-02-23T13:00:00
+CUST-0296,Đỗ Ngọc Yến,FEMALE,yen.đo@outlook.com.vn,0850586509,"316 Đường Lạch Tray, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-02-19T13:00:00
+CUST-0297,Đặng Hồng Hương,FEMALE,huong.đang81@fpt.edu.vn,0796338392,"442 Đường Võ Văn Tần, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-03-16T13:00:00
+CUST-0298,Ngô Diệu Nhi,FEMALE,nhi.ngo@outlook.com.vn,0972897558,"336 Đường Võ Nguyên Giáp, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-08-25T13:00:00
+CUST-0299,Đặng Trúc Hạnh,FEMALE,hanh.đang12@vnu.edu.vn,0865776004,"312 Đường Nguyễn Trãi, Quận Đống Đa, TP. Hà Nội",Hà Nội,PLATINUM,ACTIVE,2025-02-20T13:00:00
+CUST-0300,Dương Trúc Thảo,FEMALE,thao.duong@fpt.edu.vn,0798899210,"276 Đường Nguyễn Văn Linh, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-02T13:00:00
+CUST-0301,Phạm Khánh Lan,FEMALE,lan.pham@fpt.edu.vn,0836931572,"43 Đường Lê Hồng Phong, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2024-11-26T13:00:00
+CUST-0302,Trần Lâm Trung,MALE,trung.tran@gmail.com,0976613906,"158 Đường Trần Hưng Đạo, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-16T13:00:00
+CUST-0303,Lê Hồng Phương,FEMALE,phuong.le@fpt.edu.vn,0779981364,"89 Đường Tràng Tiền, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-05-15T13:00:00
+CUST-0304,Đặng Ngọc Phương,FEMALE,phuong.đang@fpt.edu.vn,0796227837,"253 Đường Trần Hưng Đạo, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-11-01T13:00:00
+CUST-0305,Phan Duy Tuấn,MALE,tuan.phan@vnu.edu.vn,0916655355,"363 Đường 3 Tháng 2, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-10-26T13:00:00
+CUST-0306,Bùi Thị Hương,FEMALE,huong.bui@yahoo.com,0935211039,"118 Đường Trần Hưng Đạo, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-10-11T13:00:00
+CUST-0307,Nguyễn Hồng Hạnh,FEMALE,hanh.nguyen@hust.edu.vn,0933884879,"390 Đường Nguyễn Trãi, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-09-13T13:00:00
+CUST-0308,Nguyễn Thị Ngọc,FEMALE,ngoc.nguyen44@hust.edu.vn,0939407016,"304 Đường Lê Duẩn, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2024-11-24T13:00:00
+CUST-0309,Phạm Quang Nam,MALE,nam.pham81@hust.edu.vn,0977981238,"547 Đường Điện Biên Phủ, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-10-02T13:00:00
+CUST-0310,Vũ Văn Hoàng,MALE,hoang.vu@hust.edu.vn,0855543840,"291 Đường Lê Duẩn, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-12-17T13:00:00
+CUST-0311,Lý Quỳnh Lan,FEMALE,lan.ly@fpt.edu.vn,0388936392,"139 Đường Võ Nguyên Giáp, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-03-31T13:00:00
+CUST-0312,Bùi Lâm Sơn,MALE,son.bui@outlook.com.vn,0984826292,"330 Đường 3 Tháng 2, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-03-27T13:00:00
+CUST-0313,Hồ Mai Trúc,FEMALE,truc.ho@yahoo.com,0384742312,"242 Đường Điện Biên Phủ, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-05-27T13:00:00
+CUST-0314,Phan Trúc Chi,FEMALE,chi.phan@fpt.edu.vn,0988975267,"236 Đường Bà Triệu, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-06-02T13:00:00
+CUST-0315,Lý Diệu Hương,FEMALE,huong.ly@hust.edu.vn,0853312797,"442 Đường Nguyễn Văn Linh, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-19T13:00:00
+CUST-0316,Bùi Hoàng Trung,MALE,trung.bui@gmail.com,0389998808,"256 Đường Đại lộ Hòa Bình, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-11-19T13:00:00
+CUST-0317,Hồ Diệu Nhi,FEMALE,nhi.ho@fpt.edu.vn,0850347644,"60 Đường Kim Mã, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-29T13:00:00
+CUST-0318,Võ Anh Tuấn,MALE,tuan.vo@outlook.com.vn,0791298266,"469 Đường Mậu Thân, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-02-26T13:00:00
+CUST-0319,Lý Khánh Hà,FEMALE,ha.ly@vnu.edu.vn,0852111751,"392 Đường Mậu Thân, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-05-18T13:00:00
+CUST-0320,Ngô Mai Trinh,FEMALE,trinh.ngo@outlook.com.vn,0852222064,"125 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2025-02-26T13:00:00
+CUST-0321,Nguyễn Đình Hùng,MALE,hung.nguyen@yahoo.com,0777780973,"469 Đường Tô Hiệu, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-04-30T13:00:00
+CUST-0322,Bùi Quốc Duy,MALE,duy.bui54@gmail.com,0869830220,"310 Đường Nguyễn Trãi, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-04-26T13:00:00
+CUST-0323,Nguyễn Quỳnh Linh,FEMALE,linh.nguyen@hust.edu.vn,0854999827,"100 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2024-12-26T13:00:00
+CUST-0324,Phan Hữu Khoa,MALE,khoa.phan@vnu.edu.vn,0791472145,"219 Đường Mậu Thân, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-15T13:00:00
+CUST-0325,Bùi Ngọc Khánh,MALE,khanh.bui@vnu.edu.vn,0917946954,"137 Đường Lê Hồng Phong, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-09-28T13:00:00
+CUST-0326,Đặng Anh Kiệt,MALE,kiet.đang@fpt.edu.vn,0989343010,"428 Đường Nguyễn Kiệm, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-12-12T13:00:00
+CUST-0327,Đặng Quốc Hùng,MALE,hung.đang@vnu.edu.vn,0853441448,"346 Đường Lê Duẩn, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-26T13:00:00
+CUST-0328,Dương Mai Hà,FEMALE,ha.duong@vnu.edu.vn,0857702727,"62 Đường Võ Nguyên Giáp, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-01-07T13:00:00
+CUST-0329,Bùi Minh Duy,MALE,duy.bui@outlook.com.vn,0790395512,"174 Đường Nguyễn Kiệm, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-11-22T13:00:00
+CUST-0330,Lê Lâm Việt,MALE,viet.le@fpt.edu.vn,0970461735,"314 Đường Hùng Vương, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-11-30T13:00:00
+CUST-0331,Ngô Phương Lan,FEMALE,lan.ngo@fpt.edu.vn,0778078235,"151 Đường Lê Hồng Phong, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-04-20T13:00:00
+CUST-0332,Dương Quang Minh,MALE,minh.duong@gmail.com,0930768104,"483 Đường Lê Hồng Phong, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-04-18T13:00:00
+CUST-0333,Đặng Thành Việt,MALE,viet.đang@outlook.com.vn,0909435334,"125 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-03-21T13:00:00
+CUST-0334,Hoàng Vy Hạnh,FEMALE,hanh.hoang@yahoo.com,0791385854,"77 Đường Nguyễn Văn Linh, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-12-18T13:00:00
+CUST-0335,Đặng Quỳnh Trang,FEMALE,trang.đang@yahoo.com,0770160166,"369 Đường Tô Hiệu, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-02-28T13:00:00
+CUST-0336,Hồ Lâm Duy,MALE,duy.ho@outlook.com.vn,0917921717,"234 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-01-28T13:00:00
+CUST-0337,Lý Quỳnh Hà,FEMALE,ha.ly@fpt.edu.vn,0977701715,"361 Đường Nguyễn Văn Cừ, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-05T13:00:00
+CUST-0338,Đặng Hồng Mai,FEMALE,mai.đang@fpt.edu.vn,0978148769,"167 Đường Bà Triệu, Quận Ba Đình, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2024-11-25T13:00:00
+CUST-0339,Trần Hồng Trinh,FEMALE,trinh.tran@hust.edu.vn,0386958321,"479 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-04-21T13:00:00
+CUST-0340,Dương Khánh Phương,FEMALE,phuong.duong@gmail.com,0919196570,"5 Đường Chùa Bộc, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-03-25T13:00:00
+CUST-0341,Võ Hoàng Long,MALE,long.vo@fpt.edu.vn,0837335494,"13 Đường Hùng Vương, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-09-21T13:00:00
+CUST-0342,Vũ Đình Dũng,MALE,dung.vu@gmail.com,0978008514,"330 Đường Tố Hữu, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-11-14T13:00:00
+CUST-0343,Vũ Phương Linh,FEMALE,linh.vu@outlook.com.vn,0772386562,"78 Đường Nguyễn Trãi, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-28T13:00:00
+CUST-0344,Hồ Ngọc Khoa,MALE,khoa.ho@yahoo.com,0981267969,"465 Đường Trần Văn Khéo, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-02-14T13:00:00
+CUST-0345,Lê Thị Trinh,FEMALE,trinh.le@gmail.com,0773846895,"120 Đường Quang Trung, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-04-30T13:00:00
+CUST-0346,Lê Quang Huy,MALE,huy.le@hust.edu.vn,0778189137,"356 Đường Nguyễn Thị Minh Khai, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-06-04T13:00:00
+CUST-0347,Võ Linh Trinh,FEMALE,trinh.vo@hust.edu.vn,0976544209,"489 Đường Lê Duẩn, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-14T13:00:00
+CUST-0348,Đỗ Lâm Long,MALE,long.đo@outlook.com.vn,0904712814,"286 Đường Kim Mã, Quận Ba Đình, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-06-02T13:00:00
+CUST-0349,Hồ Quỳnh Trinh,FEMALE,trinh.ho@vnu.edu.vn,0987524372,"153 Đường Lê Lợi, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-03-23T13:00:00
+CUST-0350,Dương Diệu Phương,FEMALE,phuong.duong16@yahoo.com,0937239504,"313 Đường Trần Văn Khéo, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-09-10T13:00:00
+CUST-0351,Phạm Hồng Phương,FEMALE,phuong.pham96@outlook.com.vn,0774286047,"104 Đường Lạch Tray, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,GOLD,ACTIVE,2024-12-10T13:00:00
+CUST-0352,Dương Thảo Thảo,FEMALE,thao.duong@hust.edu.vn,0974414967,"537 Đường Bà Triệu, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-09T13:00:00
+CUST-0353,Phan Ngọc Hùng,MALE,hung.phan@yahoo.com,0910618175,"39 Đường Nguyễn Văn Linh, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-04-23T13:00:00
+CUST-0354,Nguyễn Ngọc Sơn,MALE,son.nguyen@yahoo.com,0831119269,"306 Đường Phan Đăng Lưu, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-05-02T13:00:00
+CUST-0355,Đỗ Khánh Trúc,FEMALE,truc.đo@fpt.edu.vn,0855421406,"276 Đường Trần Hưng Đạo, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-05T13:00:00
+CUST-0356,Võ Quốc Long,MALE,long.vo@vnu.edu.vn,0382712863,"110 Đường Phan Đăng Lưu, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-05-04T13:00:00
+CUST-0357,Bùi Lâm Bách,MALE,bach.bui@hust.edu.vn,0907200642,"8 Đường Hùng Vương, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-10-01T13:00:00
+CUST-0358,Võ Hồng Lan,FEMALE,lan.vo@outlook.com.vn,0793067198,"61 Đường Võ Nguyên Giáp, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-04-24T13:00:00
+CUST-0359,Phan Minh Tuấn,MALE,tuan.phan@outlook.com.vn,0774328063,"503 Đường Nguyễn Văn Cừ, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-10-28T13:00:00
+CUST-0360,Hồ Thị Giang,FEMALE,giang.ho@fpt.edu.vn,0909376184,"42 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-19T13:00:00
+CUST-0361,Ngô Hoàng Nam,MALE,nam.ngo@gmail.com,0938782931,"487 Đường Nguyễn Trãi, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2025-05-17T13:00:00
+CUST-0362,Phạm Đức Hùng,MALE,hung.pham@gmail.com,0980417929,"230 Đường Võ Văn Tần, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-02-26T13:00:00
+CUST-0363,Vũ Hồng Phương,FEMALE,phuong.vu@vnu.edu.vn,0971982530,"128 Đường Xuân Thủy, Quận Đống Đa, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-11-09T13:00:00
+CUST-0364,Lê Quang Hải,MALE,hai.le@yahoo.com,0773902196,"11 Đường Lê Lợi, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-04-25T13:00:00
+CUST-0365,Hồ Đình Khoa,MALE,khoa.ho32@vnu.edu.vn,0772324876,"95 Đường Võ Văn Tần, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-01-06T13:00:00
+CUST-0366,Phan Thu Hương,FEMALE,huong.phan@yahoo.com,0931819588,"288 Đường Mậu Thân, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-13T13:00:00
+CUST-0367,Ngô Linh Chi,FEMALE,chi.ngo@outlook.com.vn,0982005436,"111 Đường Lê Duẩn, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2024-09-07T13:00:00
+CUST-0368,Lê Thị Chi,FEMALE,chi.le@fpt.edu.vn,0791137995,"240 Đường Tràng Tiền, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-12-25T13:00:00
+CUST-0369,Phạm Hồng Trúc,FEMALE,truc.pham@fpt.edu.vn,0936317970,"187 Đường Trần Duy Hưng, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-04-01T13:00:00
+CUST-0370,Võ Ngọc Hoàng,MALE,hoang.vo@yahoo.com,0863520904,"433 Đường Võ Văn Tần, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-12-16T13:00:00
+CUST-0371,Phạm Duy Hải,MALE,hai.pham@vnu.edu.vn,0859298316,"478 Đường Trần Văn Khéo, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-11-02T13:00:00
+CUST-0372,Hồ Quốc Trung,MALE,trung.ho15@fpt.edu.vn,0389392906,"548 Đường Tô Hiệu, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-04-20T13:00:00
+CUST-0373,Võ Ngọc Hạnh,FEMALE,hanh.vo71@hust.edu.vn,0906325431,"29 Đường Võ Nguyên Giáp, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2024-10-15T13:00:00
+CUST-0374,Ngô Hồng Phương,FEMALE,phuong.ngo@gmail.com,0985701658,"217 Đường Trần Hưng Đạo, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-04-29T13:00:00
+CUST-0375,Bùi Thành Dũng,MALE,dung.bui@gmail.com,0795016579,"73 Đường Nguyễn Văn Linh, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-02-25T13:00:00
+CUST-0376,Lê Quốc Duy,MALE,duy.le@vnu.edu.vn,0917933554,"69 Đường Đại lộ Hòa Bình, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-10-21T13:00:00
+CUST-0377,Võ Hữu Kiệt,MALE,kiet.vo@fpt.edu.vn,0798479513,"188 Đường Nguyễn Kiệm, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-05-01T13:00:00
+CUST-0378,Trần Ngọc Vy,FEMALE,vy.tran@yahoo.com,0772380468,"459 Đường Trần Văn Khéo, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2025-05-30T13:00:00
+CUST-0379,Hoàng Thị Hương,FEMALE,huong.hoang99@vnu.edu.vn,0795695579,"316 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-04T13:00:00
+CUST-0380,Lê Quốc Kiệt,MALE,kiet.le@vnu.edu.vn,0974025472,"191 Đường Kim Mã, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2025-03-23T13:00:00
+CUST-0381,Lê Thị Hà,FEMALE,ha.le@hust.edu.vn,0832745238,"156 Đường Quang Trung, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-09-06T13:00:00
+CUST-0382,Lê Hữu Hùng,MALE,hung.le@vnu.edu.vn,0387275208,"301 Đường Võ Nguyên Giáp, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2025-03-26T13:00:00
+CUST-0383,Ngô Anh Trung,MALE,trung.ngo@fpt.edu.vn,0917028140,"370 Đường Tô Hiệu, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-12T13:00:00
+CUST-0384,Bùi Duy Khánh,MALE,khanh.bui60@yahoo.com,0934301871,"374 Đường Đại lộ Hòa Bình, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-11-03T13:00:00
+CUST-0385,Phan Thị Ngọc,FEMALE,ngoc.phan@hust.edu.vn,0975478137,"172 Đường Nguyễn Văn Cừ, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2024-11-04T13:00:00
+CUST-0386,Hồ Đức Tùng,MALE,tung.ho@gmail.com,0831234785,"11 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-21T13:00:00
+CUST-0387,Vũ Linh Trinh,FEMALE,trinh.vu@outlook.com.vn,0983264870,"479 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-06-08T13:00:00
+CUST-0388,Lê Thảo Chi,FEMALE,chi.le@outlook.com.vn,0914627301,"497 Đường Nguyễn Văn Cừ, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-01-28T13:00:00
+CUST-0389,Đỗ Thành Nam,MALE,nam.đo@yahoo.com,0978904290,"370 Đường Nguyễn Văn Linh, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-01-21T13:00:00
+CUST-0390,Phan Mai Hoa,FEMALE,hoa.phan@vnu.edu.vn,0864818321,"328 Đường Tràng Tiền, Quận Ba Đình, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-01-06T13:00:00
+CUST-0391,Hoàng Thành Hoàng,MALE,hoang.hoang@outlook.com.vn,0918952028,"353 Đường Võ Nguyên Giáp, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2025-03-18T13:00:00
+CUST-0392,Trần Thu Hương,FEMALE,huong.tran@fpt.edu.vn,0938988816,"22 Đường 3 Tháng 2, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-01-01T13:00:00
+CUST-0393,Hồ Linh Anh,FEMALE,anh.ho@hust.edu.vn,0795240132,"319 Đường Bà Triệu, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-04-04T13:00:00
+CUST-0394,Trần Trúc Mai,FEMALE,mai.tran@hust.edu.vn,0910760310,"485 Đường Lạch Tray, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-31T13:00:00
+CUST-0395,Nguyễn Thảo Trang,FEMALE,trang.nguyen@gmail.com,0911939325,"361 Đường Phan Đăng Lưu, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-09-26T13:00:00
+CUST-0396,Ngô Quốc Khánh,MALE,khanh.ngo@outlook.com.vn,0831190833,"106 Đường Nguyễn Trãi, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2024-09-24T13:00:00
+CUST-0397,Dương Minh Tùng,MALE,tung.duong@vnu.edu.vn,0987125663,"326 Đường Xuân Thủy, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-04-14T13:00:00
+CUST-0398,Đặng Trúc Vân,FEMALE,van.đang@outlook.com.vn,0868015716,"459 Đường Nguyễn Văn Cừ, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-11-13T13:00:00
+CUST-0399,Hoàng Hoàng Sơn,MALE,son.hoang@fpt.edu.vn,0917520716,"127 Đường Lạch Tray, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-11-16T13:00:00
+CUST-0400,Hồ Hữu Hải,MALE,hai.ho@yahoo.com,0915353961,"290 Đường Trần Văn Khéo, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2025-01-21T13:00:00
+CUST-0401,Ngô Ngọc Anh,MALE,anh.ngo@fpt.edu.vn,0977967842,"506 Đường Phan Đăng Lưu, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-04-02T13:00:00
+CUST-0402,Nguyễn Thị Lan,FEMALE,lan.nguyen@vnu.edu.vn,0770269524,"537 Đường Lạch Tray, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2024-10-14T13:00:00
+CUST-0403,Phạm Linh Chi,FEMALE,chi.pham25@fpt.edu.vn,0794858800,"458 Đường Trần Văn Khéo, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-05-24T13:00:00
+CUST-0404,Lê Lâm Việt,MALE,viet.le@vnu.edu.vn,0987624671,"492 Đường Trần Văn Khéo, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-03-21T13:00:00
+CUST-0405,Đặng Khánh Chi,FEMALE,chi.đang@vnu.edu.vn,0836954500,"362 Đường Quang Trung, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-05-27T13:00:00
+CUST-0406,Ngô Minh Anh,MALE,anh.ngo@yahoo.com,0916556503,"91 Đường Kim Mã, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2025-05-07T13:00:00
+CUST-0407,Dương Mai Linh,FEMALE,linh.duong@fpt.edu.vn,0908507698,"27 Đường Võ Nguyên Giáp, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,PLATINUM,ACTIVE,2024-11-28T13:00:00
+CUST-0408,Bùi Vy Mai,FEMALE,mai.bui@vnu.edu.vn,0771357852,"211 Đường Võ Nguyên Giáp, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-02T13:00:00
+CUST-0409,Dương Quốc Việt,MALE,viet.duong84@gmail.com,0860496391,"73 Đường Lê Hồng Phong, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-09-11T13:00:00
+CUST-0410,Võ Mai Lan,FEMALE,lan.vo@fpt.edu.vn,0854846853,"189 Đường Trần Văn Khéo, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2024-09-18T13:00:00
+CUST-0411,Dương Linh Giang,FEMALE,giang.duong35@outlook.com.vn,0857489690,"159 Đường Mậu Thân, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2025-01-07T13:00:00
+CUST-0412,Dương Mai Lan,FEMALE,lan.duong@yahoo.com,0853644249,"158 Đường Đại lộ Hòa Bình, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-02-04T13:00:00
+CUST-0413,Ngô Anh Kiệt,MALE,kiet.ngo@gmail.com,0796603242,"185 Đường Hùng Vương, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-19T13:00:00
+CUST-0414,Hồ Thị Hoa,FEMALE,hoa.ho@fpt.edu.vn,0915941651,"517 Đường Xuân Thủy, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2024-09-15T13:00:00
+CUST-0415,Đỗ Lâm Khánh,MALE,khanh.đo@vnu.edu.vn,0867139155,"438 Đường Mậu Thân, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-16T13:00:00
+CUST-0416,Lê Khánh Yến,FEMALE,yen.le@outlook.com.vn,0384907851,"257 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,GOLD,ACTIVE,2025-03-27T13:00:00
+CUST-0417,Phan Mai Ngọc,FEMALE,ngoc.phan@outlook.com.vn,0909003486,"247 Đường Hùng Vương, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2024-11-23T13:00:00
+CUST-0418,Nguyễn Hoàng Huy,MALE,huy.nguyen@hust.edu.vn,0861343275,"87 Đường Nguyễn Văn Cừ, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,SILVER,ACTIVE,2024-10-01T13:00:00
+CUST-0419,Võ Minh Khoa,MALE,khoa.vo@hust.edu.vn,0912481569,"469 Đường Lê Hồng Phong, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-14T13:00:00
+CUST-0420,Đỗ Ngọc Bách,MALE,bach.đo@gmail.com,0852063459,"533 Đường Điện Biên Phủ, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-04-04T13:00:00
+CUST-0421,Dương Hoàng Trung,MALE,trung.duong@yahoo.com,0777242954,"191 Đường Quang Trung, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-11-28T13:00:00
+CUST-0422,Dương Quốc Hùng,MALE,hung.duong@hust.edu.vn,0908931734,"444 Đường Tố Hữu, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-25T13:00:00
+CUST-0423,Trần Đức Tùng,MALE,tung.tran@hust.edu.vn,0910867713,"299 Đường Kim Mã, Quận Thanh Xuân, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2024-11-26T13:00:00
+CUST-0424,Lê Phương Anh,FEMALE,anh.le@outlook.com.vn,0934362620,"466 Đường Hùng Vương, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2024-12-02T13:00:00
+CUST-0425,Bùi Anh Tuấn,MALE,tuan.bui@hust.edu.vn,0907256366,"102 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-14T13:00:00
+CUST-0426,Phan Anh Hoàng,MALE,hoang.phan@outlook.com.vn,0839004896,"140 Đường Nguyễn Văn Cừ, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,GOLD,ACTIVE,2024-08-27T13:00:00
+CUST-0427,Nguyễn Đình Hải,MALE,hai.nguyen@fpt.edu.vn,0797572158,"325 Đường Xuân Thủy, Quận Đống Đa, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-04-05T13:00:00
+CUST-0428,Võ Đình Hoàng,MALE,hoang.vo50@hust.edu.vn,0384494856,"59 Đường Trần Văn Khéo, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-05-13T13:00:00
+CUST-0429,Phạm Linh Thảo,FEMALE,thao.pham@hust.edu.vn,0987617075,"509 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-03-26T13:00:00
+CUST-0430,Trần Phương Ngọc,FEMALE,ngoc.tran@gmail.com,0982849939,"431 Đường Trần Hưng Đạo, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,GOLD,ACTIVE,2025-02-03T13:00:00
+CUST-0431,Ngô Ngọc Hà,FEMALE,ha.ngo@yahoo.com,0904165915,"496 Đường Võ Văn Tần, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-01-23T13:00:00
+CUST-0432,Bùi Minh Dũng,MALE,dung.bui@hust.edu.vn,0859759230,"77 Đường Lê Duẩn, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-11-26T13:00:00
+CUST-0433,Trần Quỳnh Hương,FEMALE,huong.tran93@yahoo.com,0381032664,"447 Đường Võ Văn Tần, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-01-02T13:00:00
+CUST-0434,Lý Đức Hoàng,MALE,hoang.ly@fpt.edu.vn,0851583776,"437 Đường Lê Duẩn, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-03-06T13:00:00
+CUST-0435,Vũ Hữu Dũng,MALE,dung.vu47@fpt.edu.vn,0795732788,"312 Đường Trần Văn Khéo, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-05T13:00:00
+CUST-0436,Đỗ Quốc Khánh,MALE,khanh.đo@gmail.com,0384908108,"101 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-31T13:00:00
+CUST-0437,Phan Ngọc Nhi,FEMALE,nhi.phan@fpt.edu.vn,0901722601,"470 Đường Hùng Vương, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2024-10-22T13:00:00
+CUST-0438,Bùi Minh Hải,MALE,hai.bui@gmail.com,0932194168,"18 Đường Lê Lợi, Thành phố Thủ Đức, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-10-08T13:00:00
+CUST-0439,Võ Ngọc Long,MALE,long.vo@yahoo.com,0774995641,"119 Đường Bà Triệu, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,SILVER,ACTIVE,2025-03-05T13:00:00
+CUST-0440,Dương Linh Vy,FEMALE,vy.duong@yahoo.com,0853683147,"124 Đường Đại lộ Hòa Bình, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-03-23T13:00:00
+CUST-0441,Hồ Anh Kiệt,MALE,kiet.ho@gmail.com,0907933496,"447 Đường Lê Duẩn, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2024-09-29T13:00:00
+CUST-0442,Hồ Thành Duy,MALE,duy.ho@hust.edu.vn,0860767899,"545 Đường Đại lộ Hòa Bình, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-12-30T13:00:00
+CUST-0443,Đặng Thảo Trúc,FEMALE,truc.đang@yahoo.com,0771795760,"357 Đường Võ Nguyên Giáp, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-09-23T13:00:00
+CUST-0444,Phạm Ngọc Trung,MALE,trung.pham@yahoo.com,0837246657,"93 Đường Lê Hồng Phong, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-04-04T13:00:00
+CUST-0445,Lê Vy Chi,FEMALE,chi.le@gmail.com,0916743380,"167 Đường Trần Hưng Đạo, Quận Sơn Trà, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-09-25T13:00:00
+CUST-0446,Nguyễn Minh Khoa,MALE,khoa.nguyen@outlook.com.vn,0919318374,"278 Đường Hùng Vương, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2024-09-19T13:00:00
+CUST-0447,Bùi Thành Dũng,MALE,dung.bui74@gmail.com,0777119918,"215 Đường Xuân Thủy, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2025-03-21T13:00:00
+CUST-0448,Hồ Linh Nhi,FEMALE,nhi.ho63@gmail.com,0771255213,"354 Đường Trần Duy Hưng, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-14T13:00:00
+CUST-0449,Trần Hồng Trúc,FEMALE,truc.tran@fpt.edu.vn,0973286326,"35 Đường Nguyễn Văn Cừ, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-06-04T13:00:00
+CUST-0450,Hồ Hữu Tuấn,MALE,tuan.ho@hust.edu.vn,0975626060,"537 Đường Nguyễn Trãi, Quận Ba Đình, TP. Hà Nội",Hà Nội,GOLD,ACTIVE,2024-11-07T13:00:00
+CUST-0451,Vũ Thành Duy,MALE,duy.vu@hust.edu.vn,0865504892,"457 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2024-11-14T13:00:00
+CUST-0452,Ngô Khánh Lan,FEMALE,lan.ngo@yahoo.com,0908562884,"168 Đường Quang Trung, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-09-06T13:00:00
+CUST-0453,Bùi Trúc Ngọc,FEMALE,ngoc.bui@gmail.com,0388105485,"310 Đường Võ Văn Tần, Quận 3, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-06-07T13:00:00
+CUST-0454,Võ Phương Trinh,FEMALE,trinh.vo27@hust.edu.vn,0838935449,"112 Đường Mậu Thân, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-03-03T13:00:00
+CUST-0455,Dương Anh Nam,MALE,nam.duong37@fpt.edu.vn,0986611062,"536 Đường Nguyễn Kiệm, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-01-25T13:00:00
+CUST-0456,Bùi Diệu Yến,FEMALE,yen.bui@yahoo.com,0776228277,"222 Đường Lạch Tray, Quận Lê Chân, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-24T13:00:00
+CUST-0457,Hồ Thu Vân,FEMALE,van.ho76@yahoo.com,0919611594,"388 Đường Phan Đăng Lưu, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2024-10-04T13:00:00
+CUST-0458,Nguyễn Đức Tùng,MALE,tung.nguyen@gmail.com,0380443270,"50 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-02T13:00:00
+CUST-0459,Bùi Mai Phương,FEMALE,phuong.bui@yahoo.com,0779228777,"424 Đường Hùng Vương, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-11-19T13:00:00
+CUST-0460,Phan Ngọc Bách,MALE,bach.phan@hust.edu.vn,0861209481,"59 Đường Trần Hưng Đạo, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,GOLD,ACTIVE,2024-09-15T13:00:00
+CUST-0461,Phạm Quang Hùng,MALE,hung.pham@fpt.edu.vn,0918204339,"51 Đường Nguyễn Kiệm, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-05-29T13:00:00
+CUST-0462,Phan Diệu Trang,FEMALE,trang.phan@yahoo.com,0795641118,"266 Đường Nguyễn Văn Linh, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,SILVER,ACTIVE,2025-03-23T13:00:00
+CUST-0463,Hoàng Ngọc Hải,MALE,hai.hoang@gmail.com,0909520046,"336 Đường Võ Nguyên Giáp, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-04-09T13:00:00
+CUST-0464,Nguyễn Trúc Anh,FEMALE,anh.nguyen@gmail.com,0833788614,"421 Đường Hùng Vương, Quận Ngũ Hành Sơn, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-26T13:00:00
+CUST-0465,Vũ Văn Huy,MALE,huy.vu67@gmail.com,0799138249,"387 Đường Trần Hưng Đạo, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-03-15T13:00:00
+CUST-0466,Ngô Diệu Hạnh,FEMALE,hanh.ngo71@outlook.com.vn,0770079420,"364 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,SILVER,ACTIVE,2025-02-21T13:00:00
+CUST-0467,Bùi Đình Dũng,MALE,dung.bui@yahoo.com,0988914161,"220 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-29T13:00:00
+CUST-0468,Lý Minh Huy,MALE,huy.ly@outlook.com.vn,0774355379,"492 Đường Nguyễn Thị Minh Khai, Quận 10, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-06-05T13:00:00
+CUST-0469,Đỗ Thu Chi,FEMALE,chi.đo@outlook.com.vn,0388118071,"401 Đường Nguyễn Văn Cừ, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-06-05T13:00:00
+CUST-0470,Trần Phương Yến,FEMALE,yen.tran@hust.edu.vn,0903045319,"510 Đường Nguyễn Văn Linh, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,GOLD,ACTIVE,2025-05-22T13:00:00
+CUST-0471,Hoàng Hồng Anh,FEMALE,anh.hoang@fpt.edu.vn,0930361498,"184 Đường Bà Triệu, Quận Ba Đình, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-04-05T13:00:00
+CUST-0472,Hồ Khánh Trinh,FEMALE,trinh.ho@hust.edu.vn,0938430894,"442 Đường Lạch Tray, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-14T13:00:00
+CUST-0473,Dương Hoàng Khoa,MALE,khoa.duong@hust.edu.vn,0861877580,"435 Đường Kim Mã, Quận Cầu Giấy, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-12-30T13:00:00
+CUST-0474,Nguyễn Mai Lan,FEMALE,lan.nguyen@outlook.com.vn,0830361332,"33 Đường Lê Duẩn, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-28T13:00:00
+CUST-0475,Bùi Minh Huy,MALE,huy.bui@yahoo.com,0931735058,"462 Đường Lê Lợi, Quận Phú Nhuận, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-04-27T13:00:00
+CUST-0476,Nguyễn Hoàng Trung,MALE,trung.nguyen@gmail.com,0912070496,"306 Đường Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2024-11-16T13:00:00
+CUST-0477,Trần Hoàng Phong,MALE,phong.tran@vnu.edu.vn,0839076769,"469 Đường Nguyễn Thị Minh Khai, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-03-03T13:00:00
+CUST-0478,Trần Vy Lan,FEMALE,lan.tran@fpt.edu.vn,0833928456,"253 Đường Trần Hưng Đạo, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-05-18T13:00:00
+CUST-0479,Nguyễn Vy Trúc,FEMALE,truc.nguyen@outlook.com.vn,0795498227,"382 Đường Lê Hồng Phong, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,GOLD,ACTIVE,2024-09-17T13:00:00
+CUST-0480,Bùi Đức Dũng,MALE,dung.bui35@gmail.com,0938806533,"483 Đường Võ Nguyên Giáp, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-12-22T13:00:00
+CUST-0481,Dương Minh Long,MALE,long.duong@yahoo.com,0866521707,"482 Đường Điện Biên Phủ, Quận Bình Thạnh, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-02-07T13:00:00
+CUST-0482,Võ Minh Anh,MALE,anh.vo@gmail.com,0936205015,"302 Đường Trần Hưng Đạo, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-07T13:00:00
+CUST-0483,Nguyễn Quốc Sơn,MALE,son.nguyen35@gmail.com,0862342583,"108 Đường Kim Mã, Quận Nam Từ Liêm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-03-31T13:00:00
+CUST-0484,Vũ Hữu Trung,MALE,trung.vu@vnu.edu.vn,0934735528,"126 Đường Đại lộ Hòa Bình, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-04T13:00:00
+CUST-0485,Ngô Thu Phương,FEMALE,phuong.ngo@yahoo.com,0975963099,"340 Đường Trần Hưng Đạo, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-01-17T13:00:00
+CUST-0486,Dương Thu Trinh,FEMALE,trinh.duong@fpt.edu.vn,0773179128,"536 Đường Tô Hiệu, Quận Ngô Quyền, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2024-12-27T13:00:00
+CUST-0487,Hồ Hồng Chi,FEMALE,chi.ho@yahoo.com,0777496903,"410 Đường Bà Triệu, Quận Hai Bà Trưng, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-11-04T13:00:00
+CUST-0488,Lý Quỳnh Vân,FEMALE,van.ly@outlook.com.vn,0868121478,"481 Đường Nguyễn Trãi, Quận Ba Đình, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2024-12-19T13:00:00
+CUST-0489,Vũ Diệu Trúc,FEMALE,truc.vu@yahoo.com,0977546027,"89 Đường Trần Hưng Đạo, Quận Hải Châu, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2024-09-26T13:00:00
+CUST-0490,Đặng Hữu Huy,MALE,huy.đang@outlook.com.vn,0931115083,"261 Đường Tràng Tiền, Quận Hoàn Kiếm, TP. Hà Nội",Hà Nội,REGULAR,ACTIVE,2025-01-20T13:00:00
+CUST-0491,Phạm Đức Duy,MALE,duy.pham11@fpt.edu.vn,0860445669,"238 Đường Tô Hiệu, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-02-22T13:00:00
+CUST-0492,Võ Vy Hạnh,FEMALE,hanh.vo@yahoo.com,0777515366,"388 Đường Đại lộ Hòa Bình, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-04-05T13:00:00
+CUST-0493,Hoàng Văn Kiệt,MALE,kiet.hoang51@vnu.edu.vn,0855536668,"162 Đường 3 Tháng 2, Quận 1, TP. Hồ Chí Minh",Hồ Chí Minh,GOLD,ACTIVE,2024-12-22T13:00:00
+CUST-0494,Bùi Duy Long,MALE,long.bui@yahoo.com,0836636186,"467 Đường Nguyễn Văn Cừ, Quận Ninh Kiều, TP. Cần Thơ",Cần Thơ,REGULAR,ACTIVE,2025-01-05T13:00:00
+CUST-0495,Trần Thảo Hạnh,FEMALE,hanh.tran@fpt.edu.vn,0980970231,"303 Đường Nguyễn Văn Linh, Quận Thanh Khê, TP. Đà Nẵng",Đà Nẵng,REGULAR,ACTIVE,2025-05-05T13:00:00
+CUST-0496,Võ Thu Trang,FEMALE,trang.vo@fpt.edu.vn,0985662128,"403 Đường Đại lộ Hòa Bình, Quận Bình Thủy, TP. Cần Thơ",Cần Thơ,GOLD,ACTIVE,2025-02-24T13:00:00
+CUST-0497,Lê Đình Khoa,MALE,khoa.le@vnu.edu.vn,0857299493,"12 Đường Mậu Thân, Quận Cái Răng, TP. Cần Thơ",Cần Thơ,PLATINUM,ACTIVE,2024-10-24T13:00:00
+CUST-0498,Trần Duy Phong,MALE,phong.tran@hust.edu.vn,0795977790,"360 Đường Võ Văn Tần, Quận Gò Vấp, TP. Hồ Chí Minh",Hồ Chí Minh,SILVER,ACTIVE,2025-01-08T13:00:00
+CUST-0499,Vũ Lâm Hải,MALE,hai.vu@hust.edu.vn,0383296762,"49 Đường Tô Hiệu, Quận Hồng Bàng, TP. Hải Phòng",Hải Phòng,REGULAR,ACTIVE,2025-03-21T13:00:00
+CUST-0500,Hoàng Quang Việt,MALE,viet.hoang@gmail.com,0851376815,"466 Đường Nguyễn Kiệm, Quận Tân Bình, TP. Hồ Chí Minh",Hồ Chí Minh,REGULAR,ACTIVE,2025-02-23T13:00:00
