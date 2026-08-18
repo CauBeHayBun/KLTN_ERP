@@ -63,7 +63,10 @@ export default function Accountant() {
     addLedgerEntry, 
     payrolls = [], 
     disbursePayroll,
-    disburseAllPayrolls
+    disburseAllPayrolls,
+    returnRequests, 
+    updateReturnStatus,
+    sendSystemNotification
   } = useERP();
 
   const [allPOs, setAllPOs] = useState([]);
@@ -460,7 +463,8 @@ export default function Accountant() {
         {[
           { key: 'ledger', label: '📒 Sổ Nhật Ký Tài Chính', count: ledger.length },
           { key: 'payroll_disbursement', label: '💵 Duyệt Chi Lương Nhân Sự', count: pendingPayrolls.length },
-          { key: 'po_payments', label: '🛒 Duyệt Chi Tiền Hàng (Nhà Cung Cấp)', count: pendingPOs.length }
+          { key: 'po_payments', label: '🛒 Duyệt Chi Tiền Hàng (Nhà Cung Cấp)', count: pendingPOs.length },
+          { key: 'refunds', label: '↩️ Duyệt Hoàn Tiền', count: (returnRequests || []).filter(r => r.type === 'REFUND' && r.status === 'QC_PASSED').length }
         ].map(tab => (
           <button
             key={tab.key}
@@ -924,6 +928,68 @@ export default function Accountant() {
                       </tr>
                     );
                   })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 4: ↩️ DUYỆT HOÀN TIỀN (REFUNDS) ── */}
+      {activeTab === 'refunds' && (
+        <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 6px rgba(15,23,42,0.03)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: '#0f172a' }}>Danh Sách Yêu Cầu Hoàn Tiền (RMA)</h2>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Chỉ hiển thị các đơn hàng trả lại (REFUND) đã vượt qua vòng kiểm định chất lượng (QC PASS) từ Kho.</p>
+            </div>
+          </div>
+          
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', color: '#475569', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.73rem', letterSpacing: '0.5px' }}>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'left', width: '150px' }}>Mã Đổi Trả</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'left' }}>Khách Hàng</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'right', width: '160px' }}>Số Tiền Hoàn</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center', width: '220px' }}>Trạng Thái</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center', width: '210px' }}>Thao Tác Kế Toán</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!returnRequests || returnRequests.filter(r => r.type === 'REFUND' && r.status === 'QC_PASSED').length === 0) ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>
+                      Không có yêu cầu hoàn tiền (REFUND) nào đang chờ kế toán duyệt.
+                    </td>
+                  </tr>
+                ) : (
+                  returnRequests.filter(r => r.type === 'REFUND' && r.status === 'QC_PASSED').map(r => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: 800, color: '#2563eb' }}>{r.id}<br/><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Đơn: {r.orderId}</span></td>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: 700, color: '#0f172a' }}>{r.customerName}</td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'right', fontWeight: 900, color: '#dc2626' }}>{formatPrice(r.refundAmount || 0)}</td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                        <span style={{ backgroundColor: '#fdf2f8', color: '#be185d', border: '1px solid #fbcfe8', padding: '3px 10px', borderRadius: '14px', fontWeight: 800, fontSize: '0.75rem' }}>
+                          Chờ Duyệt Chi
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Xác nhận đã chuyển khoản ${formatPrice(r.refundAmount || 0)} cho khách hàng ${r.customerName}?`)) {
+                              updateReturnStatus(r.id, 'REFUND_COMPLETED');
+                              alert(`✅ Đã xác nhận hoàn tiền cho đơn ${r.id}!`);
+                              sendSystemNotification({ targetRoles: ['SALES', 'ADMIN'], title: `Hoàn Tiền: ${r.id}`, message: `Kế toán đã duyệt chi hoàn tiền.`, link: '/admin/customer-service', type: 'RETURN_UPDATE' });
+                            }
+                          }}
+                          style={{ padding: '0.45rem 1rem', borderRadius: '8px', backgroundColor: '#16a34a', color: '#ffffff', border: 'none', fontWeight: 900, fontSize: '0.78rem', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 10px rgba(22,163,74,0.2)' }}
+                        >
+                          Xác nhận Đã Chuyển Khoản
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

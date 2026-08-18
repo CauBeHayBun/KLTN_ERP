@@ -201,7 +201,7 @@ const loginEmployee = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-    const { id, name, email, phone, address, city, role } = req.body;
+    const { id, name, email, phone, address, city, gender, role } = req.body;
 
     if (!id) {
       return res.status(400).json({ success: false, message: 'User ID is required' });
@@ -211,11 +211,12 @@ const updateProfile = async (req, res, next) => {
       const updatedCustomer = await prisma.customer.update({
         where: { customerId: id },
         data: {
-          name,
+          ...(name !== undefined ? { name } : {}),
           ...(email ? { email } : {}),
-          phone: phone || null,
-          address: address || null,
-          city: city || null
+          ...(phone !== undefined ? { phone: phone || null } : {}),
+          ...(address !== undefined ? { address: address || null } : {}),
+          ...(city !== undefined ? { city: city || null } : {}),
+          ...(gender !== undefined ? { gender: gender || null } : {})
         }
       });
       return res.json({
@@ -229,6 +230,7 @@ const updateProfile = async (req, res, next) => {
           phone: updatedCustomer.phone,
           address: updatedCustomer.address,
           city: updatedCustomer.city,
+          gender: updatedCustomer.gender,
           role: 'CUSTOMER'
         }
       });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import { 
   Search, ShoppingCart, Plus, Minus, Trash2, Printer, FileText,
   BarChart2, DollarSign, Users, Award, ClipboardList, TrendingUp, Truck, X, Check,
@@ -44,6 +45,7 @@ const isDateInRange = (dateVal, startDate, endDate) => {
 export default function SalesPOS() {
   const { inventory, processCheckout, orders = [], ledger = [], updateOrderStatus } = useERP();
   const { user, isCEO } = useAuth();
+  const { addNotification } = useNotification();
   const products = inventory || [];
   
   const isManager = ['SALES_MANAGER', 'CEO', 'ADMIN'].includes(user?.role);
@@ -58,9 +60,13 @@ export default function SalesPOS() {
   const [searchTerm, setSearchTerm] = useState('');
   const [posCart, setPosCart] = useState([]);
   const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [checkoutComplete, setCheckoutComplete] = useState(false);
-  const [receipt, setReceipt] = useState(null);
+  const [phone, setPhone] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [address, setAddress] = useState('');
+  const [invoice, setInvoice] = useState(null);
+  
+  const [confirmState, setConfirmState] = useState({ isOpen: false, message: '', onConfirm: null, type: 'info' });
+  const [selectedOrders, setSelectedOrders] = useState([]);
 
   const filteredProducts = products.filter(p => {
     const name = p.name ? p.name.toLowerCase() : '';
@@ -540,11 +546,79 @@ export default function SalesPOS() {
               })}
             </div>
 
+            {/* Bulk Actions Toolbar */}
+            {selectedOrders.length > 0 && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.75rem 1rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe',
+                borderRadius: '8px', marginBottom: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: '#1e40af', fontSize: '0.9rem' }}>
+                  <Check size={18} />
+                  Đã chọn {selectedOrders.length} đơn hàng
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => {
+                      setConfirmState({
+                        isOpen: true,
+                        message: `Xác nhận PHÊ DUYỆT ${selectedOrders.length} đơn hàng đã chọn để chuyển sang bộ phận kho?`,
+                        onConfirm: () => {
+                          selectedOrders.forEach(id => updateOrderStatus(id, 'CONFIRMED'));
+                          addNotification(`✅ Đã phê duyệt thành công ${selectedOrders.length} đơn hàng!`, 'success');
+                          setSelectedOrders([]);
+                        }
+                      });
+                    }}
+                    style={{ background: '#16a34a', border: 'none', color: '#fff', borderRadius: '6px', padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Check size={14} /> Duyệt Hàng Loạt
+                  </button>
+                  <button
+                    onClick={() => {
+                      setConfirmState({
+                        isOpen: true,
+                        message: `Xác nhận HỦY ${selectedOrders.length} đơn hàng đã chọn? Hành động này không thể hoàn tác.`,
+                        type: 'danger',
+                        onConfirm: () => {
+                          selectedOrders.forEach(id => updateOrderStatus(id, 'CANCELLED'));
+                          addNotification(`Đã hủy thành công ${selectedOrders.length} đơn hàng!`, 'success');
+                          setSelectedOrders([]);
+                        }
+                      });
+                    }}
+                    style={{ background: '#ef4444', border: 'none', color: '#fff', borderRadius: '6px', padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <X size={14} /> Hủy Hàng Loạt
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Table */}
             <div style={{ overflowX: 'auto', maxHeight: '440px', minHeight: '380px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-secondary)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                    <th style={{ padding: '0.65rem 0.85rem', width: '40px', textAlign: 'center' }}>
+                      <input 
+                        type="checkbox" 
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            const validIds = filteredOrders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING').map(o => o.orderId);
+                            setSelectedOrders(validIds);
+                          } else {
+                            setSelectedOrders([]);
+                          }
+                        }}
+                        checked={
+                          filteredOrders.length > 0 && 
+                          filteredOrders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING').length > 0 &&
+                          selectedOrders.length === filteredOrders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING').length
+                        }
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </th>
                     <th style={{ padding: '0.65rem 0.85rem', textAlign: 'left', fontWeight: 600, width: '140px' }}>Mã Đơn</th>
                     <th style={{ padding: '0.65rem 0.85rem', textAlign: 'left', fontWeight: 600, width: '220px' }}>Khách Hàng</th>
                     <th style={{ padding: '0.65rem 0.85rem', textAlign: 'left', fontWeight: 600, width: '140px' }}>Tổng Tiền</th>
@@ -561,8 +635,25 @@ export default function SalesPOS() {
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map(ord => (
-                      <tr key={ord.orderId} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    filteredOrders.map(ord => {
+                      const canSelect = ord.status === 'PENDING' || ord.status === 'PROCESSING';
+                      return (
+                      <tr key={ord.orderId} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', backgroundColor: selectedOrders.includes(ord.orderId) ? 'rgba(59,130,246,0.05)' : 'transparent' }}>
+                        <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
+                          <input 
+                            type="checkbox" 
+                            disabled={!canSelect}
+                            checked={selectedOrders.includes(ord.orderId)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedOrders([...selectedOrders, ord.orderId]);
+                              } else {
+                                setSelectedOrders(selectedOrders.filter(id => id !== ord.orderId));
+                              }
+                            }}
+                            style={{ cursor: canSelect ? 'pointer' : 'not-allowed', opacity: canSelect ? 1 : 0.3 }}
+                          />
+                        </td>
                         <td style={{ padding: '0.65rem 0.85rem', textAlign: 'left' }}>
                           <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.82rem' }}>{ord.orderId}</div>
                           <span style={{ fontSize: '0.65rem', backgroundColor: ord.type === 'POS' ? 'rgba(59,130,246,0.15)' : 'rgba(99,102,241,0.15)', color: ord.type === 'POS' ? 'var(--info)' : 'var(--primary)', padding: '1px 6px', borderRadius: '3px', fontWeight: 600 }}>{ord.type || 'ONLINE'}</span>
@@ -586,14 +677,18 @@ export default function SalesPOS() {
                               <Eye size={13} /> Chi tiết
                             </button>
 
-                            {/* Phê duyệt đơn hàng mới (PENDING / PROCESSING) → CONFIRMED */}
                             {(ord.status === 'PROCESSING' || ord.status === 'PENDING') && (
                               <button
                                 onClick={() => {
-                                  if (window.confirm(`Xác nhận PHÊ DUYỆT đơn hàng ${ord.orderId} để chuyển sang bộ phận kho?`)) {
-                                    updateOrderStatus(ord.orderId, 'CONFIRMED');
-                                    alert(`✅ Đã phê duyệt đơn ${ord.orderId}! Đơn hàng hiện đã ở trạng thái xác nhận.`);
-                                  }
+                                  setConfirmState({
+                                    isOpen: true,
+                                    message: `Xác nhận PHÊ DUYỆT đơn hàng ${ord.orderId} để chuyển sang bộ phận kho?`,
+                                    onConfirm: () => {
+                                      updateOrderStatus(ord.orderId, 'CONFIRMED');
+                                      addNotification(`✅ Đã phê duyệt đơn ${ord.orderId}! Đơn hàng hiện đã ở trạng thái xác nhận.`, 'success');
+                                      setSelectedOrders(prev => prev.filter(id => id !== ord.orderId));
+                                    }
+                                  });
                                 }}
                                 title="Phê duyệt đơn hàng"
                                 style={{ background: 'rgba(16,185,129,0.2)', border: '1px solid var(--success)', color: 'var(--success)', borderRadius: '4px', padding: '4px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
@@ -602,13 +697,19 @@ export default function SalesPOS() {
                               </button>
                             )}
 
-                            {/* Hủy đơn */}
                             {(ord.status === 'PENDING' || ord.status === 'PROCESSING' || ord.status === 'AWAITING_STOCK') && (
                               <button
                                 onClick={() => {
-                                  if (window.confirm(`Hủy đơn hàng ${ord.orderId}? Hành động này không thể hoàn tác.`)) {
-                                    updateOrderStatus(ord.orderId, 'CANCELLED');
-                                  }
+                                  setConfirmState({
+                                    isOpen: true,
+                                    message: `Hủy đơn hàng ${ord.orderId}? Hành động này không thể hoàn tác.`,
+                                    type: 'danger',
+                                    onConfirm: () => {
+                                      updateOrderStatus(ord.orderId, 'CANCELLED');
+                                      addNotification(`Đã hủy đơn hàng ${ord.orderId}`, 'success');
+                                      setSelectedOrders(prev => prev.filter(id => id !== ord.orderId));
+                                    }
+                                  });
                                 }}
                                 title="Hủy đơn hàng"
                                 style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: '4px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}
@@ -619,7 +720,7 @@ export default function SalesPOS() {
                           </div>
                         </td>
                       </tr>
-                    ))
+                    )})
                   )}
                 </tbody>
               </table>
@@ -1026,11 +1127,15 @@ export default function SalesPOS() {
               {selectedDetailOrder.status === 'PROCESSING' && (
                 <button
                   onClick={() => {
-                    if (window.confirm(`Phê duyệt đơn hàng ${selectedDetailOrder.orderId}?`)) {
-                      updateOrderStatus(selectedDetailOrder.orderId, 'CONFIRMED');
-                      setSelectedDetailOrder(prev => ({ ...prev, status: 'CONFIRMED' }));
-                      alert(`✅ Đã phê duyệt đơn hàng ${selectedDetailOrder.orderId}!`);
-                    }
+                    setConfirmState({
+                      isOpen: true,
+                      message: `Phê duyệt đơn hàng ${selectedDetailOrder.orderId}?`,
+                      onConfirm: () => {
+                        updateOrderStatus(selectedDetailOrder.orderId, 'CONFIRMED');
+                        setSelectedDetailOrder(prev => ({ ...prev, status: 'CONFIRMED' }));
+                        addNotification(`✅ Đã phê duyệt đơn hàng ${selectedDetailOrder.orderId}!`, 'success');
+                      }
+                    });
                   }}
                   className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', backgroundColor: '#16a34a', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '8px' }}>
                   <Check size={14} /> Duyệt Đơn
@@ -1038,6 +1143,47 @@ export default function SalesPOS() {
               )}
               <button onClick={() => setSelectedDetailOrder(null)} style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {confirmState.isOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '400px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Xác nhận
+              </h2>
+              <button onClick={() => setConfirmState({ ...confirmState, isOpen: false })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRadius: '50%' }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
+              <p style={{ margin: 0, color: '#334155', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                {confirmState.message}
+              </p>
+            </div>
+
+            <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', backgroundColor: '#f8fafc', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+              <button 
+                onClick={() => setConfirmState({ ...confirmState, isOpen: false })} 
+                style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', backgroundColor: '#fff', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={() => {
+                  if (confirmState.onConfirm) confirmState.onConfirm();
+                  setConfirmState({ ...confirmState, isOpen: false });
+                }} 
+                className="btn btn-primary" 
+                style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', backgroundColor: confirmState.type === 'danger' ? '#ef4444' : '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Đồng ý
               </button>
             </div>
           </div>

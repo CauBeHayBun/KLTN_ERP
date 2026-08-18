@@ -1,8 +1,8 @@
-# HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP (ERP) TÍCH HỢP AI VÀ WEBSOCKET REALTIME TRONG NGÀNH RETAIL & LẮP RÁP LINH KIỆN MÁY TÍNH
+# XÂY DỰNG VÀ TRIỂN KHAI HỆ THỐNG ERP CHO DOANH NGHIỆP BÁN LẺ & LẮP RÁP LINH KIỆN MÁY TÍNH AETHERPC
 
 > **Khóa Luận Tốt Nghiệp Đại Học — Trường Đại Học Công Nghiệp TP. Hồ Chí Minh (IUH)**  
 > **Chuyên Ngành**: Hệ Thống Thông Tin — Khoa Công Nghệ Thông Tin  
-> **Tên Đề Tài**: Xây dựng Hệ thống ERP Quản lý Bán lẻ Linh kiện Máy tính kết hợp Website Thương mại Điện tử, Trợ lý AI và Kênh Chat CSKH Realtime bằng WebSocket (**AetherPC ERP & Storefront**).
+> **Tên Đề Tài**: Xây dựng và triển khai hệ thống ERP cho doanh nghiệp bán lẻ & lắp ráp linh kiện máy tính (**AetherPC ERP & Storefront**).
 
 ---
 

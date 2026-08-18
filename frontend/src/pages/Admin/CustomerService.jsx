@@ -18,23 +18,21 @@ const STATUS_COLORS = {
 
 const RETURN_STATUS_LABELS = {
   PENDING: 'Chờ xử lý',
-  PROCESSING: 'Đang xử lý',
-  RETURNING: 'Đang thu hồi',
-  RETURNED: 'Kho đã nhận',
-  APPROVED: 'Đã duyệt',
-  REJECTED: 'Từ chối',
-  COMPLETED: 'Hoàn thành',
-  REFUNDED: 'Đã hoàn tiền'
+  RETURN_APPROVED: 'Đồng ý thu hồi',
+  RETURNING_TO_WAREHOUSE: 'Đang hoàn về kho',
+  QC_PASSED: 'QC Pass',
+  QC_FAILED: 'Từ chối (Lỗi KH)',
+  REFUND_COMPLETED: 'Đã hoàn tiền',
+  REJECTED: 'Bị từ chối'
 };
 const RETURN_STATUS_COLORS = {
   PENDING: '#f59e0b',
-  PROCESSING: '#6366f1',
-  RETURNING: '#3b82f6',
-  RETURNED: '#ec4899',
-  APPROVED: '#10b981',
-  REJECTED: '#ef4444',
-  COMPLETED: '#10b981',
-  REFUNDED: '#10b981'
+  RETURN_APPROVED: '#3b82f6',
+  RETURNING_TO_WAREHOUSE: '#6366f1',
+  QC_PASSED: '#10b981',
+  QC_FAILED: '#ef4444',
+  REFUND_COMPLETED: '#10b981',
+  REJECTED: '#ef4444'
 };
 
 import { useSearchParams } from 'react-router-dom';
@@ -415,16 +413,13 @@ export default function CustomerService() {
                         className="btn btn-secondary" style={{ padding: '0.22rem 0.5rem', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
                         Xem Chi Tiết
                       </button>
-                      {r.status === 'PENDING' && <>
-                        <button onClick={() => handleReturnUpdate(r.id, 'PROCESSING')} className="btn btn-secondary" style={{ padding: '0.22rem 0.45rem', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Xử lý</button>
-                        <button onClick={() => handleReturnUpdate(r.id, 'APPROVED')} className="btn btn-primary" style={{ padding: '0.22rem 0.45rem', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Duyệt</button>
-                      </>}
-                      {r.status === 'PROCESSING' && <>
-                        <button onClick={() => handleReturnUpdate(r.id, 'APPROVED')} className="btn btn-primary" style={{ padding: '0.22rem 0.45rem', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Duyệt</button>
-                        <button onClick={() => handleReturnUpdate(r.id, 'REJECTED')} className="btn" style={{ padding: '0.22rem 0.45rem', fontSize: '0.7rem', whiteSpace: 'nowrap', background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Từ chối</button>
-                      </>}
-                      {r.status === 'APPROVED' && (
-                        <button onClick={() => handleReturnUpdate(r.id, 'COMPLETED')} className="btn btn-primary" style={{ padding: '0.22rem 0.45rem', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Hoàn thành</button>
+                      {r.status === 'PENDING' && (
+                        <button onClick={() => handleReturnUpdate(r.id, 'RETURN_APPROVED')} className="btn btn-primary" style={{ padding: '0.22rem 0.45rem', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                          ✓ Đồng ý thu hồi
+                        </button>
+                      )}
+                      {['RETURN_APPROVED', 'RETURNING_TO_WAREHOUSE', 'QC_PASSED', 'QC_FAILED', 'REFUND_COMPLETED'].includes(r.status) && (
+                        <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600 }}>Đã chuyển tiếp</span>
                       )}
                     </div>
                   </td>
@@ -774,19 +769,19 @@ export default function CustomerService() {
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <button onClick={() => setSelectedReturnDetail(null)} className="btn btn-secondary">Đóng</button>
                 <button onClick={() => {
-                  handleReturnUpdate(selectedReturnDetail.id, 'REJECTED');
                   updateReturnStatus(selectedReturnDetail.id, 'REJECTED', csNote || 'Từ chối bởi CSKH');
                   setSelectedReturnDetail(null);
                 }} className="btn" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>
                   ❌ Từ Chối Yêu Cầu
                 </button>
-                <button onClick={() => {
-                  handleReturnUpdate(selectedReturnDetail.id, 'APPROVED');
-                  updateReturnStatus(selectedReturnDetail.id, 'APPROVED', csNote || 'Đã duyệt bởi CSKH');
-                  setSelectedReturnDetail(null);
-                }} className="btn btn-primary">
-                  ✓ Phê Duyệt Yêu Cầu
-                </button>
+                {selectedReturnDetail.status === 'PENDING' && (
+                  <button onClick={() => {
+                    updateReturnStatus(selectedReturnDetail.id, 'RETURN_APPROVED', csNote || 'Đồng ý thu hồi hàng');
+                    setSelectedReturnDetail(null);
+                  }} className="btn btn-primary">
+                    ✓ Đồng Ý Thu Hồi Hàng
+                  </button>
+                )}
               </div>
             </div>
           </div>

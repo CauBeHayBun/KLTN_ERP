@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useERP } from '../../context/ERPContext';
+import { useNotification } from '../../context/NotificationContext';
 import { 
   ShoppingCart, ShoppingBag, Trash2, ArrowLeft, CreditCard, Sparkles, 
   MapPin, User, Phone, Lock, LogIn, UserPlus, CheckCircle, 
@@ -246,8 +247,8 @@ export default function Cart() {
 
   const auth = useAuth() || {};
   const { user, login } = auth;
-  const erpContext = useERP() || {};
-  const processCheckout = erpContext.processCheckout || (() => {});
+  const { processCheckout } = useERP();
+  const { addNotification } = useNotification();
   const navigate = useNavigate();
 
   const getProductId = (p) => {
@@ -310,7 +311,7 @@ export default function Cart() {
       .filter((key) => key && selectedKeys[key]);
 
     if (keysToRemove.length === 0) {
-      alert('Vui lòng tích chọn ít nhất 1 sản phẩm để xóa!');
+      addNotification('Vui lòng tích chọn ít nhất 1 sản phẩm để xóa!', 'error');
       return;
     }
 
@@ -337,6 +338,8 @@ export default function Cart() {
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [ward, setWard] = useState('');
   const [streetAddress, setStreetAddress] = useState('');
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState(null);
 
   // AddressKit API states (live data from General Statistics Office via https://addresskit.cas.so)
   const [apiProvinces, setApiProvinces] = useState([]);
@@ -381,6 +384,32 @@ export default function Cart() {
     }
   }, [user]);
 
+  useEffect(() => {
+    let active = true;
+    const loadSavedAddresses = async () => {
+      const token = localStorage.getItem('token') || '';
+      try {
+        const list = token && !token.startsWith('mock-')
+          ? ((await api.get('/customers/addresses')).data || [])
+          : JSON.parse(localStorage.getItem('mock_addresses') || '[]');
+        if (active) setSavedAddresses([...list].sort((a, b) => Number(Boolean(b.isDefault)) - Number(Boolean(a.isDefault)) || Number(b.id) - Number(a.id)));
+      } catch (error) {
+        console.warn('Unable to load saved addresses:', error);
+      }
+    };
+    if (user) loadSavedAddresses();
+    return () => { active = false; };
+  }, [user]);
+
+  const useSavedAddress = (address) => {
+    setSelectedSavedAddressId(address.id);
+    setCustomerName(address.recipientName || customerName);
+    setPhone(address.recipientPhone || phone);
+    setStreetAddress(address.addressLine || '');
+    setSelectedProvince(address.city || '');
+    setWard(address.ward || '');
+    setSelectedDistrict(address.district || '');
+  };
   // Update district & fetch live communes when province changes
   const handleProvinceChange = (val) => {
     const provName = typeof val === 'string' ? val : val?.target?.value;
@@ -500,18 +529,18 @@ export default function Cart() {
   const handleCheckout = async (e) => {
     e.preventDefault();
     if (selectedCartItems.length === 0) {
-      alert('Vui lòng tích chọn ít nhất 1 sản phẩm trong giỏ hàng để thực hiện thanh toán!');
+      addNotification('Vui lòng tích chọn ít nhất 1 sản phẩm trong giỏ hàng để thực hiện thanh toán!', 'error');
       return;
     }
 
     if (!user) {
-      alert('Vui lòng đăng nhập tài khoản để thực hiện thanh toán!');
+      addNotification('Vui lòng đăng nhập tài khoản để thực hiện thanh toán!', 'error');
       navigate('/login?redirect=/cart');
       return;
     }
 
     if (!selectedProvince || !ward.trim() || !streetAddress.trim()) {
-      alert('Vui lòng chọn và nhập đầy đủ thông tin Địa Chỉ Giao Hàng (Tỉnh/Thành phố, Phường/Xã, Số nhà/tên đường)!');
+      addNotification('Vui lòng chọn và nhập đầy đủ thông tin Địa Chỉ Giao Hàng (Tỉnh/Thành phố, Phường/Xã, Số nhà/tên đường)!', 'error');
       return;
     }
 
@@ -553,6 +582,7 @@ export default function Cart() {
       };
 
       setInvoice(invoiceData);
+      addNotification(`Đơn hàng #${orderId} đã đặt thành công!`, 'success', '/my-orders');
 
       // Gửi email xác nhận thật qua backend /orders/email-notify
       if (targetEmail) {
@@ -595,7 +625,7 @@ export default function Cart() {
 
       removeSelectedFromCart(selectedCartItems.map(getItemKey));
     } catch (err) {
-      alert('Không thể hoàn tất thanh toán. Vui lòng kiểm tra lại kết nối!');
+      addNotification('Không thể hoàn tất thanh toán. Vui lòng kiểm tra lại kết nối!', 'error');
     } finally {
       setCheckingOut(false);
     }
@@ -1109,6 +1139,20 @@ export default function Cart() {
                     </div>
                   </div>
 
+                  {savedAddresses.length > 0 && (
+                    <div style={{ border: '1px solid #dbeafe', background: '#f8fbff', borderRadius: '12px', padding: '0.85rem' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e3a8a', marginBottom: '0.55rem' }}>{'\u0110\u1ecba ch\u1ec9 \u0111\u00e3 l\u01b0u'}</div>
+                      <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'grid', gap: '0.45rem', paddingRight: '0.2rem' }}>
+                        {savedAddresses.map(address => {
+                          const selected = selectedSavedAddressId === address.id;
+                          return <button key={address.id} type="button" onClick={() => useSavedAddress(address)} style={{ textAlign: 'left', border: selected ? '1px solid #2563eb' : '1px solid #dbeafe', background: selected ? '#eff6ff' : '#fff', borderRadius: '8px', padding: '0.6rem 0.7rem', cursor: 'pointer', color: '#1e293b' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 700 }}><span>{address.recipientName}</span><span style={{ fontWeight: 400 }}>| {address.recipientPhone}</span>{address.isDefault && <span style={{ fontSize: '0.68rem', background: '#2563eb', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>{'\u0110\u1ecba ch\u1ec9 m\u1eb7c \u0111\u1ecbnh'}</span>}</div>
+                            <div style={{ marginTop: '0.2rem', fontSize: '0.75rem', color: '#475569' }}>{[address.addressLine, address.ward, address.district, address.city].filter(Boolean).join(', ')}</div>
+                          </button>;
+                        })}
+                      </div>
+                    </div>
+                  )}
                   {/* Structured Address Selection */}
                   <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>

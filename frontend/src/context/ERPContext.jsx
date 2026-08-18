@@ -147,12 +147,11 @@ const INITIAL_ATTENDANCE_LOGS = (() => {
 })();
 
 const INITIAL_SERIALS = [
-  { serial: 'SN-I5-839201', productId: 1, status: 'AVAILABLE' },
-  { serial: 'SN-I5-839202', productId: 1, status: 'AVAILABLE' },
-  { serial: 'SN-MB-471029', productId: 3, status: 'AVAILABLE' },
-  { serial: 'SN-RAM-112233', productId: 5, status: 'AVAILABLE' },
-  { serial: 'SN-VGA-998877', productId: 8, status: 'AVAILABLE' },
-  { serial: 'SN-PSU-556677', productId: 10, status: 'AVAILABLE' }
+  ...Array.from({ length: 30 }).flatMap((_, i) => [
+    { serial: `SN-MOCK-${i + 1}-A`, productId: i + 1, status: 'AVAILABLE' },
+    { serial: `SN-MOCK-${i + 1}-B`, productId: i + 1, status: 'AVAILABLE' },
+    { serial: `SN-MOCK-${i + 1}-C`, productId: i + 1, status: 'AVAILABLE' },
+  ])
 ];
 
 export const ERPProvider = ({ children }) => {
@@ -405,7 +404,7 @@ export const ERPProvider = ({ children }) => {
 
     // Load Serials
     const storedSerials = localStorage.getItem('erp_serials');
-    if (storedSerials) {
+    if (storedSerials && !storedSerials.includes('SN-I5-839201')) {
       setSerialNumbers(JSON.parse(storedSerials));
     } else {
       localStorage.setItem('erp_serials', JSON.stringify(INITIAL_SERIALS));
@@ -901,6 +900,32 @@ export const ERPProvider = ({ children }) => {
     }
   };
 
+  // Khách hàng tự cập nhật thông tin đơn hàng PENDING
+  const updateOrderDetails = (orderId, details) => {
+    const updatedOrders = orders.map(o => {
+      if (o.orderId === orderId && o.status === 'PENDING') {
+        return {
+          ...o,
+          customerName: details.customerName || o.customerName,
+          phone: details.phone || o.phone,
+          shippingAddress: details.shippingAddress || o.shippingAddress,
+          lastNote: details.notes !== undefined ? details.notes : o.lastNote
+        };
+      }
+      return o;
+    });
+
+    saveState('erp_orders', updatedOrders, setOrders);
+
+    // Gửi API lên backend để đồng bộ CSDL
+    const token = localStorage.getItem('token');
+    if (token && !token.startsWith('mock-')) {
+      api.patch(`/orders/${orderId}/details`, details).then(() => {
+        console.log(`[CSDL] Đã đồng bộ thông tin đơn hàng ${orderId} xuống DB.`);
+      }).catch(err => console.error('[CSDL] Lỗi cập nhật đơn hàng:', err.message));
+    }
+  };
+
   // Sales Manager/CEO/Delivery cập nhật trạng thái đơn hàng thủ công
   const updateOrderStatus = (orderId, newStatus, note = null, extraData = {}) => {
     const dateStr = new Date().toLocaleDateString('vi-VN');
@@ -997,6 +1022,16 @@ export const ERPProvider = ({ children }) => {
       }
     }
 
+    if (newStatus === 'PACKED' && extraData.selectedSerials) {
+      const updatedSerials = serialNumbers.map(sn => {
+        if (extraData.selectedSerials.includes(sn.serial)) {
+          return { ...sn, status: 'USED', orderId: orderId };
+        }
+        return sn;
+      });
+      saveState('erp_serials', updatedSerials, setSerialNumbers);
+    }
+
     if (inventoryChanged) {
       saveState('erp_inventory', nextInventory, setInventory);
     }
@@ -1020,6 +1055,33 @@ export const ERPProvider = ({ children }) => {
     });
     saveState('erp_orders', updatedOrders, setOrders);
     syncExistingPoints(updatedOrders);
+
+    // Bắn thông báo Hệ thống cho Bộ phận Kho (Warehouse) nếu đơn hàng liên quan đến Kho
+    if (newStatus === 'CONFIRMED' && !isCancelledTransition) {
+      sendSystemNotification({
+        targetRoles: ['WAREHOUSE_MANAGER', 'ADMIN', 'CEO'],
+        title: `📦 Đơn hàng #${orderId} cần xuất kho`,
+        message: `Đơn hàng #${orderId} vừa được duyệt. Vui lòng chuẩn bị hàng để xuất kho.`,
+        link: '/admin/warehouse',
+        type: 'ORDER_ALERT'
+      });
+    } else if (newStatus === 'AWAITING_STOCK') {
+      sendSystemNotification({
+        targetRoles: ['WAREHOUSE_MANAGER', 'ADMIN', 'CEO'],
+        title: `⚠️ Đơn hàng #${orderId} thiếu linh kiện`,
+        message: `Đơn hàng #${orderId} đang chờ linh kiện nhập kho. Vui lòng kiểm tra và lên kế hoạch nhập hàng.`,
+        link: '/admin/warehouse',
+        type: 'STOCK_ALERT'
+      });
+    } else if (newStatus === 'CANCELLED' && ['CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'PACKED', 'AWAITING_STOCK'].includes(targetOrder.status)) {
+       sendSystemNotification({
+        targetRoles: ['WAREHOUSE_MANAGER', 'ADMIN', 'CEO'],
+        title: `❌ Hủy đơn hàng #${orderId}`,
+        message: `Đơn hàng #${orderId} vừa bị hủy. Vui lòng ngừng xuất kho hoặc thu hồi lại linh kiện.`,
+        link: '/admin/warehouse',
+        type: 'ORDER_ALERT'
+      });
+    }
 
     // Gửi email cập nhật trạng thái thực tế qua backend /orders/email-notify
     const targetOrderWithEmail = updatedOrders.find(o => o.orderId === orderId);
@@ -1636,64 +1698,77 @@ export const ERPProvider = ({ children }) => {
 
   const updateReturnStatus = (id, status, resolution = '') => {
     // 1. Update return request status
-    const next = returnRequests.map(r => r.id === id ? { ...r, status, resolution } : r);
+    const returnReq = returnRequests.find(r => r.id === id);
+    if (!returnReq) return;
+
+    const next = returnRequests.map(r => r.id === id ? { ...r, status, resolution: resolution || r.resolution } : r);
     saveState('erp_return_requests', next, setReturnRequests);
 
-    // 2. If return is approved or completed, update order, inventory, and record refund expense
-    if (status === 'APPROVED' || status === 'COMPLETED') {
-      const returnReq = returnRequests.find(r => r.id === id);
-      if (returnReq) {
-        const orderId = returnReq.orderId;
-        const ord = orders.find(o => o.orderId === orderId);
-        
-        // If order hasn't already been marked as returned
-        if (ord && ord.status !== 'RETURNED') {
-          // A. Update Order Status to RETURNED
-          const updatedOrders = orders.map(o => {
-            if (o.orderId === orderId) {
-              return { ...o, status: 'RETURNED', lastNote: `Đổi trả hàng thành công: ${resolution || 'CSKH phê duyệt'}` };
-            }
-            return o;
-          });
-          saveState('erp_orders', updatedOrders, setOrders);
-          syncExistingPoints(updatedOrders);
+    const orderId = returnReq.orderId;
+    const ord = orders.find(o => o.orderId === orderId);
 
-          // Sync RETURNED order status to backend
-          const token = localStorage.getItem('token');
-          if (token) {
-            api.patch(`/orders/${orderId}/status`, {
-              status: 'RETURNED',
-              note: `Đổi trả hàng: ${resolution || 'CSKH phê duyệt'}`
-            }).then(() => {
-              console.log(`[CSDL] Đã cập nhật trạng thái đơn ${orderId} thành RETURNED trên backend.`);
-            }).catch(err => {
-              console.warn(`[CSDL] Không thể đồng bộ trạng thái RETURNED cho đơn ${orderId}:`, err.message);
-            });
+    // 2. Logic based on new RMA status
+    if (status === 'QC_PASSED') {
+      // Khi kho duyệt QC Pass
+      if (ord && ord.status !== 'RETURNED') {
+        // A. Cập nhật trạng thái đơn gốc thành RETURNED
+        const updatedOrders = orders.map(o => {
+          if (o.orderId === orderId) {
+            return { ...o, status: 'RETURNED', lastNote: `Đổi trả hàng (QC Passed): ${resolution || 'Hợp lệ'}` };
           }
-
-          // B. Restore Inventory Stock (Warehouse Manager)
-          const updatedInventory = inventory.map(invItem => {
-            const matchInOrder = ord.items?.find(oItem => String(oItem.productId) === String(invItem.id));
-            if (matchInOrder) {
-              return { ...invItem, stock: invItem.stock + matchInOrder.quantity };
-            }
-            return invItem;
-          });
-          saveState('erp_inventory', updatedInventory, setInventory);
-
-          // C. Record Refund Expense in Ledger (Accountant)
-          const dateStr = new Date().toLocaleDateString('vi-VN');
-          const newTx = {
-            id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
-            type: 'EXPENSE',
-            amount: ord.totalAmount,
-            date: dateStr,
-            description: `Hoàn tiền trả hàng đơn ${orderId} cho KH ${ord.customerName}`
+          return o;
+        });
+        
+        // B. Nếu là Đổi hàng (EXCHANGE) -> Tạo đơn hàng mới 0đ
+        if (returnReq.type === 'EXCHANGE' || returnReq.returnType === 'EXCHANGE') {
+          const newOrderId = `EX-${Date.now().toString().slice(-6)}`;
+          const exchangeOrder = {
+            ...ord,
+            orderId: newOrderId,
+            status: 'PENDING',
+            totalAmount: 0, // Đổi hàng không tốn tiền
+            type: 'ONLINE', // Hoặc để y như cũ
+            date: new Date().toLocaleDateString('vi-VN'),
+            lastNote: `Đơn hàng đổi trả cho đơn gốc #${orderId}`,
+            originalOrderId: orderId
           };
-          const nextLedger = [newTx, ...ledger];
-          saveState('erp_ledger', nextLedger, setLedger);
+          updatedOrders.unshift(exchangeOrder);
         }
+        
+        saveState('erp_orders', updatedOrders, setOrders);
+        syncExistingPoints(updatedOrders);
+
+        // Sync RETURNED order status to backend
+        const token = localStorage.getItem('token');
+        if (token) {
+          api.patch(`/orders/${orderId}/status`, {
+            status: 'RETURNED',
+            note: `Kho duyệt trả hàng: QC Passed`
+          }).catch(() => {});
+        }
+
+        // C. Restore Inventory Stock (Warehouse Manager)
+        const updatedInventory = inventory.map(invItem => {
+          const matchInOrder = ord.items?.find(oItem => String(oItem.productId) === String(invItem.id));
+          if (matchInOrder) {
+            return { ...invItem, stock: invItem.stock + matchInOrder.quantity };
+          }
+          return invItem;
+        });
+        saveState('erp_inventory', updatedInventory, setInventory);
       }
+    } else if (status === 'REFUND_COMPLETED') {
+      // Kế toán hoàn tiền
+      const dateStr = new Date().toLocaleDateString('vi-VN');
+      const newTx = {
+        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+        type: 'EXPENSE',
+        amount: ord ? ord.totalAmount : 0,
+        date: dateStr,
+        description: `Hoàn tiền trả hàng đơn ${orderId} cho KH ${ord ? ord.customerName : ''}`
+      };
+      const nextLedger = [newTx, ...ledger];
+      saveState('erp_ledger', nextLedger, setLedger);
     }
   };
 
@@ -1896,6 +1971,7 @@ export const ERPProvider = ({ children }) => {
       sendSystemNotification,
       // Order operations
       processCheckout,
+      updateOrderDetails,
       updateOrderStatus,
       deliverOrder,
       claimOrderForDelivery,

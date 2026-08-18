@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import { api } from '../../services/api';
 import ActorNotificationBar from '../../components/ActorNotificationBar';
+import PackAndScanModal from '../../components/PackAndScanModal';
 import { 
   Database, PlusCircle, AlertOctagon, TrendingDown, ArrowDownLeft, 
   Edit2, Check, MapPin, BarChart2, DollarSign, ListFilter, ShieldAlert,
@@ -1002,9 +1004,10 @@ export default function Warehouse() {
     inventory, processGRN, purchaseOrders, serialNumbers, 
     updateThreshold, updateLocation, ledger, orders = [], assemblyJobs = [],
     deliverOrder, updateOrderStatus, assignShipperToOrder, addProduct, updateProduct, deleteProduct,
-    sendSystemNotification
+    sendSystemNotification, returnRequests, updateReturnStatus
   } = useERP();
   const { user, isCEO } = useAuth();
+  const { addNotification } = useNotification();
   
   const isManager = ['WAREHOUSE_MANAGER', 'CEO', 'ADMIN'].includes(user?.role);
 
@@ -1014,6 +1017,9 @@ export default function Warehouse() {
   const [receiptsLoading, setReceiptsLoading] = useState(false);
   const [receiptsError, setReceiptsError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  const [confirmState, setConfirmState] = useState({ isOpen: false, message: '', onConfirm: null, type: 'info' });
+  const [selectedItems, setSelectedItems] = useState([]);
 
   // Receipt Detail Modal
   const [selectedReceipt, setSelectedReceipt] = useState(null);
@@ -1023,6 +1029,24 @@ export default function Warehouse() {
 
   // Shipper Assign Modal State
   const [orderToAssignShipper, setOrderToAssignShipper] = useState(null);
+
+  // Pack And Scan Modal State
+  const [orderToPack, setOrderToPack] = useState(null);
+
+  const handleConfirmPack = (ord, selectedSerials) => {
+    if (!ord) return;
+    const poNumOrOrdId = ord.orderId || ord.id;
+    
+    // Gọi hàm updateOrderStatus với trạng thái PACKED và danh sách S/N
+    if (typeof updateOrderStatus === 'function') {
+      updateOrderStatus(poNumOrOrdId, 'PACKED', 'Đã nhặt hàng & đóng gói xong', {
+        selectedSerials: selectedSerials
+      });
+    }
+    
+    addNotification(`Đã đóng gói xong đơn hàng #${poNumOrOrdId}. ${selectedSerials.length > 0 ? `Đã lưu ${selectedSerials.length} S/N.` : ''}`, 'success');
+    setOrderToPack(null);
+  };
 
   const handleConfirmShipperAssign = (ord, chosenUser) => {
     if (!ord) return;
@@ -1056,11 +1080,9 @@ export default function Warehouse() {
     setOrderToAssignShipper(null);
     setSelectedDetailOrder(null);
 
-    alert(
-      `✅ ĐÃ XÁC NHẬN XUẤT KHO THÀNH CÔNG!\n\n` +
-      `• Mã đơn hàng: #${poNumOrOrdId}\n` +
-      `• Người giao hàng: ${shipperName || 'Đã đưa lên sàn chờ Shipper tự nhặt đơn'}\n` +
-      `• Đã gửi thông báo đến bộ phận Giao Hàng & Bán Hàng.`
+    addNotification(
+      `ĐÃ XÁC NHẬN XUẤT KHO THÀNH CÔNG! Mã đơn: #${poNumOrOrdId}. Đã gửi thông báo đến bộ phận Giao Hàng & Bán Hàng.`,
+      'success'
     );
   };
 
@@ -1991,10 +2013,57 @@ export default function Warehouse() {
           </select>
         </div>
 
+        {/* Bulk Actions Toolbar */}
+        {selectedItems.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0.75rem 1rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe',
+            borderRadius: '8px', marginBottom: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: '#1e40af', fontSize: '0.9rem' }}>
+              <Check size={18} />
+              Đã chọn {selectedItems.length} linh kiện
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => {
+                  setConfirmState({
+                    isOpen: true,
+                    message: `Xác nhận XÓA ${selectedItems.length} linh kiện đã chọn khỏi kho? Hành động này không thể hoàn tác.`,
+                    type: 'danger',
+                    onConfirm: () => {
+                      selectedItems.forEach(id => deleteProduct(id));
+                      addNotification(`Đã xóa thành công ${selectedItems.length} linh kiện khỏi kho!`, 'success');
+                      setSelectedItems([]);
+                    }
+                  });
+                }}
+                style={{ background: '#ef4444', border: 'none', color: '#fff', borderRadius: '6px', padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <X size={14} /> Xóa Hàng Loạt
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="table-container" style={{ overflowX: 'auto' }}>
           <table className="erp-table" style={{ width: '100%', minWidth: '980px' }}>
             <thead>
               <tr>
+                <th style={{ width: '40px', padding: '0.625rem 0.5rem', textAlign: 'center' }}>
+                  <input 
+                    type="checkbox" 
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedItems(filteredInventory.map(i => i.id));
+                      } else {
+                        setSelectedItems([]);
+                      }
+                    }}
+                    checked={filteredInventory.length > 0 && selectedItems.length === filteredInventory.length}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </th>
                 <th style={{ width: '28%', padding: '0.625rem 0.5rem' }}>Tên Linh Kiện</th>
                 <th style={{ width: '10%', padding: '0.625rem 0.5rem' }}>Phân Nhóm</th>
                 <th style={{ width: '8%', padding: '0.625rem 0.5rem', textAlign: 'center' }}>Số Lượng Tồn</th>
@@ -2016,7 +2085,21 @@ export default function Warehouse() {
                   const itemSerials = (serialNumbers || []).filter(sn => sn.productId === item.id && sn.status === 'AVAILABLE');
                   const serialListStr = itemSerials.slice(0, 3).map(s => s.serial).join(', ') + (itemSerials.length > 3 ? '...' : '');
                   return (
-                    <tr key={item.id}>
+                    <tr key={item.id} style={{ backgroundColor: selectedItems.includes(item.id) ? 'rgba(59,130,246,0.05)' : 'transparent' }}>
+                      <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedItems.includes(item.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedItems([...selectedItems, item.id]);
+                            } else {
+                              setSelectedItems(selectedItems.filter(id => id !== item.id));
+                            }
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </td>
                       <td style={{ padding: '0.625rem 0.5rem', wordBreak: 'break-word', whiteSpace: 'normal', fontSize: '0.8rem' }}>
                         <strong style={{ color: '#0f172a', fontWeight: 800 }}>{item.name}</strong>
                         
@@ -2158,9 +2241,15 @@ export default function Warehouse() {
                             </button>
                             <button
                               onClick={() => {
-                                if (window.confirm(`Bạn có chắc muốn xóa linh kiện "${item.name}" khỏi danh mục kho?`)) {
-                                  deleteProduct(item.id);
-                                }
+                                setConfirmState({
+                                  isOpen: true,
+                                  message: `Bạn có chắc muốn xóa linh kiện "${item.name}" khỏi danh mục kho?`,
+                                  type: 'danger',
+                                  onConfirm: () => {
+                                    deleteProduct(item.id);
+                                    addNotification(`Đã xóa linh kiện "${item.name}" khỏi kho`, 'success');
+                                  }
+                                });
                               }}
                               className="btn"
                               style={{ padding: '4px 6px', fontSize: '0.68rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '2px' }}
@@ -2745,6 +2834,21 @@ export default function Warehouse() {
         >
           📜 Lịch Sử Xuất Nhập Kho
         </button>
+        <button
+          onClick={() => setActiveTab('returns')}
+          style={{
+            padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 700, borderRadius: '8px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', position: 'relative',
+            backgroundColor: activeTab === 'returns' ? 'var(--primary)' : 'transparent',
+            color: activeTab === 'returns' ? '#fff' : 'var(--text-secondary)'
+          }}
+        >
+          🔄 Xử lý Hàng Trả Về
+          {returnRequests && returnRequests.filter(r => r.status === 'RETURNING_TO_WAREHOUSE').length > 0 && (
+            <span style={{ marginLeft: '0.4rem', backgroundColor: 'var(--danger)', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '0.7rem', fontWeight: 700 }}>
+              {returnRequests.filter(r => r.status === 'RETURNING_TO_WAREHOUSE').length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Main Layout Area */}
@@ -2876,6 +2980,19 @@ export default function Warehouse() {
               </button>
 
               <button
+                onClick={() => setDeliveryFilter('PACKED')}
+                style={{
+                  padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: 'none', transition: 'all 0.2s',
+                  backgroundColor: deliveryFilter === 'PACKED' ? '#fef08a' : '#f8fafc',
+                  outline: deliveryFilter === 'PACKED' ? '2px solid #ca8a04' : '1px solid #cbd5e1'
+                }}
+              >
+                <span style={{ fontSize: '0.8rem', color: '#a16207', fontWeight: 600 }}>
+                  📦 Đã đóng gói: <strong>{orders.filter(o => o.status === 'PACKED').length}</strong> đơn
+                </span>
+              </button>
+
+              <button
                 onClick={() => setDeliveryFilter('SHIPPED')}
                 style={{
                   padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: 'none', transition: 'all 0.2s',
@@ -2933,9 +3050,10 @@ export default function Warehouse() {
                     const filteredOrders = orders
                       .filter(o => {
                         if (deliveryFilter === 'PENDING') return o.status === 'CONFIRMED';
+                        if (deliveryFilter === 'PACKED') return o.status === 'PACKED';
                         if (deliveryFilter === 'SHIPPED') return ['READY_TO_SHIP', 'SHIPPED'].includes(o.status);
                         if (deliveryFilter === 'DELIVERED') return o.status === 'DELIVERED';
-                        if (deliveryFilter === 'ALL') return ['CONFIRMED', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED'].includes(o.status);
+                        if (deliveryFilter === 'ALL') return ['CONFIRMED', 'PACKED', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED'].includes(o.status);
                         return true;
                       })
                       .filter(o => {
@@ -2980,6 +3098,7 @@ export default function Warehouse() {
                         <td><span className={`badge ${ord.type === 'POS' ? 'badge-info' : 'badge-secondary'}`}>{ord.type || 'ONLINE'}</span></td>
                         <td>
                           {ord.status === 'CONFIRMED' && <span className="badge badge-warning">Chờ xuất kho</span>}
+                          {ord.status === 'PACKED' && <span className="badge badge-warning" style={{ backgroundColor: '#fef08a', color: '#a16207' }}>Đã đóng gói</span>}
                           {ord.status === 'READY_TO_SHIP' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                               <span className="badge badge-info" style={{ color: '#818cf8' }}>Đã xuất kho</span>
@@ -3026,12 +3145,22 @@ export default function Warehouse() {
                             </button>
                             {ord.status === 'CONFIRMED' && (
                               <button
+                                onClick={() => setOrderToPack(ord)}
+                                className="btn btn-primary"
+                                style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', backgroundColor: '#eab308', color: '#fff', border: 'none', cursor: 'pointer' }}
+                              >
+                                <Package size={14} />
+                                Đóng gói & Quét S/N
+                              </button>
+                            )}
+                            {ord.status === 'PACKED' && (
+                              <button
                                 onClick={() => setOrderToAssignShipper(ord)}
                                 className="btn btn-primary"
                                 style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'var(--success)', border: 'none', cursor: 'pointer' }}
                               >
                                 <Truck size={14} />
-                                Xác Nhận Xuất Kho
+                                Giao cho Shipper
                               </button>
                             )}
                           </div>
@@ -3261,6 +3390,62 @@ export default function Warehouse() {
                       );
                     });
                   })()}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : activeTab === 'returns' ? (
+          <div className="card-glass" style={{ padding: '1.5rem', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.75rem', gap: '0.75rem', flexWrap: 'nowrap' }}>
+              <div style={{ minWidth: 0, flexShrink: 1 }}>
+                <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-title)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, whiteSpace: 'nowrap' }}>
+                  <RefreshCw size={20} style={{ color: '#ec4899' }} />
+                  Xử Lý Hàng Đổi Trả (QC)
+                </h3>
+              </div>
+            </div>
+            
+            <div style={{ overflowX: 'auto' }}>
+              <table className="table" style={{ width: '100%', minWidth: '900px' }}>
+                <thead>
+                  <tr>
+                    <th>Mã Đổi Trả</th>
+                    <th>Sản Phẩm</th>
+                    <th>Loại</th>
+                    <th>Trạng Thái</th>
+                    <th>Hành Động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {returnRequests && returnRequests.filter(r => ['RETURNING_TO_WAREHOUSE', 'QC_PASSED', 'QC_FAILED'].includes(r.status)).map(req => (
+                    <tr key={req.id}>
+                      <td><strong>{req.id}</strong><br/><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Đơn: {req.orderId}</span></td>
+                      <td>{req.items && req.items[0] ? req.items.map(i => i.productName).join(', ') : 'N/A'}</td>
+                      <td>{req.type === 'REFUND' ? 'Hoàn Tiền' : 'Đổi Hàng'}</td>
+                      <td>
+                        {req.status === 'RETURNING_TO_WAREHOUSE' ? <span style={{ color: '#d97706', fontWeight: 'bold' }}>Chờ QC</span> : req.status === 'QC_PASSED' ? <span style={{ color: '#16a34a', fontWeight: 'bold' }}>Đạt (QC Pass)</span> : <span style={{ color: '#dc2626', fontWeight: 'bold' }}>Lỗi (QC Fail)</span>}
+                      </td>
+                      <td>
+                        {req.status === 'RETURNING_TO_WAREHOUSE' && (
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button onClick={() => {
+                              updateReturnStatus(req.id, 'QC_PASSED');
+                              addNotification(`Đã duyệt QC Pass cho yêu cầu ${req.id}`, 'success');
+                              sendSystemNotification({ targetRoles: ['ACCOUNTANT', 'SALES', 'ADMIN'], title: `Kiểm tra QC Pass: ${req.id}`, message: `Kho đã xác nhận hàng hóa đạt yêu cầu. Đợi hoàn tiền hoặc đổi hàng.`, link: '/admin/accountant', type: 'RETURN_UPDATE' });
+                            }} className="btn btn-primary" style={{ backgroundColor: '#16a34a', border: 'none', padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>PASS</button>
+                            <button onClick={() => {
+                              updateReturnStatus(req.id, 'QC_FAILED');
+                              addNotification(`Đã đánh dấu QC Fail cho yêu cầu ${req.id}`, 'error');
+                              sendSystemNotification({ targetRoles: ['SALES', 'ADMIN'], title: `Kiểm tra QC Fail: ${req.id}`, message: `Kho đã kiểm tra hàng hóa không đạt yêu cầu.`, link: '/admin/customer-service', type: 'RETURN_UPDATE' });
+                            }} className="btn" style={{ backgroundColor: '#dc2626', color: '#fff', border: 'none', padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>FAIL</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {(!returnRequests || returnRequests.filter(r => ['RETURNING_TO_WAREHOUSE', 'QC_PASSED', 'QC_FAILED'].includes(r.status)).length === 0) && (
+                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>Không có yêu cầu đổi trả cần xử lý</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -3666,6 +3851,55 @@ export default function Warehouse() {
         orderToAssign={orderToAssignShipper}
         onClose={() => setOrderToAssignShipper(null)}
         onConfirmAssign={handleConfirmShipperAssign}
+      />
+
+      {/* Confirm Modal */}
+      {confirmState.isOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '400px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Xác nhận
+              </h2>
+              <button onClick={() => setConfirmState({ ...confirmState, isOpen: false })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRadius: '50%' }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
+              <p style={{ margin: 0, color: '#334155', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                {confirmState.message}
+              </p>
+            </div>
+
+            <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', backgroundColor: '#f8fafc', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+              <button 
+                onClick={() => setConfirmState({ ...confirmState, isOpen: false })} 
+                style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', backgroundColor: '#fff', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={() => {
+                  if (confirmState.onConfirm) confirmState.onConfirm();
+                  setConfirmState({ ...confirmState, isOpen: false });
+                }} 
+                className="btn btn-primary" 
+                style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', backgroundColor: confirmState.type === 'danger' ? '#ef4444' : '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Đồng ý
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pack And Scan Modal */}
+      <PackAndScanModal
+        show={!!orderToPack}
+        onClose={() => setOrderToPack(null)}
+        order={orderToPack}
+        onConfirmPack={handleConfirmPack}
       />
     </div>
   );

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation }
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ERPProvider } from './context/ERPContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 // Storefront Components
 import Header from './components/Layout/Header';
@@ -20,6 +21,7 @@ import About from './pages/Storefront/About';
 import Careers from './pages/Storefront/Careers';
 import MemberTier from './pages/Storefront/MemberTier';
 import FlashSale from './pages/Storefront/FlashSale';
+import Profile from './pages/Storefront/Profile';
 import Login from './pages/Login';
 
 // Admin ERP Components
@@ -143,121 +145,125 @@ const ScrollToTop = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <ERPProvider>
-          <Router>
-            <ScrollToTop />
-            <Routes>
-              {/* Storefront Layout Routes */}
-              <Route path="/" element={<StorefrontLayout />}>
-                <Route index element={<Home />} />
-                <Route path="product/:id" element={<ProductDetail />} />
-                <Route path="pc-builder" element={<PCBuilder />} />
-                <Route path="cart" element={<Cart />} />
-                <Route path="my-orders" element={<MyOrders />} />
-                {/* New TMĐT Pages */}
-                <Route path="promotions" element={<Promotions />} />
-                <Route path="flash-sale" element={<FlashSale />} />
-                <Route path="news" element={<News />} />
-                <Route path="news/:id" element={<NewsDetail />} />
-                <Route path="about" element={<About />} />
-                <Route path="careers" element={<Careers />} />
-                <Route path="member-tier" element={<MemberTier />} />
-              </Route>
+      <NotificationProvider>
+        <CartProvider>
+          <ERPProvider>
 
-              {/* Standalone Login Route */}
-              <Route path="/login" element={<Login />} />
+            <Router>
+              <ScrollToTop />
+              <Routes>
+                {/* Storefront Layout Routes */}
+                <Route path="/" element={<StorefrontLayout />}>
+                  <Route index element={<Home />} />
+                  <Route path="product/:id" element={<ProductDetail />} />
+                  <Route path="pc-builder" element={<PCBuilder />} />
+                  <Route path="cart" element={<Cart />} />
+                  <Route path="my-orders" element={<MyOrders />} />
+                  {/* New TMĐT Pages */}
+                  <Route path="promotions" element={<Promotions />} />
+                  <Route path="flash-sale" element={<FlashSale />} />
+                  <Route path="news" element={<News />} />
+                  <Route path="news/:id" element={<NewsDetail />} />
+                  <Route path="about" element={<About />} />
+                  <Route path="careers" element={<Careers />} />
+                  <Route path="member-tier" element={<MemberTier />} />
+                  <Route path="profile" element={<Profile />} />
+                </Route>
 
-              {/* Protected Admin ERP Layout Routes */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminIndexRedirect />} />
-                
-                <Route path="dashboard" element={
-                  <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="sales" element={
-                  <ProtectedRoute allowedRoles={['CEO', 'SALES', 'SALES_MANAGER', 'ADMIN']}>
-                    <SalesPOS />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="warehouse" element={
-                  <ProtectedRoute allowedRoles={['CEO', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'ADMIN']}>
-                    <Warehouse />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="assembly" element={
-                  <ProtectedRoute allowedRoles={['ASSEMBLY', 'ADMIN']}>
-                    <Assembly />
-                  </ProtectedRoute>
-                } />
+                {/* Standalone Login Route */}
+                <Route path="/login" element={<Login />} />
 
-                <Route path="hr" element={
-                  <ProtectedRoute allowedRoles={['CEO', 'HR', 'ADMIN', 'ACCOUNTANT']}>
-                    <HRManager />
+                {/* Protected Admin ERP Layout Routes */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminIndexRedirect />} />
+                  
+                  <Route path="dashboard" element={
+                    <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="sales" element={
+                    <ProtectedRoute allowedRoles={['CEO', 'SALES', 'SALES_MANAGER', 'ADMIN']}>
+                      <SalesPOS />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="warehouse" element={
+                    <ProtectedRoute allowedRoles={['CEO', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'ADMIN']}>
+                      <Warehouse />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="assembly" element={
+                    <ProtectedRoute allowedRoles={['ASSEMBLY', 'ADMIN']}>
+                      <Assembly />
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="hr" element={
+                    <ProtectedRoute allowedRoles={['CEO', 'HR', 'ADMIN', 'ACCOUNTANT']}>
+                      <HRManager />
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="accounting" element={
+                    <ProtectedRoute allowedRoles={['CEO', 'ACCOUNTANT', 'ADMIN']}>
+                      <Accountant />
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="purchasing" element={
+                    <ProtectedRoute allowedRoles={['CEO', 'PURCHASING', 'ADMIN']}>
+                      <Purchasing />
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="quality-control" element={
+                    <ProtectedRoute allowedRoles={['QC', 'QA', 'QUALITY_CONTROL', 'CEO', 'ADMIN', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'PURCHASING']}>
+                      <QualityControl />
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="system" element={
+                    <ProtectedRoute allowedRoles={['ADMIN']}>
+                      <SystemAdmin />
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="cskh" element={
+                    <ProtectedRoute allowedRoles={['CSKH', 'ADMIN', 'SALES_MANAGER']}>
+                      <CustomerService />
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="delivery" element={
+                    <ProtectedRoute allowedRoles={['DELIVERY', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'ADMIN']}>
+                      <Delivery />
+                    </ProtectedRoute>
+                  } />
+                </Route>
+
+                {/* Supplier Portal Layout Routes */}
+                <Route path="/supplier" element={
+                  <ProtectedRoute allowedRoles={['SUPPLIER']}>
+                    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
+                      <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+                        <Outlet />
+                      </main>
+                    </div>
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route path="portal" element={<SupplierPortal />} />
+                </Route>
 
-                <Route path="accounting" element={
-                  <ProtectedRoute allowedRoles={['CEO', 'ACCOUNTANT', 'ADMIN']}>
-                    <Accountant />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="purchasing" element={
-                  <ProtectedRoute allowedRoles={['CEO', 'PURCHASING', 'ADMIN']}>
-                    <Purchasing />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="quality-control" element={
-                  <ProtectedRoute allowedRoles={['QC', 'QA', 'QUALITY_CONTROL', 'CEO', 'ADMIN', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'PURCHASING']}>
-                    <QualityControl />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="system" element={
-                  <ProtectedRoute allowedRoles={['ADMIN']}>
-                    <SystemAdmin />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="cskh" element={
-                  <ProtectedRoute allowedRoles={['CSKH', 'ADMIN', 'SALES_MANAGER']}>
-                    <CustomerService />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="delivery" element={
-                  <ProtectedRoute allowedRoles={['DELIVERY', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'ADMIN']}>
-                    <Delivery />
-                  </ProtectedRoute>
-                } />
-              </Route>
-
-              {/* Supplier Portal Layout Routes */}
-              <Route path="/supplier" element={
-                <ProtectedRoute allowedRoles={['SUPPLIER']}>
-                  <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-                    <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-                      <Outlet />
-                    </main>
-                  </div>
-                </ProtectedRoute>
-              }>
-                <Route path="portal" element={<SupplierPortal />} />
-              </Route>
-
-              {/* General fallback route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Router>
-        </ERPProvider>
-      </CartProvider>
+                {/* General fallback route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Router>
+          </ERPProvider>
+        </CartProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

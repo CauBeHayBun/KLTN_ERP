@@ -9,7 +9,8 @@ const {
   rejectReturnRequest,
   confirmReturnWarehouse,
   processRefund,
-  getReturnRequests
+  getReturnRequests,
+  updateOrderDetails
 } = require('../controllers/order.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const { getEmailLogs } = require('../services/emailService');
@@ -25,6 +26,10 @@ router.get('/', authMiddleware(['CUSTOMER']), getCustomerOrders);
 // @route   PATCH /api/v1/orders/:id/status
 // @desc    Cập nhật trạng thái đơn hàng (Nhân viên Sale / Kho / Delivery / Admin)
 router.patch('/:id/status', authMiddleware(['SALES', 'SALES_MANAGER', 'CEO', 'ADMIN', 'CSKH', 'DELIVERY']), updateOrderStatus);
+
+// @route   PATCH /api/v1/orders/:id/details
+// @desc    Khách hàng tự cập nhật thông tin đơn hàng PENDING
+router.patch('/:id/details', authMiddleware(['CUSTOMER']), updateOrderDetails);
 
 // @route   POST /api/v1/orders/:id/return
 // @desc    Khách hàng gửi Yêu cầu Đổi / Trả / Hoàn tiền

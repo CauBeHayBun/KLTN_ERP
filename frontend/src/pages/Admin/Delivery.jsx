@@ -64,7 +64,7 @@ const PROOF_PHOTO_PRESETS = [
 ];
 
 export default function Delivery() {
-  const { orders, updateOrderStatus, claimOrderForDelivery } = useERP();
+  const { orders, updateOrderStatus, claimOrderForDelivery, returnRequests, updateReturnStatus } = useERP();
   const { user } = useAuth();
   const [tab, setTab] = useState('pending');
   const [search, setSearch] = useState('');
@@ -112,6 +112,15 @@ export default function Delivery() {
     (isManagerOrAdmin || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username)
   ).length;
 
+  const filteredReturns = (returnRequests || []).filter(r => {
+    const matchSearch = !search || r.orderId?.toLowerCase().includes(search.toLowerCase())
+      || r.customerName?.toLowerCase().includes(search.toLowerCase())
+      || r.phone?.includes(search);
+    return matchSearch && ['RETURN_APPROVED', 'RETURNING_TO_WAREHOUSE'].includes(r.status);
+  });
+  const returnsCount = filteredReturns.length;
+
+
   const filteredOrders = dateFilteredMyOrders.filter(o => {
     const matchSearch = !search || o.orderId?.toLowerCase().includes(search.toLowerCase())
       || o.customerName?.toLowerCase().includes(search.toLowerCase())
@@ -127,6 +136,12 @@ export default function Delivery() {
     if (tab === 'done') return matchSearch && o.status === 'DELIVERED' && isMyActiveOrder;
     return matchSearch && isAssignedToMe;
   });
+
+  const handleReturnPickup = (id) => {
+    updateReturnStatus(id, 'RETURNING_TO_WAREHOUSE', `Shipper ${user?.fullname || user?.username} đã lấy hàng thu hồi`);
+    alert('Đã xác nhận lấy hàng thu hồi, đang hoàn về kho.');
+  };
+
 
   const fmt = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 
@@ -429,6 +444,7 @@ export default function Delivery() {
             { key: 'active', label: `Đang giao (${activeCount})` },
             { key: 'failed', label: `Giao thất bại (${failedCount})` },
             { key: 'done', label: `Đã giao (${doneCount})` },
+            { key: 'returns', label: `Đơn cần thu hồi (${returnsCount})` },
           ].map(t => (
             <button key={t.key} onClick={() => { setTab(t.key); setSearch(''); }}
               style={{
@@ -662,6 +678,67 @@ export default function Delivery() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── RETURNS GRID ── */}
+      {tab === 'returns' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem', alignItems: 'stretch' }}>
+          {filteredReturns.length === 0 ? (
+            <div className="card-glass" style={{ gridColumn: '1 / -1', padding: '3rem', textAlign: 'center', color: '#64748b', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px' }}>
+              <RefreshCw size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+              <p style={{ fontSize: '0.95rem', fontWeight: 600 }}>Không có đơn hàng nào cần thu hồi</p>
+            </div>
+          ) : (
+            filteredReturns.map(r => (
+              <div key={r.id} style={{
+                padding: '1.25rem', display: 'flex', flexDirection: 'column',
+                backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '14px',
+                borderLeft: `5px solid #6366f1`, boxShadow: '0 4px 15px rgba(15,23,42,0.06)',
+                height: '100%'
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#6366f1', fontSize: '1rem', fontWeight: 800 }}>Yêu Cầu Đổi Trả: {r.id}</span>
+                    <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '0.725rem', fontWeight: 800, backgroundColor: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe' }}>
+                      {r.type === 'REFUND' ? 'Hoàn tiền' : 'Đổi hàng'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f172a' }}>
+                      <User size={14} style={{ color: '#64748b', flexShrink: 0 }} />
+                      <strong style={{ fontWeight: 700 }}>{r.customerName}</strong>
+                    </div>
+                    {r.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#475569' }}>
+                        <Phone size={14} style={{ color: '#64748b', flexShrink: 0 }} />
+                        <span style={{ fontWeight: 700 }}>{r.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ padding: '0.625rem 0.75rem', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.76rem', color: '#475569' }}>
+                    <strong>Mã đơn gốc:</strong> {r.orderId} <br/>
+                    <strong>Lý do trả:</strong> {r.reason}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 'auto', paddingTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.35rem' }}>
+                    {r.status === 'RETURN_APPROVED' && (
+                      <button onClick={() => handleReturnPickup(r.id)} className="btn btn-primary" style={{ flex: 1, fontSize: '0.825rem', padding: '0.55rem', borderRadius: '8px', backgroundColor: '#2563eb', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Truck size={15} style={{ marginRight: '4px' }}/> Đã nhận hàng trả về
+                      </button>
+                    )}
+                    {r.status === 'RETURNING_TO_WAREHOUSE' && (
+                      <div style={{ flex: 1, padding: '0.5rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', color: '#16a34a', fontSize: '0.825rem', fontWeight: 800 }}>
+                        <CheckCircle size={15}/> Đang hoàn về kho
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 

@@ -36,6 +36,7 @@ app.use('/api/v1/chat', require('./routes/chat.routes'));
 app.use('/api/v1/purchasing', require('./routes/purchase.routes'));
 app.use('/api/v1/warehouse', require('./routes/warehouse.routes'));
 app.use('/api/v1/hr', require('./routes/hr.routes'));
+app.use('/api/v1/customers', require('./routes/customer.routes'));
 
 // Global Error Handler Middleware
 app.use(errorMiddleware);
