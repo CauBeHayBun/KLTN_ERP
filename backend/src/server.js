@@ -2,6 +2,7 @@ require('dotenv').config();
 const app = require('./app');
 const prisma = require('./config/database');
 const { startScheduler } = require('./services/orderScheduler');
+const { initWebSocket } = require('./services/websocketService');
 
 const PORT = process.env.PORT || 5000;
 
@@ -13,6 +14,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`==================================================`);
   
   startScheduler();
+  initWebSocket(server);
 });
 
 // Handle graceful shutdown

@@ -17,7 +17,12 @@
         "alo",
         "ê ad",
         "có ai online không",
-        "có ai trực không"
+        "có ai trực không",
+        "dạ chào shop ạ",
+        "tư vấn cho mình bộ pc",
+        "shop tư vấn em với",
+        "shop ơi",
+        "ad ơi"
       ]
     },
     {
@@ -30,7 +35,8 @@
         "hẹn gặp lại",
         "hẹn gặp lại shop",
         "mình đi nha",
-        "tạm biệt ad"
+        "tạm biệt ad",
+        "cảm ơn hẹn gặp lại"
       ]
     },
     {
@@ -44,7 +50,9 @@
         "thank shop",
         "cảm ơn ad nhiều nha",
         "ok cảm ơn bạn",
-        "ok cám ơn"
+        "ok cám ơn",
+        "tư vấn tuyệt vời cảm ơn shop",
+        "đã hiểu cảm ơn bạn nhiều"
       ]
     },
     {
@@ -68,7 +76,16 @@
         "cấu hình máy tính chơi game khoảng 15tr",
         "ráp pc gaming",
         "build pc văn phòng",
-        "tư vấn ráp máy tính chơi game"
+        "tư vấn ráp máy tính chơi game",
+        "build pc 22tr mượt valorant",
+        "ráp máy 35tr làm blender 3d",
+        "pc 40tr chạy ai llama vram 16gb",
+        "ráp pc màu trắng full argb",
+        "cấu hình pc livestream vtuber",
+        "build pc 12tr",
+        "dàn máy 18 triệu",
+        "tư vấn cấu hình máy tính 15tr",
+        "build dàn máy 25tr"
       ]
     },
     {
@@ -94,7 +111,27 @@
         "tìm màn hình tầm 3 triệu",
         "vga gigabyte",
         "ssd samsung 500gb",
-        "tìm bàn phím cơ"
+        "tìm bàn phím cơ",
+        "tìm card msi rtx 4070 super",
+        "tìm ram corsair vengeance rgb",
+        "tìm tản nhiệt deepcool ak620",
+        "có nguồn corsair 850w gold không",
+        "cho xem các mẫu màn hình",
+        "bàn phím cơ giá bao nhiêu",
+        "card màn hình rẻ nhất"
+      ]
+    },
+    {
+      "intent": "game_advice",
+      "utterances": [
+        "chơi valorant cần máy bao nhiêu",
+        "cấu hình chơi gta 5 mượt",
+        "máy tính chơi fo4 fifa online",
+        "pc chơi lmht lol max setting",
+        "cần dàn pc chơi pubg 60fps",
+        "cấu hình chơi genshin impact",
+        "máy tính cho học sinh sinh viên học lập trình",
+        "cấu hình dựng phim premiere pro 4k"
       ]
     },
     {
@@ -109,7 +146,8 @@
         "màn hình bị sọc có được bảo hành không",
         "gửi bảo hành ở đâu",
         "thời gian bảo hành mất bao lâu",
-        "chính sách đổi trả sản phẩm"
+        "chính sách đổi trả sản phẩm",
+        "đổi mới trong bao lâu"
       ]
     },
     {
@@ -124,7 +162,9 @@
         "nhận hàng rồi thanh toán được không",
         "ship tỉnh mất mấy ngày",
         "chính sách vận chuyển",
-        "có ship cod không"
+        "có ship cod không",
+        "ship hà nội hcm bao nhiêu tiền",
+        "ship các tỉnh khác bao nhiêu"
       ]
     },
     {
@@ -151,7 +191,20 @@
         "shop hoạt động từ mấy giờ đến mấy giờ",
         "email hỗ trợ của shop là gì",
         "địa chỉ bảo hành ở đâu",
-        "cửa hàng ở quận mấy"
+        "cửa hàng ở quận mấy",
+        "gặp nhân viên cskh",
+        "cho số tổng đài"
+      ]
+    },
+    {
+      "intent": "hardware_advice",
+      "utterances": [
+        "nếu chọn intel hay amd",
+        "so sánh i5 13400f và ryzen 5 7600",
+        "chơi game chọn card nvidia hay radeon",
+        "cần bao nhiêu ram để edit video 4k",
+        "tản khí hay tản nước tốt hơn",
+        "nguồn 650w có đủ chạy rtx 4070 không"
       ]
     }
   ]

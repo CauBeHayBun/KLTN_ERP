@@ -467,11 +467,11 @@ export default function ProductDetail() {
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({reviews.length} đánh giá)</span>
               {product.available && product.stockQuantity > 0 ? (
                 <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600 }}>
-                  ✓ Còn hàng (Tồn kho: {product.stockQuantity})
+                  ✓ Còn {product.stockQuantity} sản phẩm
                 </span>
               ) : product.available && product.stockQuantity === 0 ? (
                 <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--warning)', fontWeight: 600 }}>
-                  ✓ Hàng đặt trước (Tồn kho: 0)
+                  ✓ Hàng đặt trước
                 </span>
               ) : (
                 <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--danger)', fontWeight: 600 }}>
@@ -520,59 +520,87 @@ export default function ProductDetail() {
             )}
 
             {/* ⑤ Qty + Add to cart + Buy now + Wishlist — TWO ROWS */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
-              {/* Row 1: Qty stepper + Wishlist */}
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                {/* Qty stepper */}
-                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-md)', overflow: 'hidden', flexShrink: 0, height: '44px' }}>
-                  <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ width: '36px', height: '44px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Minus size={13} />
-                  </button>
-                  <span style={{ width: '36px', textAlign: 'center', fontWeight: 700, background: 'var(--bg-secondary)', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9375rem' }}>{qty}</span>
-                  <button onClick={() => setQty(q => q + 1)} style={{ width: '36px', height: '44px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Plus size={13} />
-                  </button>
+            {(() => {
+              const inStock = (Number(product.stockQuantity) > 0 || Number(product.stock) > 0) && !product.isPreorder;
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
+                  
+                  {/* Preorder Notice Banner */}
+                  {!inStock && (
+                    <div style={{ padding: '0.75rem 1rem', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', color: '#b45309', fontSize: '0.82rem', lineHeight: '1.45' }}>
+                      ⏳ <strong>Sản Phẩm Đặt Trước:</strong> Mặt hàng này hiện đang tạm hết sẵn tại kho. Quý khách vui lòng liên hệ Hotline <strong style={{ color: '#d97706' }}>0912.888.999</strong> hoặc Live Chat CSKH để được hỗ trợ đặt giữ hàng!
+                    </div>
+                  )}
+
+                  {/* Row 1: Qty stepper + Wishlist */}
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    {/* Qty stepper */}
+                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-md)', overflow: 'hidden', flexShrink: 0, height: '44px', opacity: inStock ? 1 : 0.5 }}>
+                      <button disabled={!inStock} onClick={() => setQty(q => Math.max(1, q - 1))} style={{ width: '36px', height: '44px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-primary)', cursor: inStock ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Minus size={13} />
+                      </button>
+                      <span style={{ width: '36px', textAlign: 'center', fontWeight: 700, background: 'var(--bg-secondary)', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9375rem' }}>{qty}</span>
+                      <button disabled={!inStock} onClick={() => setQty(q => q + 1)} style={{ width: '36px', height: '44px', background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-primary)', cursor: inStock ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Plus size={13} />
+                      </button>
+                    </div>
+
+                    {/* Wishlist */}
+                    <button onClick={() => product && toggleWishlist(product)} style={{
+                      width: '44px', height: '44px', flexShrink: 0,
+                      background: fav ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${fav ? 'rgba(239,68,68,0.35)' : 'var(--border-glass)'}`,
+                      borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                    }}>
+                      <Heart size={15} fill={fav ? '#ef4444' : 'none'} stroke={fav ? '#ef4444' : 'var(--text-muted)'} />
+                    </button>
+                  </div>
+
+                  {/* Row 2: Add to cart + Buy now */}
+                  <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                    {inStock ? (
+                      <>
+                        {/* Add to cart */}
+                        <button onClick={handleCart} className="btn btn-primary" style={{
+                          flex: 1, height: '44px', fontSize: '0.875rem', fontWeight: 700, gap: '0.4rem',
+                          background: cartOk ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,var(--primary),#4f46e5)',
+                          transition: 'all 0.3s', borderRadius: 'var(--radius-md)', minWidth: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          {cartOk ? <><Check size={14} />Đã thêm!</> : <><ShoppingCart size={14} />Thêm Vào Giỏ</>}
+                        </button>
+
+                        {/* Buy now */}
+                        <button onClick={handleBuyNow} style={{
+                          flex: 1, height: '44px', fontSize: '0.875rem', fontWeight: 700, gap: '0.4rem',
+                          border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)',
+                          background: 'linear-gradient(135deg,#059669,#10b981)',
+                          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontFamily: 'var(--font-sans)', transition: 'opacity 0.2s', minWidth: 0,
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                        >
+                          <Zap size={14} />Mua Ngay
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        disabled
+                        style={{
+                          width: '100%', height: '44px', fontSize: '0.875rem', fontWeight: 800,
+                          border: '1px solid #cbd5e1', cursor: 'not-allowed', borderRadius: 'var(--radius-md)',
+                          backgroundColor: '#f1f5f9', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+                        }}
+                      >
+                        ⏳ Hàng Đặt Trước (Không Thể Mua Trực Tiếp)
+                      </button>
+                    )}
+                  </div>
                 </div>
-
-                {/* Wishlist */}
-                <button onClick={() => product && toggleWishlist(product)} style={{
-                  width: '44px', height: '44px', flexShrink: 0,
-                  background: fav ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${fav ? 'rgba(239,68,68,0.35)' : 'var(--border-glass)'}`,
-                  borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
-                }}>
-                  <Heart size={15} fill={fav ? '#ef4444' : 'none'} stroke={fav ? '#ef4444' : 'var(--text-muted)'} />
-                </button>
-              </div>
-
-              {/* Row 2: Add to cart + Buy now */}
-              <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-                {/* Add to cart */}
-                <button onClick={handleCart} className="btn btn-primary" style={{
-                  flex: 1, height: '44px', fontSize: '0.875rem', fontWeight: 700, gap: '0.4rem',
-                  background: cartOk ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,var(--primary),#4f46e5)',
-                  transition: 'all 0.3s', borderRadius: 'var(--radius-md)', minWidth: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  {cartOk ? <><Check size={14} />Đã thêm!</> : <><ShoppingCart size={14} />Thêm Vào Giỏ</>}
-                </button>
-
-                {/* Buy now */}
-                <button onClick={handleBuyNow} style={{
-                  flex: 1, height: '44px', fontSize: '0.875rem', fontWeight: 700, gap: '0.4rem',
-                  border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)',
-                  background: 'linear-gradient(135deg,#059669,#10b981)',
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'var(--font-sans)', transition: 'opacity 0.2s', minWidth: 0,
-                }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                >
-                  <Zap size={14} />Mua Ngay
-                </button>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* ⑥ Trust badges — 4 cột */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>

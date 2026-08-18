@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { api } from '../services/api';
 
 const ERPContext = createContext(null);
@@ -66,7 +66,7 @@ const INITIAL_JOBS = [
       { category: 'VGA', name: 'MSI GeForce RTX 4060 Ventus 2X 8GB OC' },
       { category: 'PSU', name: 'Corsair RM750e 750W 80 Plus Gold' }
     ],
-    checklist: { socketCheck: true, thermalPaste: true, cableRouting: false, biosBoot: false, stressTest: false }
+    checklist: { biosPost: true, osInstall: true, stressTest: true, qcSeal: true }
   }
 ];
 
@@ -80,8 +80,48 @@ const INITIAL_LEDGER = [
 ];
 
 const INITIAL_POS = [
-  { id: 'PO-501', productId: 1, productName: 'Intel Core i5-13400F', quantity: 5, unitPrice: 4200000, supplier: 'Intel Vietnam', status: 'PENDING', date: '20/06/2026' },
-  { id: 'PO-502', productId: 8, productName: 'MSI GeForce RTX 4060 Ventus 2X 8GB OC', quantity: 3, unitPrice: 7500000, supplier: 'Mai Hoàng Distribution', status: 'APPROVED', date: '21/06/2026' }
+  {
+    id: 'PO-260808-3458',
+    poNumber: 'PO-260808-3458',
+    supplierCode: 's1',
+    supplier: { code: 's1', name: 'Samsung Vina Electronics Co., Ltd' },
+    createdBy: 'purchasing@kltn-erp.vn',
+    expectedDeliveryDate: '2026-08-18',
+    totalAmount: 9524810,
+    status: 'PO',
+    items: [
+      { productId: '1', productName: 'Intel Core i5-13400F', quantity: 10, unitCost: 4150000 },
+      { productId: '8', productName: 'MSI GeForce RTX 4060 Ventus 2X 8GB OC', quantity: 5, unitCost: 7400000 }
+    ]
+  },
+  {
+    id: 'PO-2026-0003',
+    poNumber: 'PO-2026-0003',
+    supplierCode: 's2',
+    supplier: { code: 's2', name: 'Mai Hoàng Distribution' },
+    createdBy: 'purchasing@kltn-erp.vn',
+    expectedDeliveryDate: '2026-08-20',
+    totalAmount: 202500000,
+    status: 'QUOTED',
+    items: [
+      { productId: '4', productName: 'RAM Corsair Vengeance RGB 32GB DDR5', quantity: 25, unitCost: 2100000 },
+      { productId: '5', productName: 'VGA ASUS ROG Strix RTX 4070 Super', quantity: 12, unitCost: 12500000 }
+    ]
+  },
+  {
+    id: 'RFQ-2026-0001',
+    poNumber: 'RFQ-2026-0001',
+    supplierCode: 's1',
+    supplier: { code: 's1', name: 'Samsung Vina Electronics Co., Ltd' },
+    createdBy: 'purchasing@kltn-erp.vn',
+    expectedDeliveryDate: '2026-08-25',
+    totalAmount: 97500000,
+    status: 'RFQ',
+    items: [
+      { productId: '1', productName: 'Intel Core i5-13400F', quantity: 20, unitCost: 1500000 },
+      { productId: '2', productName: 'Mainboard ASUS TUF Gaming B760-PLUS', quantity: 15, unitCost: 4500000 }
+    ]
+  }
 ];
 
 const INITIAL_ATTENDANCE_LOGS = (() => {
@@ -107,12 +147,11 @@ const INITIAL_ATTENDANCE_LOGS = (() => {
 })();
 
 const INITIAL_SERIALS = [
-  { serial: 'SN-I5-839201', productId: 1, status: 'AVAILABLE' },
-  { serial: 'SN-I5-839202', productId: 1, status: 'AVAILABLE' },
-  { serial: 'SN-MB-471029', productId: 3, status: 'AVAILABLE' },
-  { serial: 'SN-RAM-112233', productId: 5, status: 'AVAILABLE' },
-  { serial: 'SN-VGA-998877', productId: 8, status: 'AVAILABLE' },
-  { serial: 'SN-PSU-556677', productId: 10, status: 'AVAILABLE' }
+  ...Array.from({ length: 30 }).flatMap((_, i) => [
+    { serial: `SN-MOCK-${i + 1}-A`, productId: i + 1, status: 'AVAILABLE' },
+    { serial: `SN-MOCK-${i + 1}-B`, productId: i + 1, status: 'AVAILABLE' },
+    { serial: `SN-MOCK-${i + 1}-C`, productId: i + 1, status: 'AVAILABLE' },
+  ])
 ];
 
 export const ERPProvider = ({ children }) => {
@@ -248,27 +287,119 @@ export const ERPProvider = ({ children }) => {
         const prodList = Array.isArray(prodData) ? prodData : (prodData?.data || []);
         setProducts(prodList);
         
+        // Reset legacy cached inventory once to load newly reallocated stock dataset (v14)
+        if (!localStorage.getItem('erp_inv_v14_synced')) {
+          localStorage.removeItem('erp_inventory');
+          ['v7','v8','v9','v10','v11','v12','v13'].forEach(v => localStorage.removeItem(`erp_inv_${v}_synced`));
+          localStorage.setItem('erp_inv_v14_synced', 'true');
+        }
+
         let storedInventory = [];
         try {
           const raw = localStorage.getItem('erp_inventory');
           if (raw) storedInventory = JSON.parse(raw);
         } catch (e) {}
 
+        // Realistic retail store: 2-8 units per SKU on average
+        const CATEGORY_DEFAULT_STOCK = {
+          'CPU': 4, 'VGA': 3, 'MAINBOARD': 4, 'RAM': 6, 'STORAGE': 5,
+          'PSU': 4, 'CASE': 3, 'COOLER': 4, 'MONITOR': 3, 'KEYBOARD': 5, 'MOUSE': 6
+        };
+        const MAX_STOCK_PER_SKU = 15; // cap unrealistically high backend values
+
         const syncedInventory = prodList.map(p => {
           const pId = p.id || p.productId;
           const invItem = storedInventory.find(i => String(i.id) === String(pId)) || {};
-          const isDiscontinued = p.status === 'DISCONTINUED' || p.status === 'INACTIVE';
-          const realStock = p.stockQuantity !== undefined ? p.stockQuantity : (p.stock_quantity !== undefined ? p.stock_quantity : (invItem.stock !== undefined ? invItem.stock : 0));
-          const realPrice = p.price !== undefined ? parseFloat(p.price) : (invItem.price || 0);
+          
+          // available=false = hidden from storefront, NOT discontinued
+          // Only truly discontinued if status='DISCONTINUED' or discontinued=true
+          const isDiscontinued = p.status === 'DISCONTINUED' || 
+                                 p.discontinued === true || 
+                                 invItem.status === 'DISCONTINUED';
+
+          // Use category.slug (reliable ASCII from DB) as primary key for normalization
+          const catSlug = (typeof p.category === 'object' ? p.category?.slug : null) || '';
+          const catName = (typeof p.category === 'object' ? p.category?.name : p.category) || invItem.category || 'STORAGE';
+          
+          // Slug-based mapping (most reliable - always ASCII)
+          const SLUG_TO_CODE = {
+            'cpu': 'CPU', 'processor': 'CPU',
+            'vga': 'VGA', 'gpu': 'VGA', 'graphics-card': 'VGA', 'card-man-hinh': 'VGA',
+            'mainboard': 'MAINBOARD', 'motherboard': 'MAINBOARD', 'main': 'MAINBOARD',
+            'ram': 'RAM', 'memory': 'RAM',
+            'storage': 'STORAGE', 'hdd': 'STORAGE', 'ssd': 'STORAGE', 'o-cung': 'STORAGE',
+            'psu': 'PSU', 'power-supply': 'PSU', 'nguon': 'PSU',
+            'case': 'CASE', 'chassis': 'CASE', 'thung-may': 'CASE',
+            'cooler': 'COOLER', 'tan-nhiet': 'COOLER', 'cooling': 'COOLER',
+            'monitor': 'MONITOR', 'man-hinh': 'MONITOR', 'screen': 'MONITOR',
+            'keyboard': 'KEYBOARD', 'ban-phim': 'KEYBOARD',
+            'mouse': 'MOUSE', 'chuot': 'MOUSE'
+          };
+          // Name-based fallback mapping
+          const CAT_NORMALIZE = {
+            'CPU': 'CPU', 'PROCESSOR': 'CPU',
+            'VGA': 'VGA', 'GPU': 'VGA', 'CARD MAN HINH': 'VGA',
+            'MAINBOARD': 'MAINBOARD', 'MOTHERBOARD': 'MAINBOARD',
+            'RAM': 'RAM', 'MEMORY': 'RAM',
+            'STORAGE': 'STORAGE', 'HDD': 'STORAGE', 'SSD': 'STORAGE',
+            'PSU': 'PSU', 'POWER SUPPLY': 'PSU',
+            'CASE': 'CASE', 'CHASSIS': 'CASE',
+            'COOLER': 'COOLER', 'FAN': 'COOLER', 'COOLING': 'COOLER',
+            'MONITOR': 'MONITOR', 'SCREEN': 'MONITOR', 'DISPLAY': 'MONITOR',
+            'KEYBOARD': 'KEYBOARD', 'BAN PHIM': 'KEYBOARD',
+            'MOUSE': 'MOUSE', 'CHUOT': 'MOUSE'
+          };
+          
+          // Determine catKey: slug first → name fallback
+          let catKey;
+          if (catSlug) {
+            catKey = SLUG_TO_CODE[catSlug.toLowerCase()] || SLUG_TO_CODE[catSlug.toLowerCase().replace(/[^a-z-]/g, '')] || catSlug.toUpperCase();
+          } else {
+            // Strip Vietnamese diacritics for matching
+            const catNameNorm = catName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+            catKey = CAT_NORMALIZE[catNameNorm] || CAT_NORMALIZE[catName.toUpperCase().trim()] || catName.toUpperCase().trim();
+          }
+          
+          const defaultStockForCat = CATEGORY_DEFAULT_STOCK[catKey] || 15;
+
+          const rawStock = p.stockQuantity !== undefined 
+            ? p.stockQuantity 
+            : (p.stock_quantity !== undefined ? p.stock_quantity : (invItem.stock !== undefined ? invItem.stock : undefined));
+
+          // Calculate realistic stock with proper distribution (in stock, low stock, out of stock)
+          let realStock;
+          if (rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock))) {
+            realStock = Math.min(Math.max(0, Number(rawStock)), MAX_STOCK_PER_SKU);
+          } else {
+            // Seed distributed stock levels if undefined
+            const numId = Number(String(pId).replace(/\D/g, '')) || 1;
+            const mod = numId % 10;
+            if (mod === 0) {
+              realStock = 0; // Hết hàng (Out of stock)
+            } else if (mod <= 2) {
+              realStock = 2 + (numId % 3); // 2-4: Cảnh báo tồn (<= threshold 5)
+            } else {
+              realStock = 6 + (numId % 8); // 6-13: Còn hàng an toàn (> threshold 5)
+            }
+          }
+
+          // Try multiple price field names from backend
+          const CATEGORY_DEFAULT_PRICE = {
+            'CPU': 8500000, 'VGA': 12000000, 'MAINBOARD': 4500000, 'RAM': 1500000,
+            'STORAGE': 1800000, 'PSU': 1200000, 'CASE': 1500000, 'COOLER': 800000,
+            'MONITOR': 6500000, 'KEYBOARD': 1200000, 'MOUSE': 500000
+          };
+          const rawPrice = parseFloat(p.price) || parseFloat(p.listPrice) || parseFloat(p.salePrice) || parseFloat(p.basePrice) || parseFloat(p.retailPrice) || parseFloat(p.unitPrice) || 0;
+          const realPrice = rawPrice > 0 ? rawPrice : (invItem.price && invItem.price > 0 ? invItem.price : (CATEGORY_DEFAULT_PRICE[catKey] || 0));
 
           return {
-            ...invItem,
             id: pId || invItem.id,
             name: p.name || invItem.name,
-            category: (typeof p.category === 'object' ? p.category?.name : p.category) || invItem.category || 'STORAGE',
-            stock: Number(realStock),
+            category: catKey,
+            stock: realStock,
             threshold: Number(invItem.threshold || 5),
             supplier: (typeof p.brand === 'object' ? p.brand?.name : p.brand) || invItem.supplier || 'Nhà phân phối',
+            location: invItem.location || 'Chưa xếp kệ',
             price: realPrice,
             available: !isDiscontinued,
             status: isDiscontinued ? 'DISCONTINUED' : 'ACTIVE'
@@ -289,7 +420,21 @@ export const ERPProvider = ({ children }) => {
     let loadedOrders = [];
     const storedOrders = localStorage.getItem('erp_orders');
     if (storedOrders) {
-      loadedOrders = JSON.parse(storedOrders);
+      try {
+        const parsed = JSON.parse(storedOrders);
+        loadedOrders = parsed.map(ord => {
+          if (!ord.items || !Array.isArray(ord.items) || ord.items.length === 0) {
+            const initMatch = INITIAL_ORDERS.find(i => i.orderId === ord.orderId);
+            if (initMatch && initMatch.items) {
+              return { ...ord, items: initMatch.items };
+            }
+          }
+          return ord;
+        });
+      } catch (e) {
+        loadedOrders = INITIAL_ORDERS;
+      }
+      localStorage.setItem('erp_orders', JSON.stringify(loadedOrders));
       setOrders(loadedOrders);
     } else {
       loadedOrders = INITIAL_ORDERS;
@@ -336,7 +481,7 @@ export const ERPProvider = ({ children }) => {
 
     // Load Serials
     const storedSerials = localStorage.getItem('erp_serials');
-    if (storedSerials) {
+    if (storedSerials && !storedSerials.includes('SN-I5-839201')) {
       setSerialNumbers(JSON.parse(storedSerials));
     } else {
       localStorage.setItem('erp_serials', JSON.stringify(INITIAL_SERIALS));
@@ -572,18 +717,25 @@ export const ERPProvider = ({ children }) => {
   };
 
   // Cập nhật trạng thái PO (dùng cho Purchasing & Supplier Portal khi offline/mock)
-  const updatePurchaseOrderStatus = (poId, newStatus, reason = null) => {
+  const updatePurchaseOrderStatus = (poId, newStatus, extraData = null) => {
+    const extraObj = typeof extraData === 'object' && extraData !== null ? extraData : (typeof extraData === 'string' ? { cancelReason: extraData, note: extraData } : {});
+    let updated = false;
     const updatedPOs = purchaseOrders.map(po => {
-      if (po.id === poId || po.poNumber === poId) {
+      if (po.id === poId || po.poNumber === poId || String(po.id) === String(poId)) {
+        updated = true;
         return { 
           ...po, 
           status: newStatus,
-          ...(reason ? { cancelReason: reason, rejectionReason: reason, note: reason } : {})
+          ...extraObj,
+          ...(extraObj.expectedDeliveryDate ? { expectedDeliveryDate: extraObj.expectedDeliveryDate } : {}),
+          ...(extraObj.supplierNote ? { supplierNote: extraObj.supplierNote, note: extraObj.supplierNote } : {})
         };
       }
       return po;
     });
-    saveState('erp_pos', updatedPOs, setPurchaseOrders);
+    // Do not overwrite persistent orders when this context has not loaded the
+    // target PO yet; SupplierPortal writes the authoritative record itself.
+    if (updated) saveState('erp_pos', updatedPOs, setPurchaseOrders);
   };
 
   // 2. Warehouse GRN imports
@@ -703,6 +855,24 @@ export const ERPProvider = ({ children }) => {
     saveState('erp_orders', updatedOrders, setOrders);
     syncExistingPoints(updatedOrders);
     saveState('erp_jobs', nextJobs, setAssemblyJobs);
+
+    // Send email notification on status change
+    const targetOrder = orders.find(o => o.orderId === orderId);
+    if (targetOrder) {
+      const emailToUse = targetOrder.email || targetOrder.customerEmail || user?.email || 'nguyenhoangmy7772004@gmail.com';
+      api.post('/orders/email-notify', {
+        type: 'STATUS_UPDATE',
+        toEmail: emailToUse,
+        customerName: targetOrder.customerName || user?.fullname || 'Khách hàng',
+        orderId: targetOrder.orderId,
+        status: newStatus,
+        note: note || '',
+        items: targetOrder.items,
+        totalAmount: targetOrder.totalAmount
+      }).then(() => {
+        console.log(`[EmailService] ✅ Đã gửi email thông báo trạng thái ${newStatus} tới ${emailToUse}`);
+      }).catch(err => console.warn('[EmailService] Order status email error:', err.message));
+    }
   };
 
   // 3. Assembly Line progress tracking
@@ -784,6 +954,52 @@ export const ERPProvider = ({ children }) => {
       };
       const nextLedger = [newTx, ...ledger];
       saveState('erp_ledger', nextLedger, setLedger);
+
+      // Gửi email thông báo Giao hàng thành công trực tiếp tới hòm thư khách hàng
+      const emailToUse = ord.email || ord.customerEmail || user?.email || 'nguyenhoangmy7772004@gmail.com';
+      api.post('/orders/email-notify', {
+        type: 'STATUS_UPDATE',
+        toEmail: emailToUse,
+        customerName: ord.customerName || user?.fullname || 'Khách hàng',
+        orderId: ord.orderId,
+        status: 'DELIVERED',
+        note: 'Đã xuất kho và giao hàng thành công tới khách hàng',
+        items: ord.items || [],
+        totalAmount: ord.totalAmount || 0,
+        proofPhoto: ord.proofPhoto || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80',
+        receiverNote: 'Khách hàng đã nhận đủ hàng và kiểm tra đầy đủ.',
+        deliveredTime: new Date().toLocaleString('vi-VN')
+      }).then(() => {
+        console.log(`[EmailService] ✅ Đã gửi email giao hàng thành công đơn ${orderId} tới ${emailToUse}`);
+      }).catch(err => {
+        console.warn('[EmailService] ❌ Lỗi gửi email giao hàng thành công:', err.message);
+      });
+    }
+  };
+
+  // Khách hàng tự cập nhật thông tin đơn hàng PENDING
+  const updateOrderDetails = (orderId, details) => {
+    const updatedOrders = orders.map(o => {
+      if (o.orderId === orderId && o.status === 'PENDING') {
+        return {
+          ...o,
+          customerName: details.customerName || o.customerName,
+          phone: details.phone || o.phone,
+          shippingAddress: details.shippingAddress || o.shippingAddress,
+          lastNote: details.notes !== undefined ? details.notes : o.lastNote
+        };
+      }
+      return o;
+    });
+
+    saveState('erp_orders', updatedOrders, setOrders);
+
+    // Gửi API lên backend để đồng bộ CSDL
+    const token = localStorage.getItem('token');
+    if (token && !token.startsWith('mock-')) {
+      api.patch(`/orders/${orderId}/details`, details).then(() => {
+        console.log(`[CSDL] Đã đồng bộ thông tin đơn hàng ${orderId} xuống DB.`);
+      }).catch(err => console.error('[CSDL] Lỗi cập nhật đơn hàng:', err.message));
     }
   };
 
@@ -883,6 +1099,16 @@ export const ERPProvider = ({ children }) => {
       }
     }
 
+    if (newStatus === 'PACKED' && extraData.selectedSerials) {
+      const updatedSerials = serialNumbers.map(sn => {
+        if (extraData.selectedSerials.includes(sn.serial)) {
+          return { ...sn, status: 'USED', orderId: orderId };
+        }
+        return sn;
+      });
+      saveState('erp_serials', updatedSerials, setSerialNumbers);
+    }
+
     if (inventoryChanged) {
       saveState('erp_inventory', nextInventory, setInventory);
     }
@@ -899,7 +1125,7 @@ export const ERPProvider = ({ children }) => {
           ...o, 
           status: newStatus,
           ...(note ? { lastNote: note } : {}),
-          ...(extraData && typeof extraData === 'object' ? extraData : {})
+          ...extraData
         };
       }
       return o;
@@ -907,21 +1133,70 @@ export const ERPProvider = ({ children }) => {
     saveState('erp_orders', updatedOrders, setOrders);
     syncExistingPoints(updatedOrders);
 
+    // Bắn thông báo Hệ thống cho Bộ phận Kho (Warehouse) nếu đơn hàng liên quan đến Kho
+    if (newStatus === 'CONFIRMED' && !isCancelledTransition) {
+      sendSystemNotification({
+        targetRoles: ['WAREHOUSE_MANAGER', 'ADMIN', 'CEO'],
+        title: `📦 Đơn hàng #${orderId} cần xuất kho`,
+        message: `Đơn hàng #${orderId} vừa được duyệt. Vui lòng chuẩn bị hàng để xuất kho.`,
+        link: '/admin/warehouse',
+        type: 'ORDER_ALERT'
+      });
+    } else if (newStatus === 'AWAITING_STOCK') {
+      sendSystemNotification({
+        targetRoles: ['WAREHOUSE_MANAGER', 'ADMIN', 'CEO'],
+        title: `⚠️ Đơn hàng #${orderId} thiếu linh kiện`,
+        message: `Đơn hàng #${orderId} đang chờ linh kiện nhập kho. Vui lòng kiểm tra và lên kế hoạch nhập hàng.`,
+        link: '/admin/warehouse',
+        type: 'STOCK_ALERT'
+      });
+    } else if (newStatus === 'CANCELLED' && ['CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'PACKED', 'AWAITING_STOCK'].includes(targetOrder.status)) {
+       sendSystemNotification({
+        targetRoles: ['WAREHOUSE_MANAGER', 'ADMIN', 'CEO'],
+        title: `❌ Hủy đơn hàng #${orderId}`,
+        message: `Đơn hàng #${orderId} vừa bị hủy. Vui lòng ngừng xuất kho hoặc thu hồi lại linh kiện.`,
+        link: '/admin/warehouse',
+        type: 'ORDER_ALERT'
+      });
+    }
+
     // Gửi email cập nhật trạng thái thực tế qua backend /orders/email-notify
     const targetOrderWithEmail = updatedOrders.find(o => o.orderId === orderId);
-    const customerEmailForNotif = targetOrderWithEmail?.email || '';
+    const customerEmailForNotif = targetOrderWithEmail?.email || targetOrderWithEmail?.customerEmail || user?.email || 'nguyenhoangmy7772004@gmail.com';
+    const orderItemsToPass = (targetOrderWithEmail?.items && targetOrderWithEmail.items.length > 0)
+      ? targetOrderWithEmail.items
+      : (targetOrder?.items || []);
+
     if (customerEmailForNotif) {
+      // Chuẩn bị proofPhoto: hỗ trợ truyền base64 lên backend để convert thành CID inline attachment trong email
+      let safeProofPhoto = extraData.proofPhoto || targetOrderWithEmail?.proofPhoto || null;
+      if (safeProofPhoto && safeProofPhoto.startsWith('data:') && safeProofPhoto.length > 8000000) {
+        // Base64 quá lớn (>8MB), dùng placeholder cho email template
+        safeProofPhoto = 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80';
+      }
+
+      // Giảm kích thước items payload - chỉ giữ thông tin cần thiết cho email
+      const safeItems = (orderItemsToPass || []).map(item => ({
+        name: item.name || item.productName || item.title || 'Linh kiện máy tính',
+        quantity: item.quantity || item.qty || 1,
+        price: item.price || item.unitPrice || item.totalPrice || 0,
+        category: item.category || ''
+      }));
+
       api.post('/orders/email-notify', {
         type: 'STATUS_UPDATE',
         toEmail: customerEmailForNotif,
-        customerName: targetOrderWithEmail.customerName || 'Khách hàng',
+        customerName: targetOrderWithEmail?.customerName || user?.fullname || 'Khách hàng',
         orderId,
         status: newStatus,
         note: note || null,
-        items: targetOrderWithEmail.items,
-        totalAmount: targetOrderWithEmail.totalAmount
+        items: safeItems,
+        totalAmount: targetOrderWithEmail?.totalAmount || targetOrder?.totalAmount || 0,
+        proofPhoto: safeProofPhoto,
+        receiverNote: extraData.receiverNote || null,
+        deliveredTime: extraData.deliveredTime || null
       }).then(() => {
-        console.log(`[EmailService] ✅ Đã gửi email cập nhật trạng thái tới ${customerEmailForNotif}`);
+        console.log(`[EmailService] ✅ Đã gửi email cập nhật trạng thái ${newStatus} tới ${customerEmailForNotif}`);
       }).catch(err => {
         console.warn('[EmailService] ❌ Lỗi gửi email cập nhật trạng thái:', err.message);
       });
@@ -938,7 +1213,7 @@ export const ERPProvider = ({ children }) => {
         id: `MAIL-${Date.now()}`,
         type: 'STATUS_UPDATE',
         toEmail: customerEmailForNotif,
-        customerName: targetOrderWithEmail.customerName || '',
+        customerName: targetOrderWithEmail?.customerName || '',
         orderId,
         status: newStatus,
         statusVN: STATUS_LABELS_VN[newStatus] || newStatus,
@@ -983,6 +1258,61 @@ export const ERPProvider = ({ children }) => {
         saveState('erp_ledger', nextLedger, setLedger);
       }
     }
+  };
+
+  // ──── Atomic Delivery Claiming & Deduplication ────
+  const claimOrderForDelivery = (orderId, shipperUser) => {
+    let currentOrders = [];
+    try {
+      currentOrders = JSON.parse(localStorage.getItem('erp_orders') || '[]');
+    } catch (_) {
+      currentOrders = orders;
+    }
+
+    const targetOrder = currentOrders.find(o => o.orderId === orderId || String(o.id) === String(orderId));
+    if (!targetOrder) {
+      return { success: false, message: `Không tìm thấy đơn hàng ${orderId} trong hệ thống!` };
+    }
+
+    const shipperId = shipperUser?.id || shipperUser?.username || 'SHIPPER';
+    const shipperName = shipperUser?.fullname || shipperUser?.name || shipperUser?.username || 'Giao Hàng';
+
+    // Anti-duplication check: If already assigned to another shipper, reject claim
+    if (targetOrder.assignedShipperId && String(targetOrder.assignedShipperId) !== String(shipperId)) {
+      return {
+        success: false,
+        message: `⚠️ Đơn hàng ${orderId} đã được Shipper "${targetOrder.assignedShipperName || targetOrder.assignedShipperId}" nhận trước đó!`
+      };
+    }
+
+    const nowStr = new Date().toLocaleDateString('vi-VN') + ' ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const noteText = `Đã lấy hàng & đang vận chuyển giao – Shipper: ${shipperName} (${nowStr})`;
+
+    updateOrderStatus(orderId, 'SHIPPED', noteText, {
+      assignedShipperId: shipperId,
+      assignedShipperName: shipperName,
+      assignedAt: new Date().toISOString(),
+      assignmentMethod: 'SELF_CLAIM'
+    });
+
+    return { success: true, message: `✅ Đã nhận đơn hàng ${orderId} thành công!` };
+  };
+
+  const assignShipperToOrder = (orderId, shipperUser) => {
+    const shipperId = shipperUser?.id || shipperUser?.username || null;
+    const shipperName = shipperUser?.fullname || shipperUser?.name || shipperUser?.username || null;
+    const nowStr = new Date().toLocaleDateString('vi-VN') + ' ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+    const noteText = shipperName
+      ? `Đã xuất kho – Phân công cho ${shipperName} giao hàng`
+      : `Đã xuất kho – Chờ bên giao hàng nhận đơn`;
+
+    updateOrderStatus(orderId, 'READY_TO_SHIP', noteText, {
+      assignedShipperId: shipperId,
+      assignedShipperName: shipperName,
+      assignedAt: shipperId ? new Date().toISOString() : null,
+      assignmentMethod: shipperId ? 'MANUAL_ASSIGN' : null
+    });
   };
 
   // Assembly tạo job lắp ráp thủ công
@@ -1389,15 +1719,17 @@ export const ERPProvider = ({ children }) => {
     const nextInventory = inventory.map(item => item.id === id ? { ...item, ...updatedFields } : item);
     saveState('erp_inventory', nextInventory, setInventory);
 
-    // Sync product update to backend
-    const token = localStorage.getItem('token');
-    if (token) {
-      api.put(`/products/admin/${id}`, updatedFields).then(() => {
-        console.log(`[CSDL] Đã cập nhật linh kiện ID ${id} lên backend thành công.`);
-      }).catch(err => {
-        console.warn(`[CSDL] Không thể đồng bộ cập nhật linh kiện ${id}:`, err.message);
-      });
-    }
+    // Sync product update to backend PostgreSQL CSDL
+    const payload = {
+      ...updatedFields,
+      stockQuantity: updatedFields.stock !== undefined ? parseInt(updatedFields.stock, 10) : undefined
+    };
+
+    api.put(`/products/admin/${id}`, payload).then((res) => {
+      console.log(`[CSDL] Đã lưu cập nhật linh kiện ID ${id} vào CSDL PostgreSQL thành công:`, res);
+    }).catch(err => {
+      console.warn(`[CSDL] Không thể đồng bộ cập nhật linh kiện ${id} vào CSDL:`, err.message);
+    });
   };
 
   const deleteProduct = (id) => {
@@ -1445,64 +1777,77 @@ export const ERPProvider = ({ children }) => {
 
   const updateReturnStatus = (id, status, resolution = '') => {
     // 1. Update return request status
-    const next = returnRequests.map(r => r.id === id ? { ...r, status, resolution } : r);
+    const returnReq = returnRequests.find(r => r.id === id);
+    if (!returnReq) return;
+
+    const next = returnRequests.map(r => r.id === id ? { ...r, status, resolution: resolution || r.resolution } : r);
     saveState('erp_return_requests', next, setReturnRequests);
 
-    // 2. If return is approved or completed, update order, inventory, and record refund expense
-    if (status === 'APPROVED' || status === 'COMPLETED') {
-      const returnReq = returnRequests.find(r => r.id === id);
-      if (returnReq) {
-        const orderId = returnReq.orderId;
-        const ord = orders.find(o => o.orderId === orderId);
-        
-        // If order hasn't already been marked as returned
-        if (ord && ord.status !== 'RETURNED') {
-          // A. Update Order Status to RETURNED
-          const updatedOrders = orders.map(o => {
-            if (o.orderId === orderId) {
-              return { ...o, status: 'RETURNED', lastNote: `Đổi trả hàng thành công: ${resolution || 'CSKH phê duyệt'}` };
-            }
-            return o;
-          });
-          saveState('erp_orders', updatedOrders, setOrders);
-          syncExistingPoints(updatedOrders);
+    const orderId = returnReq.orderId;
+    const ord = orders.find(o => o.orderId === orderId);
 
-          // Sync RETURNED order status to backend
-          const token = localStorage.getItem('token');
-          if (token) {
-            api.patch(`/orders/${orderId}/status`, {
-              status: 'RETURNED',
-              note: `Đổi trả hàng: ${resolution || 'CSKH phê duyệt'}`
-            }).then(() => {
-              console.log(`[CSDL] Đã cập nhật trạng thái đơn ${orderId} thành RETURNED trên backend.`);
-            }).catch(err => {
-              console.warn(`[CSDL] Không thể đồng bộ trạng thái RETURNED cho đơn ${orderId}:`, err.message);
-            });
+    // 2. Logic based on new RMA status
+    if (status === 'QC_PASSED') {
+      // Khi kho duyệt QC Pass
+      if (ord && ord.status !== 'RETURNED') {
+        // A. Cập nhật trạng thái đơn gốc thành RETURNED
+        const updatedOrders = orders.map(o => {
+          if (o.orderId === orderId) {
+            return { ...o, status: 'RETURNED', lastNote: `Đổi trả hàng (QC Passed): ${resolution || 'Hợp lệ'}` };
           }
-
-          // B. Restore Inventory Stock (Warehouse Manager)
-          const updatedInventory = inventory.map(invItem => {
-            const matchInOrder = ord.items?.find(oItem => String(oItem.productId) === String(invItem.id));
-            if (matchInOrder) {
-              return { ...invItem, stock: invItem.stock + matchInOrder.quantity };
-            }
-            return invItem;
-          });
-          saveState('erp_inventory', updatedInventory, setInventory);
-
-          // C. Record Refund Expense in Ledger (Accountant)
-          const dateStr = new Date().toLocaleDateString('vi-VN');
-          const newTx = {
-            id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
-            type: 'EXPENSE',
-            amount: ord.totalAmount,
-            date: dateStr,
-            description: `Hoàn tiền trả hàng đơn ${orderId} cho KH ${ord.customerName}`
+          return o;
+        });
+        
+        // B. Nếu là Đổi hàng (EXCHANGE) -> Tạo đơn hàng mới 0đ
+        if (returnReq.type === 'EXCHANGE' || returnReq.returnType === 'EXCHANGE') {
+          const newOrderId = `EX-${Date.now().toString().slice(-6)}`;
+          const exchangeOrder = {
+            ...ord,
+            orderId: newOrderId,
+            status: 'PENDING',
+            totalAmount: 0, // Đổi hàng không tốn tiền
+            type: 'ONLINE', // Hoặc để y như cũ
+            date: new Date().toLocaleDateString('vi-VN'),
+            lastNote: `Đơn hàng đổi trả cho đơn gốc #${orderId}`,
+            originalOrderId: orderId
           };
-          const nextLedger = [newTx, ...ledger];
-          saveState('erp_ledger', nextLedger, setLedger);
+          updatedOrders.unshift(exchangeOrder);
         }
+        
+        saveState('erp_orders', updatedOrders, setOrders);
+        syncExistingPoints(updatedOrders);
+
+        // Sync RETURNED order status to backend
+        const token = localStorage.getItem('token');
+        if (token) {
+          api.patch(`/orders/${orderId}/status`, {
+            status: 'RETURNED',
+            note: `Kho duyệt trả hàng: QC Passed`
+          }).catch(() => {});
+        }
+
+        // C. Restore Inventory Stock (Warehouse Manager)
+        const updatedInventory = inventory.map(invItem => {
+          const matchInOrder = ord.items?.find(oItem => String(oItem.productId) === String(invItem.id));
+          if (matchInOrder) {
+            return { ...invItem, stock: invItem.stock + matchInOrder.quantity };
+          }
+          return invItem;
+        });
+        saveState('erp_inventory', updatedInventory, setInventory);
       }
+    } else if (status === 'REFUND_COMPLETED') {
+      // Kế toán hoàn tiền
+      const dateStr = new Date().toLocaleDateString('vi-VN');
+      const newTx = {
+        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+        type: 'EXPENSE',
+        amount: ord ? ord.totalAmount : 0,
+        date: dateStr,
+        description: `Hoàn tiền trả hàng đơn ${orderId} cho KH ${ord ? ord.customerName : ''}`
+      };
+      const nextLedger = [newTx, ...ledger];
+      saveState('erp_ledger', nextLedger, setLedger);
     }
   };
 
@@ -1543,44 +1888,46 @@ export const ERPProvider = ({ children }) => {
     saveState('erp_complaints', next, setComplaints);
   };
 
+  // Ref to hold latest state for background timer without triggering effect re-subscriptions
+  const stateRef = useRef({ orders, inventory, ledger, assemblyJobs });
+  useEffect(() => {
+    stateRef.current = { orders, inventory, ledger, assemblyJobs };
+  }, [orders, inventory, ledger, assemblyJobs]);
+
   // Background interval check to auto-approve pending orders after 5 hours
   useEffect(() => {
     const checkPendingOrders = () => {
+      const { orders: currentOrders, inventory: currentInventory, ledger: currentLedger, assemblyJobs: currentJobs } = stateRef.current;
       let orderChanged = false;
       let inventoryChanged = false;
       let ledgerChanged = false;
       let jobsChanged = false;
 
-      let nextInventory = [...inventory];
-      let nextLedger = [...ledger];
-      let nextJobs = [...assemblyJobs];
+      let nextInventory = [...currentInventory];
+      let nextLedger = [...currentLedger];
+      let nextJobs = [...currentJobs];
 
-      const updatedOrders = orders.map(o => {
+      const updatedOrders = currentOrders.map(o => {
         // Process both PENDING (after 5h) and AWAITING_STOCK (re-check when stock comes in)
         const isPendingExpired = o.status === 'PENDING' && o.createdAtTime &&
           (Date.now() - o.createdAtTime) >= 5 * 60 * 60 * 1000;
         const isAwaitingStock = o.status === 'AWAITING_STOCK';
 
         if (isPendingExpired || isAwaitingStock) {
-          orderChanged = true;
-
           // Check stock:
-          // - If the item IS found in local inventory but quantity is not enough → shortage
-          // - If the item is NOT found in local inventory (backend UUID product) → assume available
           let hasShortage = false;
           o.items?.forEach(item => {
             const invItem = nextInventory.find(inv =>
               String(inv.id) === String(item.productId) ||
               (inv.name && item.name && inv.name.trim().toLowerCase() === item.name.trim().toLowerCase())
             );
-            // Only flag shortage if we CAN track it locally and stock is insufficient
             if (invItem && invItem.stock < item.quantity) {
               hasShortage = true;
             }
-            // If invItem is null (UUID not tracked locally), skip → assume available
           });
 
           if (!hasShortage) {
+            orderChanged = true;
             inventoryChanged = true;
             // Deduct stock only for items found in local inventory
             nextInventory = nextInventory.map(invItem => {
@@ -1634,8 +1981,9 @@ export const ERPProvider = ({ children }) => {
 
             return { ...o, status: 'CONFIRMED', lastNote: 'Hệ thống tự động duyệt (Đủ tồn kho).' };
           } else {
-            // Only transition PENDING → AWAITING_STOCK, keep existing AWAITING_STOCK as-is
+            // Only transition PENDING → AWAITING_STOCK
             if (o.status === 'PENDING') {
+              orderChanged = true;
               return { ...o, status: 'AWAITING_STOCK', lastNote: 'Hệ thống tự động chuyển Chờ hàng sau 5 tiếng chờ (Thiếu tồn kho).' };
             }
           }
@@ -1650,7 +1998,7 @@ export const ERPProvider = ({ children }) => {
         const token = localStorage.getItem('token');
         if (token) {
           updatedOrders.forEach(o => {
-            const oldOrder = orders.find(old => old.orderId === o.orderId);
+            const oldOrder = currentOrders.find(old => old.orderId === o.orderId);
             if (oldOrder && oldOrder.status === 'PENDING' && o.status !== 'PENDING') {
               api.patch(`/orders/${o.orderId}/status`, {
                 status: o.status,
@@ -1675,12 +2023,11 @@ export const ERPProvider = ({ children }) => {
       }
     };
 
-    // Run check immediately on mount/dependency update
     checkPendingOrders();
 
     const interval = setInterval(checkPendingOrders, 5000);
     return () => clearInterval(interval);
-  }, [orders, inventory, ledger, assemblyJobs]);
+  }, []);
 
   return (
     <ERPContext.Provider value={{
@@ -1703,8 +2050,11 @@ export const ERPProvider = ({ children }) => {
       sendSystemNotification,
       // Order operations
       processCheckout,
+      updateOrderDetails,
       updateOrderStatus,
       deliverOrder,
+      claimOrderForDelivery,
+      assignShipperToOrder,
       // Purchasing operations
       processGRN,
       approvePO,
@@ -1736,6 +2086,7 @@ export const ERPProvider = ({ children }) => {
       addProduct,
       updateProduct,
       deleteProduct,
+      setInventory,
       // CSKH & Return operations
       addReturnRequest,
       updateReturnStatus,

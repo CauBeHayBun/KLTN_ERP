@@ -470,7 +470,9 @@ const updateOrderStatus = async (req, res, next) => {
         status,
         note: note || null,
         items: updatedOrderFull.items,
-        totalAmount: updatedOrderFull.totalAmount
+        totalAmount: updatedOrderFull.totalAmount,
+        proofPhoto: req.body.proofPhoto || req.body.proofUrl || null,
+        receiverNote: req.body.receiverNote || null
       }).catch(err => console.warn('[Email] Lỗi gửi email cập nhật trạng thái:', err.message));
     }
 
@@ -773,6 +775,72 @@ const getReturnRequests = async (req, res, next) => {
   }
 };
 
+/**
+ * 10. KHÁCH HÀNG CẬP NHẬT THÔNG TIN ĐƠN HÀNG KHI ĐANG PENDING (M_DHBH)
+ */
+const updateOrderDetails = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const customerId = req.user.id;
+    const { customerName, phone, shippingAddress, notes } = req.body;
+
+    const order = await prisma.order.findUnique({
+      where: { orderId: id },
+      include: { customer: true }
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    }
+
+    if (order.customerId !== customerId) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền chỉnh sửa đơn hàng này' });
+    }
+
+    if (order.status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: 'Chỉ có thể chỉnh sửa thông tin khi đơn hàng đang ở trạng thái Chờ xác nhận (PENDING)' });
+    }
+
+    // Update Customer profile if name or phone changed
+    if ((customerName && customerName !== order.customer?.name) || (phone && phone !== order.customer?.phone)) {
+      await prisma.customer.update({
+        where: { customerId },
+        data: {
+          name: customerName || order.customer?.name,
+          phone: phone || order.customer?.phone
+        }
+      });
+    }
+
+    // Update Order details
+    const updatedOrder = await prisma.order.update({
+      where: { orderId: id },
+      data: {
+        shippingAddress: shippingAddress || order.shippingAddress,
+        notes: notes !== undefined ? notes : order.notes
+      },
+      include: { customer: true, items: true, statusHistory: { orderBy: { timestamp: 'desc' } } }
+    });
+
+    await prisma.orderStatusHistory.create({
+      data: {
+        orderId: id,
+        status: order.status,
+        note: 'Khách hàng tự cập nhật thông tin giao hàng (SĐT/Địa chỉ/Ghi chú)',
+        changedBy: 'Khách hàng'
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Cập nhật thông tin giao hàng thành công',
+      data: updatedOrder
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createOrder,
   getCustomerOrders,
@@ -782,5 +850,6 @@ module.exports = {
   rejectReturnRequest,
   confirmReturnWarehouse,
   processRefund,
-  getReturnRequests
+  getReturnRequests,
+  updateOrderDetails
 };

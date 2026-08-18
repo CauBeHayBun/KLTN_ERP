@@ -33,7 +33,11 @@ const getPurchasingProducts = async (req, res, next) => {
 // GET /api/v1/purchasing/orders
 const getPurchaseOrders = async (req, res, next) => {
   try {
+    const where = req.user?.role === 'SUPPLIER'
+      ? { supplierCode: req.user.code }
+      : {};
     const orders = await prisma.purchaseOrder.findMany({
+      where,
       include: {
         supplier: true,
         items: {
@@ -158,16 +162,16 @@ const createPurchaseOrder = async (req, res, next) => {
 const updatePurchaseOrderStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status, itemPrices, reason } = req.body;
+    const { status, itemPrices, reason, expectedDeliveryDate, supplierNote } = req.body;
 
-    const validStatuses = ['RFQ', 'RFQ_SENT', 'QUOTED', 'PO', 'DONE', 'CANCELLED'];
+    const validStatuses = ['RFQ', 'RFQ_SENT', 'SENT', 'QUOTED', 'PO', 'APPROVED', 'CONFIRMED_BY_SUPPLIER', 'PENDING_QA', 'QA_PASSED', 'QA_PARTIAL', 'QA_REJECTED', 'RECEIVED', 'DONE', 'COMPLETED', 'CANCELLED'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: `Invalid status: ${status}. Must be one of: ${validStatuses.join(', ')}` });
     }
 
     const updatedPO = await prisma.$transaction(async (tx) => {
-      const po = await tx.purchaseOrder.findUnique({
-        where: { id: parseInt(id) },
+      const po = await tx.purchaseOrder.findFirst({
+        where: Number.isInteger(Number(id)) ? { id: Number(id) } : { poNumber: id },
         include: { items: true }
       });
 
@@ -175,16 +179,62 @@ const updatePurchaseOrderStatus = async (req, res, next) => {
         throw new Error(`Purchase Order not found: ${id}`);
       }
 
+      const userRole = req.user?.role;
+      const isAdmin = ['ADMIN', 'CEO'].includes(userRole);
+      if (userRole === 'CEO' && status !== 'CANCELLED' && !(po.status === 'QUOTED' && status === 'PO')) {
+        const error = new Error('CEO chỉ phê duyệt báo giá để phát hành PO hoặc hủy đơn trong trường hợp ngoại lệ.');
+        error.statusCode = 403;
+        throw error;
+      }
+      if (userRole === 'SUPPLIER') {
+        if (po.supplierCode !== req.user?.code) {
+          const error = new Error('Nhà cung cấp chỉ được thao tác trên đơn hàng của mình.');
+          error.statusCode = 403;
+          throw error;
+        }
+        const allowedTransitions = {
+          RFQ: ['QUOTED', 'CANCELLED'],
+          RFQ_SENT: ['QUOTED', 'CANCELLED'],
+          SENT: ['QUOTED', 'CANCELLED'],
+          PO: ['CONFIRMED_BY_SUPPLIER'],
+          APPROVED: ['CONFIRMED_BY_SUPPLIER']
+        };
+        if (!allowedTransitions[po.status]?.includes(status)) {
+          const error = new Error('Nhà cung cấp không thể chuyển đơn hàng sang trạng thái này.');
+          error.statusCode = 403;
+          throw error;
+        }
+      }
+
+      // Enforce the purchasing workflow for all operational roles. Admin and CEO
+      // retain an override only for exceptional cancellation/approval handling.
+      if (!isAdmin && userRole !== 'SUPPLIER') {
+        const allowedTransitionsByRole = {
+          PURCHASING: {
+            RFQ: ['RFQ_SENT', 'CANCELLED'],
+            RFQ_SENT: ['CANCELLED'],
+            QUOTED: ['CANCELLED']
+          },
+          QC: { CONFIRMED_BY_SUPPLIER: ['QA_PASSED', 'QA_PARTIAL', 'QA_REJECTED'] },
+          QA: { CONFIRMED_BY_SUPPLIER: ['QA_PASSED', 'QA_PARTIAL', 'QA_REJECTED'] }
+        };
+        const permitted = allowedTransitionsByRole[userRole];
+        if (!permitted || !permitted[po.status]?.includes(status)) {
+          const error = new Error('Trạng thái đơn hàng không hợp lệ cho vai trò hiện tại.');
+          error.statusCode = 403;
+          throw error;
+        }
+      }
+
       // Check restriction: ONLY CEO (or ADMIN) can approve QUOTED -> PO
       if (status === 'PO' && po.status === 'QUOTED') {
-        const userRole = req.user?.role;
         if (userRole !== 'CEO' && userRole !== 'ADMIN') {
           throw new Error('Chỉ CEO (Ban Giám Đốc) mới có quyền duyệt báo giá mua hàng.');
         }
       }
 
-      // If supplier is quoting prices (RFQ_SENT → QUOTED) or confirming (→ PO), update item prices first
-      if (['QUOTED', 'PO'].includes(status) && itemPrices && itemPrices.length > 0) {
+      // If supplier is quoting prices (RFQ_SENT → QUOTED) or confirming (→ PO / CONFIRMED_BY_SUPPLIER), update item prices first
+      if (['QUOTED', 'PO', 'CONFIRMED_BY_SUPPLIER'].includes(status) && itemPrices && itemPrices.length > 0) {
         let newTotal = 0;
         for (const priceInfo of itemPrices) {
           const item = po.items.find(i => i.id === priceInfo.itemId);
@@ -204,19 +254,22 @@ const updatePurchaseOrderStatus = async (req, res, next) => {
         // Update total amount on the PO
         if (newTotal > 0) {
           await tx.purchaseOrder.update({
-            where: { id: parseInt(id) },
+            where: { id: po.id },
             data: { totalAmount: newTotal }
           });
         }
       }
 
       const updateData = { status };
-      if (reason || status === 'CANCELLED') {
-        updateData.cancelReason = reason || null;
+      if (expectedDeliveryDate) {
+        updateData.expectedDeliveryDate = new Date(expectedDeliveryDate);
+      }
+      if (reason || supplierNote || status === 'CANCELLED') {
+        updateData.cancelReason = reason || supplierNote || null;
       }
 
       const updated = await tx.purchaseOrder.update({
-        where: { id: parseInt(id) },
+        where: { id: po.id },
         data: updateData,
         include: {
           supplier: true,
@@ -228,20 +281,32 @@ const updatePurchaseOrderStatus = async (req, res, next) => {
         }
       });
 
-      // If status changes to PO (Approved by CEO / Confirm PO), automatically generate a GoodsReceipt in READY state
-      if (status === 'PO' && po.status !== 'PO') {
-        const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-        const randCode = Math.floor(100 + Math.random() * 900);
-        const receiptNumber = `WH/IN/${dateStr}/${randCode}`;
+      // Automatically generate a GoodsReceipt in READY state when Supplier Confirms delivery (CONFIRMED_BY_SUPPLIER)
+      if (status === 'CONFIRMED_BY_SUPPLIER' && po.status !== 'CONFIRMED_BY_SUPPLIER') {
+        const existingReceipt = await tx.goodsReceipt.findFirst({ where: { poId: updated.id } });
+        if (!existingReceipt) {
+          const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+          const randCode = Math.floor(100 + Math.random() * 900);
+          const receiptNumber = `WH/IN/${dateStr}/${randCode}`;
 
-        await tx.goodsReceipt.create({
-          data: {
-            receiptNumber,
-            poId: updated.id,
-            receivedWarehouseId: 1, // Default warehouse
-            status: 'READY',
-            note: `Tự động tạo từ Đơn Mua Hàng ${updated.poNumber}`
-          }
+          await tx.goodsReceipt.create({
+            data: {
+              receiptNumber,
+              poId: updated.id,
+              receivedWarehouseId: 1, // Default warehouse
+              status: 'READY',
+              note: `Tự động tạo từ Đơn Mua Hàng ${updated.poNumber} (NCC đã xác nhận & hẹn giao)`
+            }
+          });
+        }
+      }
+
+      // A rejected QA result voids the pending receipt; its stock can never be
+      // received until Purchasing creates a replacement order.
+      if (status === 'QA_REJECTED') {
+        await tx.goodsReceipt.updateMany({
+          where: { poId: updated.id, status: 'READY' },
+          data: { status: 'CANCELLED', note: `QA/QC từ chối lô hàng: ${supplierNote || reason || 'Không đạt chất lượng'}` }
         });
       }
 
@@ -269,8 +334,10 @@ const createVendorBill = async (req, res, next) => {
         include: { supplier: true }
       });
       if (!po) throw new Error(`Purchase Order not found: ${id}`);
-      if (po.status === 'RFQ' || po.status === 'RFQ_SENT') {
-        throw new Error('Cannot create bill for unconfirmed PO.');
+      if (!['RECEIVED', 'DONE', 'COMPLETED'].includes(po.status)) {
+        const error = new Error('Chỉ có thể ghi nhận hóa đơn NCC sau khi kho đã hoàn tất nhập hàng.');
+        error.statusCode = 409;
+        throw error;
       }
 
       // Generate billNumber
@@ -379,6 +446,11 @@ const validateReceipt = async (req, res, next) => {
       if (receipt.status === 'DONE') throw new Error('Receipt is already validated.');
 
       const po = receipt.po;
+      if (po.status !== 'QA_PASSED') {
+        const error = new Error('Lô hàng phải được QA/QC xác nhận đạt chất lượng trước khi nhập kho.');
+        error.statusCode = 409;
+        throw error;
+      }
 
       // Increment inventory
       for (const item of po.items) {
@@ -429,6 +501,11 @@ const validateReceipt = async (req, res, next) => {
           receivedBy,
           receivedDate: new Date()
         }
+      });
+
+      await tx.purchaseOrder.update({
+        where: { id: po.id },
+        data: { status: 'RECEIVED' }
       });
 
       // Check if PO is completed

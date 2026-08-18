@@ -201,7 +201,7 @@ const loginEmployee = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-    const { id, name, email, phone, address, city, role } = req.body;
+    const { id, name, email, phone, address, city, gender, role } = req.body;
 
     if (!id) {
       return res.status(400).json({ success: false, message: 'User ID is required' });
@@ -211,11 +211,12 @@ const updateProfile = async (req, res, next) => {
       const updatedCustomer = await prisma.customer.update({
         where: { customerId: id },
         data: {
-          name,
+          ...(name !== undefined ? { name } : {}),
           ...(email ? { email } : {}),
-          phone: phone || null,
-          address: address || null,
-          city: city || null
+          ...(phone !== undefined ? { phone: phone || null } : {}),
+          ...(address !== undefined ? { address: address || null } : {}),
+          ...(city !== undefined ? { city: city || null } : {}),
+          ...(gender !== undefined ? { gender: gender || null } : {})
         }
       });
       return res.json({
@@ -229,6 +230,7 @@ const updateProfile = async (req, res, next) => {
           phone: updatedCustomer.phone,
           address: updatedCustomer.address,
           city: updatedCustomer.city,
+          gender: updatedCustomer.gender,
           role: 'CUSTOMER'
         }
       });
@@ -257,4 +259,57 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { loginCustomer, loginEmployee, registerCustomer, updateProfile };
+const changePassword = async (req, res, next) => {
+  try {
+    const { id, currentPassword, newPassword, role } = req.body;
+    if (!id || !currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ thông tin mật khẩu' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    }
+
+    if (role === 'CUSTOMER' || id.toString().startsWith('CUST-')) {
+      const customer = await prisma.customer.findUnique({
+        where: { customerId: id }
+      });
+      if (!customer) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản khách hàng' });
+      }
+      const isMatch = await bcrypt.compare(currentPassword, customer.passwordHash);
+      if (!isMatch) {
+        return res.status(400).json({ success: false, message: 'Mật khẩu hiện tại không chính xác' });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const newHash = await bcrypt.hash(newPassword, salt);
+      await prisma.customer.update({
+        where: { customerId: id },
+        data: { passwordHash: newHash }
+      });
+      return res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+    } else {
+      const employeeId = parseInt(id);
+      const employee = await prisma.employee.findUnique({
+        where: { id: employeeId }
+      });
+      if (!employee) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản nhân viên' });
+      }
+      const isMatch = await bcrypt.compare(currentPassword, employee.passwordHash);
+      if (!isMatch) {
+        return res.status(400).json({ success: false, message: 'Mật khẩu hiện tại không chính xác' });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const newHash = await bcrypt.hash(newPassword, salt);
+      await prisma.employee.update({
+        where: { id: employeeId },
+        data: { passwordHash: newHash }
+      });
+      return res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { loginCustomer, loginEmployee, registerCustomer, updateProfile, changePassword };

@@ -30,7 +30,7 @@ const getCategoryNameVi = (cat) => {
 
 export default function ActorNotificationBar() {
   const navigate = useNavigate();
-  const { user, isCEO, isPurchasing, isAccountant, isWarehouse, isWarehouseManager, isSales, isSalesManager, isAssembly, isHR, isAdmin } = useAuth();
+  const { user, isCEO, isPurchasing, isAccountant, isWarehouse, isWarehouseManager, isSales, isSalesManager, isAssembly, isHR, isAdmin, isQC } = useAuth();
   const { purchaseOrders = [], inventory = [], orders = [], receipts = [] } = useERP() || {};
 
   const [showModal, setShowModal] = useState(false);
@@ -38,20 +38,22 @@ export default function ActorNotificationBar() {
   const [modalStatusFilter, setModalStatusFilter] = useState('ALL');
   const [modalCategoryFilter, setModalCategoryFilter] = useState('ALL');
 
+  const role = user?.role || '';
+  
   const isItemDiscontinued = (item) => {
-    if (!item) return true;
-    return item.available === false || item.isAvailable === false || item.status === 'DISCONTINUED' || item.status === 'INACTIVE' || item.available === 'false';
+    return !item || item.available === false || item.isAvailable === false || item.status === 'DISCONTINUED' || item.status === 'INACTIVE' || item.available === 'false';
   };
 
-  const validInventory = (inventory || []).filter(item => item && !isItemDiscontinued(item));
-
-  const lowStockList = validInventory.filter(item => Number(item.stock || 0) <= Number(item.threshold || 5));
+  const activeInventory = (inventory || []).filter(item => !isItemDiscontinued(item));
+  const outOfStockCount = activeInventory.filter(item => Number(item.stock || 0) === 0).length;
+  const warningCount = activeInventory.filter(item => Number(item.stock || 0) > 0 && Number(item.stock || 0) <= Number(item.threshold || 0)).length;
+  const lowStockList = activeInventory.filter(item => Number(item.stock || 0) <= Number(item.threshold || 0));
   const lowStockCount = lowStockList.length;
-  const outOfStockCount = validInventory.filter(item => Number(item.stock || 0) === 0).length;
-  const warningStockCount = validInventory.filter(item => Number(item.stock || 0) > 0 && Number(item.stock || 0) <= Number(item.threshold || 5)).length;
+
   const pendingQuotedPOs = (purchaseOrders || []).filter(po => po && po.status === 'QUOTED').length;
   const pendingPayablePOs = (purchaseOrders || []).filter(po => po && po.status === 'PO').length;
   const pendingReceipts = (receipts || []).filter(r => r && r.status === 'READY').length;
+  const pendingExportCount = (orders || []).filter(o => o && o.status === 'CONFIRMED').length;
   const pendingDeliveryOrders = (orders || []).filter(o => o && (o.status === 'CONFIRMED' || o.status === 'READY_TO_SHIP')).length;
 
   const categoriesInModal = ['ALL', ...new Set(lowStockList.map(item => item.category).filter(Boolean))];
@@ -77,81 +79,58 @@ export default function ActorNotificationBar() {
   let icon = <Bell size={18} />;
 
   if (isPurchasing) {
-    const isAlreadyOnPage = window.location.pathname.includes('/admin/purchasing');
     bannerTitle = 'Trung Tâm Nhiệm Vụ Mua Hàng';
-    bannerDesc = outOfStockCount > 0 || warningStockCount > 0
-      ? `🔴 CẢNH BÁO: Có ${lowStockCount} linh kiện thiếu tồn kho (${outOfStockCount} hết hàng, ${warningStockCount} dưới ngưỡng an toàn)!`
-      : 'Tất cả linh kiện đều đang ở mức tồn kho an toàn!';
-    actionText = isAlreadyOnPage ? 'Tạo YCBG / Xem Cần Mua' : 'Xem Danh Sách Mua Hàng';
+    bannerDesc = outOfStockCount > 0 
+      ? `🔴 CẢNH BÁO: Có ${outOfStockCount} linh kiện HẾT HÀNG và ${warningCount} linh kiện DƯỚI NGƯỠNG AN TOÀN (Tổng ${lowStockCount} SP cần nhập)!`
+      : warningCount > 0 
+        ? `⚡ Tồn kho: Có ${warningCount} linh kiện dưới ngưỡng tồn an toàn đề xuất lập Yêu Cầu Báo Giá.`
+        : 'Tất cả linh kiện đều đang ở mức tồn kho an toàn!';
+    actionText = 'Xem Danh Sách Mua Hàng';
     actionPath = '/admin/purchasing';
     badgeText = `${lowStockCount} Cần Mua`;
     badgeColor = outOfStockCount > 0 ? '#ef4444' : '#fbbf24';
     icon = <ShoppingBag size={18} style={{ color: badgeColor }} />;
   } else if (isWarehouse || isWarehouseManager) {
-    const isAlreadyOnPage = window.location.pathname.includes('/admin/warehouse');
     bannerTitle = 'Trung Tâm Nhiệm Vụ Quản Lý Kho';
     bannerDesc = pendingReceipts > 0 || lowStockCount > 0
-      ? `📥 Có ${pendingReceipts} đơn nhận hàng chờ nhập kho và ${lowStockCount} linh kiện thiếu tồn kho (${outOfStockCount} hết hàng, ${warningStockCount} dưới ngưỡng an toàn)!`
+      ? `📥 Có ${pendingReceipts} đơn nhận chờ nhập kho | Tồn kho thiếu: ${outOfStockCount} hết hàng, ${warningCount} dưới ngưỡng.`
       : 'Kho đang vận hành ổn định, không có đơn nhận hàng tồn đọng!';
-    actionText = isAlreadyOnPage ? 'Xem Linh Kiện Cần Bổ Sung' : 'Quản Lý Kho Thực Tế';
+    actionText = 'Quản Lý Kho Thực Tế';
     actionPath = '/admin/warehouse';
     badgeText = `${pendingReceipts} Đơn Nhận`;
     badgeColor = '#2563eb';
     icon = <Truck size={18} style={{ color: badgeColor }} />;
   } else if (isAccountant) {
-    const isAlreadyOnPage = window.location.pathname.includes('/admin/accounting');
     bannerTitle = 'Trung Tâm Nhiệm Vụ Kế Toán Tài Chính';
     bannerDesc = pendingPayablePOs > 0
       ? `💳 Có ${pendingPayablePOs} đơn mua hàng đã duyệt đang chờ Kế Toán giải ngân thanh toán NCC!`
       : 'Tất cả hóa đơn mua hàng và sổ cái doanh thu đã được đối soát đầy đủ!';
-    actionText = isAlreadyOnPage ? 'Xem Chi Tiết Thu Chi' : 'Mở Sổ Cái & Thanh Toán';
+    actionText = 'Mở Sổ Cái & Thanh Toán';
     actionPath = '/admin/accounting';
     badgeText = `${pendingPayablePOs} Chờ Chi`;
     badgeColor = '#16a34a';
     icon = <CreditCard size={18} style={{ color: badgeColor }} />;
   } else if (isCEO || isAdmin) {
-    const currentPath = window.location.pathname;
-    if (currentPath.includes('/admin/warehouse')) {
-      bannerTitle = 'Giám Sát Kho Hàng & Tồn Kho (Dành cho CEO)';
-      bannerDesc = outOfStockCount > 0 || warningStockCount > 0
-        ? `🔴 CẢNH BÁO KHO: Có ${lowStockCount} linh kiện thiếu tồn kho (${outOfStockCount} hết hàng, ${warningStockCount} dưới ngưỡng an toàn).`
-        : `Kho hàng vận hành ổn định. Có ${lowStockCount} linh kiện tụt dưới ngưỡng tồn tối thiểu.`;
-      actionText = 'Xem Linh Kiện Cần Bổ Sung';
-      actionPath = '/admin/warehouse';
-      badgeText = `${lowStockCount} Linh Kiện Thiếu`;
-      badgeColor = outOfStockCount > 0 ? '#ef4444' : '#f59e0b';
-      icon = <ShieldAlert size={18} style={{ color: badgeColor }} />;
-    } else if (currentPath.includes('/admin/purchasing')) {
-      bannerTitle = 'Trung Tâm Phê Duyệt Báo Giá Mua Hàng (CEO)';
-      bannerDesc = pendingQuotedPOs > 0
-        ? `🔔 THÔNG BÁO: Có ${pendingQuotedPOs} đơn báo giá từ Nhà Cung Cấp đang chờ Ban Giám Đốc phê duyệt (chuyển thành PO)!`
-        : `Tất cả báo giá đã được duyệt hoàn tất. Tồn kho thiếu: ${lowStockCount} linh kiện (${outOfStockCount} hết hàng, ${warningStockCount} dưới ngưỡng an toàn).`;
-      actionText = pendingQuotedPOs > 0 ? 'Duyệt Báo Giá Ngay' : 'Xem Cảnh Báo Tồn Kho';
-      actionPath = '/admin/purchasing';
-      badgeText = pendingQuotedPOs > 0 ? `${pendingQuotedPOs} Báo Giá Mới` : `${lowStockCount} Thiếu Tồn`;
-      badgeColor = pendingQuotedPOs > 0 ? '#6366f1' : '#94a3b8';
-      icon = <Bell size={18} style={{ color: badgeColor }} />;
-    } else if (currentPath.includes('/admin/accounting')) {
-      bannerTitle = 'Giám Sát Báo Cáo Tài Chính & Giải Ngân (CEO)';
-      bannerDesc = pendingPayablePOs > 0
-        ? `💳 Có ${pendingPayablePOs} đơn mua hàng (PO) đã duyệt đang chờ Kế Toán giải ngân thanh toán cho NCC.`
-        : 'Sổ cái thu chi doanh nghiệp và hóa đơn thanh toán đang ở trạng thái cân đối hoàn chỉnh!';
-      actionText = 'Xem Sổ Cái Kế Toán';
-      actionPath = '/admin/accounting';
-      badgeText = `${pendingPayablePOs} Đơn Chờ Chi`;
-      badgeColor = '#16a34a';
-      icon = <CreditCard size={18} style={{ color: badgeColor }} />;
-    } else {
-      bannerTitle = 'Trung Tâm Điều Hành Ban Giám Đốc (CEO)';
-      bannerDesc = pendingQuotedPOs > 0
-        ? `🔔 CẢNH BÁO QUAN TRỌNG: Có ${pendingQuotedPOs} đơn báo giá từ NCC đang chờ Ban Giám Đốc duyệt!`
-        : `Hệ thống ERP vận hành ổn định. Tồn kho thiếu: ${lowStockCount} (${outOfStockCount} hết hàng, ${warningStockCount} dưới ngưỡng) | Đơn bán chờ giao: ${pendingDeliveryOrders}`;
-      actionText = pendingQuotedPOs > 0 ? 'Vào Duyệt Báo Giá' : 'Xem Cảnh Báo Tồn Kho';
-      actionPath = '/admin/purchasing';
-      badgeText = pendingQuotedPOs > 0 ? `${pendingQuotedPOs} Đơn Chờ CEO` : 'Hoạt Động Ổn Định';
-      badgeColor = pendingQuotedPOs > 0 ? '#6366f1' : '#10b981';
-      icon = <ShieldAlert size={18} style={{ color: badgeColor }} />;
-    }
+    bannerTitle = 'Trung Tâm Giám Sát Ban Giám Đốc';
+    bannerDesc = pendingQuotedPOs > 0
+      ? `🔔 THÔNG BÁO: Có ${pendingQuotedPOs} đơn báo giá từ NCC đang chờ Ban Giám Đốc phê duyệt!`
+      : `Hệ thống hoạt động ổn định. Tồn kho thiếu: ${outOfStockCount} hết hàng + ${warningCount} dưới ngưỡng (Tổng: ${lowStockCount} SP) | Đơn chờ xuất kho: ${pendingExportCount}`;
+    actionText = 'Duyệt Báo Giá NCC';
+    actionPath = '/admin/purchasing';
+    badgeText = `${pendingQuotedPOs} Đơn Chờ CEO`;
+    badgeColor = '#fbbf24';
+    icon = <ShieldAlert size={18} style={{ color: badgeColor }} />;
+  } else if (isQC || role === 'QC' || role === 'QA') {
+    const pendingQaCount = (purchaseOrders || []).filter(po => ['CONFIRMED_BY_SUPPLIER', 'PO', 'APPROVED', 'PENDING_QA', 'SHIPPED', 'DELIVERED', 'RFQ_SENT', 'SENT'].includes(po.status)).length;
+    bannerTitle = 'Trung Tâm Kiểm Định Chất Lượng QA/QC (Quality Control Task Center)';
+    bannerDesc = pendingQaCount > 0
+      ? `🔬 Có ${pendingQaCount} lô hàng mới từ NCC giao tới, cần thực hiện nghiệm thu chất lượng!`
+      : 'Tất cả các lô hàng nhập đã được kiểm định hoàn tất!';
+    actionText = 'Kiểm Định Ngay';
+    actionPath = '/admin/quality-control';
+    badgeText = `${pendingQaCount} Lô Chờ QA/QC`;
+    badgeColor = '#2563eb';
+    icon = <ShieldAlert size={18} style={{ color: badgeColor }} />;
   } else if (isSales || isSalesManager) {
     bannerTitle = 'Trung Tâm Nhiệm Vụ Bán Hàng & Đơn Hàng (Sales Task Center)';
     bannerDesc = pendingDeliveryOrders > 0
@@ -167,48 +146,24 @@ export default function ActorNotificationBar() {
   }
 
   const handleActionClick = () => {
-    const currentPath = window.location.pathname;
-    if (isCEO || isAdmin) {
-      if (currentPath.includes('/admin/warehouse')) {
-        setShowModal(true);
-        window.dispatchEvent(new Event('open-low-stock-modal'));
-      } else if (currentPath.includes('/admin/purchasing')) {
-        if (pendingQuotedPOs > 0) {
-          window.dispatchEvent(new CustomEvent('set-purchasing-status-filter', { detail: 'QUOTED' }));
-        } else {
-          setShowModal(true);
-          window.dispatchEvent(new Event('open-low-stock-modal'));
-        }
+    if (isPurchasing || (isCEO && lowStockCount > 0)) {
+      setShowModal(true);
+      window.dispatchEvent(new Event('open-low-stock-modal'));
+    }
+    if (actionPath) {
+      if (isQC || role === 'QC' || role === 'QA') {
+        navigate(actionPath, { state: { openInspection: true, timestamp: Date.now() } });
       } else {
-        if (pendingQuotedPOs > 0) {
-          navigate('/admin/purchasing', { state: { statusFilter: 'QUOTED', timestamp: Date.now() } });
-        } else {
-          navigate('/admin/warehouse');
-        }
+        navigate(actionPath, { state: { showLowStockList: true, timestamp: Date.now() } });
       }
-    } else if (isWarehouse || isWarehouseManager) {
-      if (currentPath.includes('/admin/warehouse')) {
-        setShowModal(true);
-        window.dispatchEvent(new Event('open-low-stock-modal'));
-      } else {
-        navigate('/admin/warehouse');
-      }
-    } else if (isPurchasing) {
-      if (currentPath.includes('/admin/purchasing')) {
-        setShowModal(true);
-        window.dispatchEvent(new Event('open-low-stock-modal'));
-      } else {
-        navigate('/admin/purchasing');
-      }
-    } else if (actionPath) {
-      navigate(actionPath, { state: { timestamp: Date.now() } });
     }
   };
 
   const handleOpenRFQForProduct = (prod) => {
     setShowModal(false);
-    navigate('/admin/purchasing', { state: { createRFQ: true, product: prod, timestamp: Date.now() } });
-    window.dispatchEvent(new CustomEvent('open-rfq-prefill-modal', { detail: { product: prod } }));
+    const targetQty = prod?.requestedQty || prod?.quantity;
+    navigate('/admin/purchasing', { state: { createRFQ: true, product: prod, quantity: targetQty, timestamp: Date.now() } });
+    window.dispatchEvent(new CustomEvent('open-rfq-prefill-modal', { detail: { product: prod, quantity: targetQty } }));
   };
 
   return (
@@ -236,12 +191,12 @@ export default function ActorNotificationBar() {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <h4 style={{ fontSize: '0.9rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+              <h4 style={{ fontSize: '0.88rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
                 {bannerTitle}
               </h4>
               {badgeText && (
                 <span style={{
-                  backgroundColor: '#fef3c7', color: '#b45309',
+                  backgroundColor: '#fef3c7', color: '#d97706',
                   padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 700,
                   border: '1px solid #fde68a'
                 }}>
@@ -249,7 +204,7 @@ export default function ActorNotificationBar() {
                 </span>
               )}
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#334155', margin: '0.25rem 0 0', lineHeight: 1.35, fontWeight: 500 }}>
+            <p style={{ fontSize: '0.78rem', color: '#475569', margin: '0.2rem 0 0', lineHeight: 1.3 }}>
               {bannerDesc}
             </p>
           </div>

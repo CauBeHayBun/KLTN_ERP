@@ -5,8 +5,9 @@ import { api } from '../../services/api';
 import {
   Cpu, Trash2, ShieldCheck, ShieldAlert, ShoppingCart, HelpCircle, Sparkles,
   AlertTriangle, XCircle, Layers, Database, Gamepad2, Zap, HardDrive, Box, Wind,
-  Copy, Printer
+  Copy, Printer, MessageSquare
 } from 'lucide-react';
+import { HARDWARE_KNOWLEDGE_BASE, parseCustomerPrompt, runAIOptimizer } from '../../config/pcBuilderAIKnowledge';
 
 const COMPONENT_SLOTS = [
   { id: 'CPU', label: 'Bộ xử lý (CPU)', icon: <Cpu size={18} /> },
@@ -200,6 +201,11 @@ export default function PCBuilder() {
   const [aiUsage, setAiUsage] = useState('gaming');
   const [aiBudget, setAiBudget] = useState(25000000);
   const [aiBrand, setAiBrand] = useState('all');
+  const [aiGpuBrand, setAiGpuBrand] = useState('all');
+  const [aiMfgBrand, setAiMfgBrand] = useState('all');
+  const [customPromptText, setCustomPromptText] = useState('');
+  const [aiReport, setAiReport] = useState(null);
+  const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [activeStepTab, setActiveStepTab] = useState(0);
   const { addToCart } = useCart();
@@ -218,19 +224,47 @@ export default function PCBuilder() {
     fetchProducts();
 
     // Check if there is a pending AI build from chatbot
-    const pendingBuild = localStorage.getItem('aetherpc_ai_selected_build');
-    if (pendingBuild) {
+    const pendingBuildStr = localStorage.getItem('aetherpc_active_build') || localStorage.getItem('aetherpc_ai_selected_build');
+    if (pendingBuildStr) {
       try {
-        const parsed = JSON.parse(pendingBuild);
-        if (parsed) {
-          setSelectedParts(parsed);
+        const parsed = JSON.parse(pendingBuildStr);
+        if (parsed && typeof parsed === 'object') {
+          const cleanedBuild = {};
+          Object.entries(parsed).forEach(([slot, item]) => {
+            if (item) {
+              cleanedBuild[slot] = {
+                ...item,
+                price: parseFloat(item.price) || 0
+              };
+            }
+          });
+          setSelectedParts(prev => ({ ...prev, ...cleanedBuild }));
         }
       } catch (e) {
         console.warn("Failed to apply pending AI build", e);
       } finally {
+        localStorage.removeItem('aetherpc_active_build');
         localStorage.removeItem('aetherpc_ai_selected_build');
       }
     }
+
+    const handleApplyBuildEvent = (e) => {
+      if (e.detail && typeof e.detail === 'object') {
+        const cleanedBuild = {};
+        Object.entries(e.detail).forEach(([slot, item]) => {
+          if (item) {
+            cleanedBuild[slot] = {
+              ...item,
+              price: parseFloat(item.price) || 0
+            };
+          }
+        });
+        setSelectedParts(prev => ({ ...prev, ...cleanedBuild }));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    window.addEventListener('aetherpc_apply_ai_build', handleApplyBuildEvent);
+    return () => window.removeEventListener('aetherpc_apply_ai_build', handleApplyBuildEvent);
   }, []);
 
   // Validation Engine
@@ -333,11 +367,12 @@ export default function PCBuilder() {
   };
 
   const calculateTotalPrice = () => {
-    return Object.values(selectedParts).reduce((sum, item) => sum + (item ? item.price : 0), 0);
+    return Object.values(selectedParts).reduce((sum, item) => sum + (item ? (parseFloat(item.price) || 0) : 0), 0);
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+    const num = parseFloat(price) || 0;
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
   };
 
   const SPEC_LABEL_MAP = {
@@ -429,149 +464,27 @@ export default function PCBuilder() {
     alert('Đã thêm toàn bộ linh kiện của cấu hình vào giỏ hàng thành công!');
   };
 
-  // Dynamic AI PC Build selector based on client needs
-  const generateAIBuild = (usage, budgetLimit, brandPref) => {
-    // 1. Group products by category
-    const cpuList = products.filter(p => p.category === 'CPU');
-    const mbList = products.filter(p => p.category === 'MAINBOARD');
-    const ramList = products.filter(p => p.category === 'RAM');
-    const vgaList = products.filter(p => p.category === 'VGA');
-    const psuList = products.filter(p => p.category === 'PSU');
-    const storageList = products.filter(p => p.category === 'STORAGE');
-    const caseList = products.filter(p => p.category === 'CASE');
-    const coolerList = products.filter(p => p.category === 'COOLER');
+  // Dynamic AI PC Build selector based on client needs & Knowledge Base Engine
+  const generateAIBuild = (usage, budgetLimit, brandPref, customPrompt = '') => {
+    setIsAnalyzingAI(true);
+    setTimeout(() => {
+      const activeProducts = products.length > 0 ? products : FALLBACK_PRODUCTS;
+      const result = runAIOptimizer({
+        promptText: customPrompt || customPromptText,
+        budgetInput: budgetLimit || aiBudget,
+        workloadInput: usage || aiUsage,
+        brandInput: brandPref || aiBrand,
+        gpuBrandInput: aiGpuBrand,
+        mfgBrandInput: aiMfgBrand,
+        availableProducts: activeProducts
+      });
 
-    if (cpuList.length === 0 || mbList.length === 0) {
-      alert("Đang tải dữ liệu sản phẩm, vui lòng thử lại sau!");
-      return;
-    }
-
-    // 2. Budget Allocation Percentages based on usage
-    let cpuPct = 0.20;
-    let mbPct = 0.15;
-    let vgaPct = 0.35;
-    let ramPct = 0.10;
-    let psuPct = 0.08;
-    let storagePct = 0.07;
-    let casePct = 0.05;
-    let coolerPct = 0.05;
-
-    if (usage === 'office') {
-      cpuPct = 0.30;
-      mbPct = 0.20;
-      vgaPct = 0.00; // Integrated Graphics
-      ramPct = 0.15;
-      psuPct = 0.10;
-      storagePct = 0.15;
-      casePct = 0.05;
-      coolerPct = 0.05;
-    } else if (usage === 'graphics') {
-      cpuPct = 0.25;
-      mbPct = 0.15;
-      vgaPct = 0.25;
-      ramPct = 0.15;
-      psuPct = 0.08;
-      storagePct = 0.07;
-      casePct = 0.05;
-      coolerPct = 0.05;
-    } else if (usage === 'ai') {
-      cpuPct = 0.22;
-      mbPct = 0.15;
-      vgaPct = 0.38;
-      ramPct = 0.13;
-      psuPct = 0.08;
-      storagePct = 0.04;
-      casePct = 0.05;
-      coolerPct = 0.05;
-    }
-
-    let targetCPU = budgetLimit * cpuPct;
-    let targetMB = budgetLimit * mbPct;
-    let targetVGA = budgetLimit * vgaPct;
-    let targetRAM = budgetLimit * ramPct;
-    let targetPSU = budgetLimit * psuPct;
-    let targetStorage = budgetLimit * storagePct;
-    let targetCase = budgetLimit * casePct;
-    let targetCooler = budgetLimit * coolerPct;
-
-    const findBestProduct = (list, targetPrice, filterFn = () => true) => {
-      const candidates = list.filter(filterFn);
-      if (candidates.length === 0) {
-        return list.reduce((best, item) => Math.abs(item.price - targetPrice) < Math.abs(best.price - targetPrice) ? item : best);
+      if (result && result.build) {
+        setSelectedParts(result.build);
+        setAiReport(result);
       }
-      return candidates.reduce((best, item) => Math.abs(item.price - targetPrice) < Math.abs(best.price - targetPrice) ? item : best);
-    };
-
-    // Step A: Select CPU
-    let cpuFilter = () => true;
-    if (brandPref === 'intel') {
-      cpuFilter = p => p.brand.toUpperCase().includes('INTEL');
-    } else if (brandPref === 'amd') {
-      cpuFilter = p => p.brand.toUpperCase().includes('AMD');
-    }
-    const selectedCPU = findBestProduct(cpuList, targetCPU, cpuFilter);
-    const cpuSocket = selectedCPU?.specs?.socket;
-
-    // Step B: Select Mainboard compatible with CPU socket
-    let selectedMB = findBestProduct(mbList, targetMB, p => {
-      const mbSocket = p.specs?.socket;
-      return cpuSocket && mbSocket && mbSocket.toLowerCase() === cpuSocket.toLowerCase();
-    });
-    const mbRamType = selectedMB?.specs?.ram_type;
-
-    // Step C: Select RAM compatible with Mainboard RAM type
-    let selectedRAM = findBestProduct(ramList, targetRAM, p => {
-      const ramType = p.specs?.ram_type;
-      return mbRamType && ramType && ramType.toLowerCase() === mbRamType.toLowerCase();
-    });
-
-    // Step D: Select VGA
-    let selectedVGA = null;
-    if (targetVGA > 0) {
-      let vgaFilter = () => true;
-      if (usage === 'ai') {
-        vgaFilter = p => p.brand.toUpperCase().includes('NVIDIA') || p.name.toUpperCase().includes('RTX') || p.name.toUpperCase().includes('GTX');
-      }
-      selectedVGA = findBestProduct(vgaList, targetVGA, vgaFilter);
-    }
-
-    // Step E: Select PSU based on wattage needed
-    let estTdp = 100;
-    if (selectedCPU) estTdp += (selectedCPU.specs?.tdp || 65);
-    if (selectedVGA) estTdp += (selectedVGA.specs?.tdp || 150);
-    const requiredWattage = Math.ceil(estTdp * 1.25);
-
-    let selectedPSU = findBestProduct(psuList, targetPSU, p => {
-      const psuWattage = p.specs?.wattage;
-      return psuWattage >= requiredWattage;
-    });
-
-    // Step F: Select Storage
-    let selectedStorage = findBestProduct(storageList, targetStorage);
-
-    // Step G: Select Case
-    let selectedCase = findBestProduct(caseList, targetCase);
-
-    // Step H: Select Cooler compatible with CPU socket
-    let selectedCooler = findBestProduct(coolerList, targetCooler, p => {
-      const support = p.specs?.socket_support;
-      const cpuSock = cpuSocket?.toLowerCase();
-      if (Array.isArray(support) && support.length > 0 && cpuSock) {
-        return support.some(s => s.toLowerCase() === cpuSock);
-      }
-      return true;
-    });
-
-    setSelectedParts({
-      CPU: selectedCPU || null,
-      MAINBOARD: selectedMB || null,
-      RAM: selectedRAM || null,
-      VGA: selectedVGA || null,
-      PSU: selectedPSU || null,
-      STORAGE: selectedStorage || null,
-      CASE: selectedCase || null,
-      COOLER: selectedCooler || null
-    });
+      setIsAnalyzingAI(false);
+    }, 350);
   };
 
   const availableBrands = activeSlot ? [...new Set(products.filter(p => p.category.toUpperCase() === activeSlot).map(p => p.brand))].filter(Boolean) : [];
@@ -725,37 +638,110 @@ export default function PCBuilder() {
           </button>
         </div>
 
-      {/* AI Custom Suggestions based on user needs */}
-      <div className="card-glass" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', color: 'var(--accent)' }}>
-          <Sparkles size={20} />
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Trợ lý Cấu hình PC AI theo Nhu cầu</h3>
+      {/* AI Custom Suggestions based on user needs & Knowledge Engine */}
+      <div className="card-glass" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '18px', border: '1.5px solid #bfdbfe', backgroundColor: '#ffffff', boxShadow: '0 8px 30px rgba(37,99,235,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#2563eb' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Sparkles size={20} color="#2563eb" />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Trợ lý Cấu hình PC AI Thông Minh</h3>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0.15rem 0 0 0' }}>Tự động phân tích nhu cầu tự do hoặc chọn tiêu chí có sẵn từ kho 1.580 linh kiện PC</p>
+            </div>
+          </div>
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, backgroundColor: '#eff6ff', color: '#2563eb', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
+            ⚡ Bộ Trí Thức AI v2.5
+          </span>
+        </div>
+
+        {/* Custom Natural Language Prompt Input */}
+        <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '1.25rem' }}>
+          <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>
+            💬 Nhập yêu cầu cụ thể của bạn (AI tự động trích xuất Ngân sách, Nhu cầu & Tối ưu hóa linh kiện):
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
+            <input
+              type="text"
+              value={customPromptText}
+              onChange={e => setCustomPromptText(e.target.value)}
+              placeholder="Ví dụ: Build PC 22 triệu chơi mượt Valorant 240fps & edit video 4K TikTok, tông màu trắng..."
+              style={{
+                flex: 1, padding: '0.65rem 0.85rem', borderRadius: '10px',
+                border: '1.5px solid #cbd5e1', fontSize: '0.85rem', color: '#0f172a',
+                backgroundColor: '#ffffff', outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+            <button
+              onClick={() => generateAIBuild(aiUsage, aiBudget, aiBrand, customPromptText)}
+              disabled={isAnalyzingAI}
+              style={{
+                padding: '0.65rem 1.4rem', borderRadius: '10px', border: 'none',
+                background: 'linear-gradient(135deg, #2563eb, #6366f1)',
+                color: '#ffffff', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap',
+                boxShadow: '0 4px 12px rgba(37,99,235,0.2)'
+              }}
+            >
+              <Sparkles size={16} />
+              {isAnalyzingAI ? 'AI Đang Phân Tích...' : 'AI Phân Tích & Tối Ưu'}
+            </button>
+          </div>
+
+          {/* Quick Sample Prompts */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>Gợi ý nhanh:</span>
+            {[
+              "PC 20 triệu chơi mượt CS2 & Valorant 240Hz",
+              "PC 35 triệu làm đồ họa 3D Blender & Unreal 5",
+              "PC 40 triệu chạy AI Llama & Deep Learning VRAM 16GB",
+              "PC 18 triệu học tập & giải trí"
+            ].map((sample, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  setCustomPromptText(sample);
+                  generateAIBuild(aiUsage, aiBudget, aiBrand, sample);
+                }}
+                style={{
+                  padding: '0.25rem 0.65rem', borderRadius: '20px',
+                  border: '1px solid #bfdbfe', backgroundColor: '#eff6ff',
+                  color: '#2563eb', fontSize: '0.72rem', fontWeight: 600,
+                  cursor: 'pointer', transition: 'all 0.15s'
+                }}
+              >
+                ✨ {sample}
+              </button>
+            ))}
+          </div>
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Row 1: Nhu cầu */}
+          {/* Row 1: Nhu cầu linh hoạt */}
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '0.875rem', fontWeight: 600, minWidth: '120px', color: 'var(--text-secondary)' }}>Nhu cầu sử dụng:</span>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.875rem', fontWeight: 700, minWidth: '120px', color: '#334155' }}>Nhu cầu sử dụng:</span>
+            <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
               {[
-                { key: 'gaming', label: '🎮 Chơi Game' },
-                { key: 'graphics', label: '🎨 Đồ họa & Render' },
+                { key: 'gaming', label: '🎮 Chơi Game & E-Sports' },
+                { key: 'graphics', label: '🎨 Đồ họa 3D & Render' },
                 { key: 'ai', label: '💻 Lập trình & AI' },
+                { key: 'STREAMING', label: '🎥 Livestream & Creator' },
+                { key: 'EMULATOR', label: '📱 Giả lập Multi-Nox' },
                 { key: 'office', label: '💼 Văn phòng & Học tập' }
               ].map(opt => (
                 <button
                   key={opt.key}
                   onClick={() => setAiUsage(opt.key)}
                   style={{
-                    padding: '0.4rem 1rem',
+                    padding: '0.4rem 0.85rem',
                     fontSize: '0.8125rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: `1px solid ${aiUsage === opt.key ? 'var(--primary)' : 'var(--border-glass)'}`,
-                    backgroundColor: aiUsage === opt.key ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                    color: aiUsage === opt.key ? 'var(--primary)' : 'var(--text-secondary)',
-                    fontWeight: 600,
+                    borderRadius: '10px',
+                    border: `1.5px solid ${aiUsage === opt.key ? '#2563eb' : '#e2e8f0'}`,
+                    backgroundColor: aiUsage === opt.key ? '#eff6ff' : '#ffffff',
+                    color: aiUsage === opt.key ? '#2563eb' : '#334155',
+                    fontWeight: aiUsage === opt.key ? 800 : 600,
                     cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.15s'
                   }}
                 >
                   {opt.label}
@@ -764,29 +750,79 @@ export default function PCBuilder() {
             </div>
           </div>
 
-          {/* Row 2: Ngân sách */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '0.875rem', fontWeight: 600, minWidth: '120px', color: 'var(--text-secondary)' }}>Ngân sách ước tính:</span>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {/* Row 2: Ngân sách Siêu Linh Hoạt (Chips + Range Slider + Custom Input Box) */}
+          <div style={{ backgroundColor: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                💰 Ngân sách ước tính:
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#2563eb', backgroundColor: '#eff6ff', padding: '0.2rem 0.75rem', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
+                  {(aiBudget / 1000000).toLocaleString('vi-VN')} Triệu VNĐ
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>
+                  (Nhập số: 
+                  <input
+                    type="number"
+                    min="5"
+                    max="100"
+                    step="0.5"
+                    value={aiBudget / 1000000}
+                    onChange={e => {
+                      const v = parseFloat(e.target.value);
+                      if (!isNaN(v) && v > 0) setAiBudget(v * 1000000);
+                    }}
+                    style={{
+                      width: '60px', padding: '0.25rem 0.4rem', borderRadius: '6px',
+                      border: '1.5px solid #cbd5e1', fontSize: '0.82rem', fontWeight: 800,
+                      color: '#0f172a', textAlign: 'center', outline: 'none'
+                    }}
+                  /> Triệu)
+                </div>
+              </div>
+            </div>
+
+            {/* Range Slider Control */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>5 Tr</span>
+              <input
+                type="range"
+                min="5000000"
+                max="100000000"
+                step="500000"
+                value={aiBudget}
+                onChange={e => setAiBudget(Number(e.target.value))}
+                style={{ flex: 1, accentColor: '#2563eb', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>100 Tr</span>
+            </div>
+
+            {/* Quick Preset Budget Chips */}
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>Mốc nhanh:</span>
               {[
-                { val: 15000000, label: '15 Triệu' },
-                { val: 25000000, label: '25 Triệu' },
-                { val: 35000000, label: '35 Triệu' },
-                { val: 50000000, label: '50 Triệu' }
+                { val: 10000000, label: '10 Tr' },
+                { val: 15000000, label: '15 Tr' },
+                { val: 20000000, label: '20 Tr' },
+                { val: 25000000, label: '25 Tr' },
+                { val: 35000000, label: '35 Tr' },
+                { val: 50000000, label: '50 Tr' },
+                { val: 70000000, label: '70 Tr' },
+                { val: 100000000, label: '100 Tr' }
               ].map(opt => (
                 <button
                   key={opt.val}
                   onClick={() => setAiBudget(opt.val)}
                   style={{
-                    padding: '0.4rem 1rem',
-                    fontSize: '0.8125rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: `1px solid ${aiBudget === opt.val ? 'var(--primary)' : 'var(--border-glass)'}`,
-                    backgroundColor: aiBudget === opt.val ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                    color: aiBudget === opt.val ? 'var(--primary)' : 'var(--text-secondary)',
-                    fontWeight: 600,
+                    padding: '0.2rem 0.6rem',
+                    fontSize: '0.75rem',
+                    borderRadius: '8px',
+                    border: `1px solid ${aiBudget === opt.val ? '#2563eb' : '#cbd5e1'}`,
+                    backgroundColor: aiBudget === opt.val ? '#2563eb' : '#ffffff',
+                    color: aiBudget === opt.val ? '#ffffff' : '#334155',
+                    fontWeight: aiBudget === opt.val ? 800 : 600,
                     cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.15s'
                   }}
                 >
                   {opt.label}
@@ -795,28 +831,93 @@ export default function PCBuilder() {
             </div>
           </div>
 
-          {/* Row 3: Hãng CPU */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '0.875rem', fontWeight: 600, minWidth: '120px', color: 'var(--text-secondary)' }}>Thương hiệu CPU:</span>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {/* Row 3: Hãng CPU & GPU Linh Hoạt */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>Thương hiệu CPU:</span>
+              <div style={{ display: 'flex', gap: '0.35rem' }}>
+                {[
+                  { key: 'all', label: 'Tùy chọn' },
+                  { key: 'intel', label: 'Intel' },
+                  { key: 'amd', label: 'AMD' }
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setAiBrand(opt.key)}
+                    style={{
+                      padding: '0.3rem 0.7rem',
+                      fontSize: '0.78rem',
+                      borderRadius: '8px',
+                      border: `1.5px solid ${aiBrand === opt.key ? '#2563eb' : '#cbd5e1'}`,
+                      backgroundColor: aiBrand === opt.key ? '#eff6ff' : '#ffffff',
+                      color: aiBrand === opt.key ? '#2563eb' : '#334155',
+                      fontWeight: aiBrand === opt.key ? 800 : 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>Card Đồ Họa (GPU):</span>
+              <div style={{ display: 'flex', gap: '0.35rem' }}>
+                {[
+                  { key: 'all', label: 'Tùy chọn' },
+                  { key: 'nvidia', label: 'NVIDIA' },
+                  { key: 'amd', label: 'Radeon' }
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setAiGpuBrand(opt.key)}
+                    style={{
+                      padding: '0.3rem 0.7rem',
+                      fontSize: '0.78rem',
+                      borderRadius: '8px',
+                      border: `1.5px solid ${aiGpuBrand === opt.key ? '#2563eb' : '#cbd5e1'}`,
+                      backgroundColor: aiGpuBrand === opt.key ? '#eff6ff' : '#ffffff',
+                      color: aiGpuBrand === opt.key ? '#2563eb' : '#334155',
+                      fontWeight: aiGpuBrand === opt.key ? 800 : 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 4: Thương hiệu Hãng sản xuất (Hệ sinh thái Hãng) */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, minWidth: '120px', color: '#334155' }}>Hãng sản xuất yêu thích:</span>
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
               {[
-                { key: 'all', label: 'Tùy chọn hãng' },
-                { key: 'intel', label: 'Intel' },
-                { key: 'amd', label: 'AMD' }
+                { key: 'all', label: 'Tất cả Hãng' },
+                { key: 'ASUS', label: 'ASUS / ROG' },
+                { key: 'MSI', label: 'MSI' },
+                { key: 'GIGABYTE', label: 'GIGABYTE / AORUS' },
+                { key: 'Corsair', label: 'Corsair' },
+                { key: 'Kingston', label: 'Kingston' },
+                { key: 'Deepcool', label: 'Deepcool' },
+                { key: 'NZXT', label: 'NZXT' },
+                { key: 'Samsung', label: 'Samsung' }
               ].map(opt => (
                 <button
                   key={opt.key}
-                  onClick={() => setAiBrand(opt.key)}
+                  onClick={() => setAiMfgBrand(opt.key)}
                   style={{
-                    padding: '0.4rem 1rem',
-                    fontSize: '0.8125rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: `1px solid ${aiBrand === opt.key ? 'var(--primary)' : 'var(--border-glass)'}`,
-                    backgroundColor: aiBrand === opt.key ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                    color: aiBrand === opt.key ? 'var(--primary)' : 'var(--text-secondary)',
-                    fontWeight: 600,
+                    padding: '0.28rem 0.65rem',
+                    fontSize: '0.78rem',
+                    borderRadius: '8px',
+                    border: `1.5px solid ${aiMfgBrand === opt.key ? '#2563eb' : '#cbd5e1'}`,
+                    backgroundColor: aiMfgBrand === opt.key ? '#eff6ff' : '#ffffff',
+                    color: aiMfgBrand === opt.key ? '#2563eb' : '#334155',
+                    fontWeight: aiMfgBrand === opt.key ? 800 : 600,
                     cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.15s'
                   }}
                 >
                   {opt.label}
@@ -828,7 +929,8 @@ export default function PCBuilder() {
           {/* Action Row */}
           <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
             <button
-              onClick={() => generateAIBuild(aiUsage, aiBudget, aiBrand)}
+              onClick={() => generateAIBuild(aiUsage, aiBudget, aiBrand, customPromptText)}
+              disabled={isAnalyzingAI}
               className="btn btn-primary"
               style={{
                 padding: '0.625rem 2rem',
@@ -843,11 +945,14 @@ export default function PCBuilder() {
               }}
             >
               <Sparkles size={16} />
-              Gợi ý Cấu hình Tối ưu
+              {isAnalyzingAI ? 'AI Đang Phân Tích...' : 'Gợi ý Cấu hình Tối ưu'}
             </button>
             
             <button
-              onClick={() => setSelectedParts({ CPU: null, MAINBOARD: null, RAM: null, VGA: null, PSU: null, STORAGE: null, CASE: null, COOLER: null })}
+              onClick={() => {
+                setSelectedParts({ CPU: null, MAINBOARD: null, RAM: null, VGA: null, PSU: null, STORAGE: null, CASE: null, COOLER: null });
+                setAiReport(null);
+              }}
               className="btn btn-secondary"
               style={{
                 borderColor: 'rgba(239, 68, 68, 0.2)',
@@ -881,6 +986,28 @@ export default function PCBuilder() {
               {showGuide ? 'Thu gọn hướng dẫn' : '📖 Hướng dẫn build PC cho người mới'}
             </button>
           </div>
+
+          {/* AI Hardware Report Card */}
+          {aiReport && (
+            <div style={{ backgroundColor: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: '14px', padding: '1rem 1.25rem', marginTop: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Sparkles size={18} color="#16a34a" /> Báo Cáo Phân Tích &amp; Tối Ưu Linh Kiện Từ AI AetherPC
+                </div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#15803d', backgroundColor: '#dcfce7', padding: '0.25rem 0.65rem', borderRadius: '20px', border: '1px solid #86efac' }}>
+                  ✓ 100% Tương Thích Linh Kiện
+                </div>
+              </div>
+              <p style={{ fontSize: '0.83rem', color: '#166534', margin: '0 0 0.6rem 0', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                {aiReport.aiExplanation}
+              </p>
+              <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.78rem', color: '#15803d', fontWeight: 700, flexWrap: 'wrap', borderTop: '1px solid #bbf7d0', paddingTop: '0.5rem' }}>
+                <span>⚡ Điện năng tiêu thụ: <strong>~{aiReport.estimatedTdp}W</strong></span>
+                <span>🔌 Nguồn khuyến nghị: <strong>{aiReport.requiredWatts}W+</strong></span>
+                <span>💰 Tổng chi phí dàn PC: <strong style={{ color: '#dc2626' }}>{Number(aiReport.totalPrice).toLocaleString('vi-VN')} đ</strong></span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

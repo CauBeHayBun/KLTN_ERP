@@ -91,37 +91,33 @@ function FlashProductCard({ p, onAddCart }) {
           </div>
         )}
       </div>
-      <div style={{ padding: "0.85rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "0.5rem" }}>
-        <div>
-          <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#6366f1", backgroundColor: "#eef2ff", padding: "2px 8px", borderRadius: 99, display: "inline-block", width: "fit-content", textTransform: "uppercase", letterSpacing: "0.5px" }}>{p.category}</span>
-          <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0f172a", lineHeight: 1.35, minHeight: "2.4rem", maxHeight: "2.4rem", margin: "0.3rem 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.name}</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: "0.3rem" }}>
-            <div style={{ display: "flex", gap: 1 }}>
-              {[1,2,3,4,5].map(st => <Star key={st} size={10} fill={st <= Math.round(parseFloat(rating)) ? "#f59e0b" : "none"} color={st <= Math.round(parseFloat(rating)) ? "#f59e0b" : "#cbd5e1"} />)}
-            </div>
-            <span style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 600 }}>{rating} ({reviewCount})</span>
+      <div style={{ padding: "0.85rem", flex: 1, display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+        <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#6366f1", backgroundColor: "#eef2ff", padding: "2px 8px", borderRadius: 99, display: "inline-block", width: "fit-content", textTransform: "uppercase", letterSpacing: "0.5px" }}>{p.category}</span>
+        <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0f172a", lineHeight: 1.4, margin: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.name}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div style={{ display: "flex", gap: 1 }}>
+            {[1,2,3,4,5].map(st => <Star key={st} size={10} fill={st <= Math.round(parseFloat(rating)) ? "#f59e0b" : "none"} color={st <= Math.round(parseFloat(rating)) ? "#f59e0b" : "#cbd5e1"} />)}
           </div>
+          <span style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 600 }}>{rating} ({reviewCount})</span>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem", whiteSpace: "nowrap", overflow: "hidden" }}>
+        <div style={{ marginTop: "auto" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem", flexWrap: "wrap" }}>
             <span style={{ fontSize: "1.15rem", fontWeight: 900, color: "#dc2626", lineHeight: 1 }}>{new Intl.NumberFormat("vi-VN").format(p.price)}đ</span>
-            {p.originalPrice > p.price && <span style={{ fontSize: "0.72rem", color: "#94a3b8", textDecoration: "line-through" }}>{new Intl.NumberFormat("vi-VN").format(p.originalPrice)}đ</span>}
+            {p.originalPrice > p.price && <span style={{ fontSize: "0.75rem", color: "#94a3b8", textDecoration: "line-through" }}>{new Intl.NumberFormat("vi-VN").format(p.originalPrice)}đ</span>}
           </div>
-          <div style={{ fontSize: "0.7rem", color: "#16a34a", fontWeight: 700, minHeight: "1rem", whiteSpace: "nowrap", display: "flex", alignItems: "center" }}>
-            {p.originalPrice > p.price ? "Tiết kiệm " + new Intl.NumberFormat("vi-VN").format(p.originalPrice - p.price) + "đ" : "\u00A0"}
-          </div>
-          <div style={{ marginTop: "0.1rem" }}>
-            <div style={{ height: 16, backgroundColor: "#fee2e2", borderRadius: 99, overflow: "hidden", position: "relative" }}>
-              <div style={{ height: "100%", width: soldPercent + "%", background: isSoldOut ? "linear-gradient(90deg,#94a3b8,#64748b)" : soldPercent > 75 ? "linear-gradient(90deg,#ef4444,#dc2626)" : "linear-gradient(90deg,#f97316,#dc2626)", borderRadius: 99 }} />
-              <span style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", fontSize: "0.6rem", fontWeight: 800, color: soldPercent > 50 ? "#fff" : "#dc2626", whiteSpace: "nowrap" }}>
-                {isSoldOut ? "Hết hàng" : soldPercent > 80 ? "Sắp hết" : "Đã bán " + soldPercent + "%"}
-              </span>
-            </div>
-          </div>
-          <button onClick={handleAdd} disabled={isSoldOut} style={{ marginTop: "0.3rem", width: "100%", padding: "0.55rem", borderRadius: 10, border: "none", background: isSoldOut ? "#e2e8f0" : added ? "linear-gradient(135deg,#16a34a,#15803d)" : "linear-gradient(135deg,#dc2626 0%,#ef4444 50%,#f97316 100%)", color: isSoldOut ? "#94a3b8" : "#fff", fontWeight: 800, fontSize: "0.8rem", cursor: isSoldOut ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", transition: "all 0.2s", boxShadow: isSoldOut ? "none" : "0 4px 12px rgba(220,38,38,0.3)" }}>
-            {added ? <><CheckCircle size={15} /> Đã thêm!</> : isSoldOut ? "Hết Hàng" : <><ShoppingCart size={15} /> Thêm Vào Giỏ</>}
-          </button>
+          {p.originalPrice > p.price && <div style={{ fontSize: "0.7rem", color: "#16a34a", fontWeight: 700, marginTop: 2 }}>Tiết kiệm {new Intl.NumberFormat("vi-VN").format(p.originalPrice - p.price)}đ</div>}
         </div>
+        <div>
+          <div style={{ height: 16, backgroundColor: "#fee2e2", borderRadius: 99, overflow: "hidden", position: "relative" }}>
+            <div style={{ height: "100%", width: soldPercent + "%", background: isSoldOut ? "linear-gradient(90deg,#94a3b8,#64748b)" : soldPercent > 75 ? "linear-gradient(90deg,#ef4444,#dc2626)" : "linear-gradient(90deg,#f97316,#dc2626)", borderRadius: 99 }} />
+            <span style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", fontSize: "0.6rem", fontWeight: 800, color: soldPercent > 50 ? "#fff" : "#dc2626", whiteSpace: "nowrap" }}>
+              {isSoldOut ? "Hết hàng" : soldPercent > 80 ? "Sắp hết" : "Đã bán " + soldPercent + "%"}
+            </span>
+          </div>
+        </div>
+        <button onClick={handleAdd} disabled={isSoldOut} style={{ marginTop: "0.4rem", width: "100%", padding: "0.55rem", borderRadius: 10, border: "none", background: isSoldOut ? "#e2e8f0" : added ? "linear-gradient(135deg,#16a34a,#15803d)" : "linear-gradient(135deg,#dc2626 0%,#ef4444 50%,#f97316 100%)", color: isSoldOut ? "#94a3b8" : "#fff", fontWeight: 800, fontSize: "0.8rem", cursor: isSoldOut ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", transition: "all 0.2s", boxShadow: isSoldOut ? "none" : "0 4px 12px rgba(220,38,38,0.3)" }}>
+          {added ? <><CheckCircle size={15} /> Đã thêm!</> : isSoldOut ? "Hết Hàng" : <><ShoppingCart size={15} /> Thêm Vào Giỏ</>}
+        </button>
       </div>
     </div>
   );

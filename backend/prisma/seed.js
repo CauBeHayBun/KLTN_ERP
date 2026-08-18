@@ -24,8 +24,6 @@ async function cleanDatabase() {
   await prisma.employee.deleteMany();
   
   await prisma.goodsReceipt.deleteMany();
-  await prisma.vendorPayment.deleteMany();
-  await prisma.vendorBill.deleteMany();
   await prisma.purchaseOrderItem.deleteMany();
   await prisma.purchaseOrder.deleteMany();
   await prisma.supplierEvaluation.deleteMany();
@@ -83,19 +81,6 @@ async function main() {
     products.push(p);
   }
 
-  // 3-tier risk management stock strategy allocation:
-  // 1,000 SAFE (stock >= 15), 250 WARNING (1 <= stock <= 5), rest OUT_OF_STOCK (stock = 0)
-  for (let i = 0; i < products.length; i++) {
-    const p = products[i];
-    if (i < 1000) {
-      p.allocated_stock = 15 + ((i * 7 + 13) % 86);
-    } else if (i < 1250) {
-      p.allocated_stock = 1 + (i % 5);
-    } else {
-      p.allocated_stock = 0;
-    }
-  }
-
   // Clean
   await cleanDatabase();
 
@@ -104,26 +89,21 @@ async function main() {
   const categoryMap = new Map();
   let catId = 1;
   for (const p of products) {
-    const slug = p.category_slug || 'uncategorized';
-    const name = p.category_name || 'Khác';
+    const slug = p.category_slug;
     if (!categoryMap.has(slug)) {
-      try {
-        const cat = await prisma.category.create({
-          data: {
-            id: catId,
-            name: name,
-            slug: slug
-          }
-        });
-        categoryMap.set(slug, cat.id);
-        catId++;
-      } catch (err) {
-        console.error(`Error creating category ${slug}:`, err.message);
-      }
+      const cat = await prisma.category.create({
+        data: {
+          id: catId,
+          name: p.category_name,
+          slug: slug
+        }
+      });
+      categoryMap.set(slug, cat.id);
+      catId++;
     }
   }
   // Reset sequence
-  await prisma.$executeRawUnsafe(`SELECT setval('categories_id_seq', COALESCE((SELECT MAX(id) FROM categories), 1));`);
+  await prisma.$executeRawUnsafe(`SELECT setval('categories_id_seq', (SELECT MAX(id) FROM categories));`);
 
   // 2. Brands
   console.log('Seeding Brands...');
@@ -139,7 +119,7 @@ async function main() {
     });
     brandMap.set(bName, brand.id);
   }
-  await prisma.$executeRawUnsafe(`SELECT setval('brands_id_seq', COALESCE((SELECT MAX(id) FROM brands), 1));`);
+  await prisma.$executeRawUnsafe(`SELECT setval('brands_id_seq', (SELECT MAX(id) FROM brands));`);
 
   // 3. Products & Images
   console.log('Seeding Products & Images...');
@@ -163,13 +143,13 @@ async function main() {
         originalPrice: p.original_price,
         discountPercent: p.discount_percent,
         currency: p.currency || 'VND',
-        available: true,
-        stockQuantity: p.allocated_stock,
+        available: p.available ?? true,
+        stockQuantity: p.stock_quantity || 0,
         primaryImage: p.primary_image,
         imageCount: p.image_count || 0,
         warranty: p.warranty || null,
-        specs: typeof p.specs === 'string' ? JSON.parse(p.specs) : (p.specs || {}),
-        filters: typeof p.filters === 'string' ? JSON.parse(p.filters) : (p.filters || {}),
+        specs: p.specs ? JSON.parse(p.specs) : {},
+        filters: p.filters ? JSON.parse(p.filters) : {},
         status: 'ACTIVE',
         publishedAt: p.published_at ? new Date(p.published_at) : null
       }
@@ -550,23 +530,26 @@ async function main() {
       woId++;
     }
   }
-  await prisma.$executeRawUnsafe(`SELECT setval('boms_id_seq', COALESCE((SELECT MAX(id) FROM boms), 1));`);
-  await prisma.$executeRawUnsafe(`SELECT setval('work_orders_id_seq', COALESCE((SELECT MAX(id) FROM work_orders), 1));`);
-  await prisma.$executeRawUnsafe(`SELECT setval('assembly_logs_id_seq', COALESCE((SELECT MAX(id) FROM assembly_logs), 1));`);
+  await prisma.$executeRawUnsafe(`SELECT setval('boms_id_seq', (SELECT MAX(id) FROM boms));`);
+  await prisma.$executeRawUnsafe(`SELECT setval('work_orders_id_seq', (SELECT MAX(id) FROM work_orders));`);
+  await prisma.$executeRawUnsafe(`SELECT setval('assembly_logs_id_seq', (SELECT MAX(id) FROM assembly_logs));`);
 
   // 9. Warehouses & Stock
   console.log('Seeding Warehouses & Stock...');
   await prisma.warehouse.create({ data: { id: 1, name: 'Kho Tổng TP.Hồ Chí Minh', address: '175 Nguyễn Thị Minh Khai, Quận 1, TP. HCM', isActive: true } });
   await prisma.warehouse.create({ data: { id: 2, name: 'Kho Chi Nhánh Hà Nội', address: '33 Phố Thái Hà, Quận Đống Đa, Hà Nội', isActive: true } });
-  await prisma.$executeRawUnsafe(`SELECT setval('warehouses_id_seq', COALESCE((SELECT MAX(id) FROM warehouses), 1));`);
+  await prisma.$executeRawUnsafe(`SELECT setval('warehouses_id_seq', (SELECT MAX(id) FROM warehouses));`);
 
   await prisma.warehouseLocation.create({ data: { id: 1, warehouseId: 1, zone: 'ZONE-A', shelf: 'SHELF-01', bin: 'BIN-01', capacity: 200 } });
   await prisma.warehouseLocation.create({ data: { id: 2, warehouseId: 1, zone: 'ZONE-A', shelf: 'SHELF-01', bin: 'BIN-02', capacity: 200 } });
   await prisma.warehouseLocation.create({ data: { id: 3, warehouseId: 2, zone: 'ZONE-B', shelf: 'SHELF-01', bin: 'BIN-01', capacity: 200 } });
-  await prisma.$executeRawUnsafe(`SELECT setval('warehouse_locations_id_seq', COALESCE((SELECT MAX(id) FROM warehouse_locations), 1));`);
+  await prisma.$executeRawUnsafe(`SELECT setval('warehouse_locations_id_seq', (SELECT MAX(id) FROM warehouse_locations));`);
 
   for (const p of products) {
-    const stockTotal = p.allocated_stock;
+    let stockTotal = p.stock_quantity || 0;
+    if (stockTotal <= 0) {
+      stockTotal = Math.floor(20 + Math.random() * 80);
+    }
     const stockWh1 = Math.floor(stockTotal * 0.7);
     const stockWh2 = stockTotal - stockWh1;
 
@@ -591,89 +574,6 @@ async function main() {
         reorderPoint: 5
       }
     });
-  }
-
-  // 9.5 Purchase Orders (POs, RFQs, Goods Receipts, Vendor Bills)
-  console.log('Seeding Purchase Orders, RFQs & Goods Receipts...');
-  const poStatuses = ['RFQ', 'QUOTED', 'APPROVED', 'PO', 'DONE', 'DONE', 'DONE', 'CANCELLED'];
-  const poProdPool = products.filter(p => p.allocated_stock <= 5);
-  const supplierCodesList = suppliers.map(s => s.code).concat(['supplier']);
-
-  for (let i = 0; i < 16; i++) {
-    const supCode = supplierCodesList[i % supplierCodesList.length];
-    const status = poStatuses[i % poStatuses.length];
-    const poNumber = `PO-202606-${1000 + i}`;
-    
-    const poItemsCount = 2 + (i % 3);
-    const itemSlice = poProdPool.slice((i * 3) % poProdPool.length, ((i * 3) % poProdPool.length) + poItemsCount);
-
-    let poTotal = 0;
-    const itemsData = itemSlice.map(p => {
-      const qty = 10 + ((i * 5) % 40);
-      const unitCost = Math.round(Number(p.price || 500000) * 0.75);
-      const totalCost = qty * unitCost;
-      poTotal += totalCost;
-      return {
-        productId: p.product_id,
-        quantity: qty,
-        unitCost: unitCost,
-        totalCost: totalCost
-      };
-    });
-
-    const poDate = new Date(2026, 5, 1 + (i % 15));
-    const createdPo = await prisma.purchaseOrder.create({
-      data: {
-        poNumber,
-        supplierCode: supCode,
-        status,
-        totalAmount: poTotal,
-        expectedDeliveryDate: new Date(2026, 5, 10 + (i % 15)),
-        createdBy: 'purchasing@kltn-erp.vn',
-        createdAt: poDate,
-        items: {
-          create: itemsData
-        }
-      }
-    });
-
-    if (status === 'DONE') {
-      await prisma.goodsReceipt.create({
-        data: {
-          receiptNumber: `GRN-202606-${1000 + i}`,
-          poId: createdPo.id,
-          receivedWarehouseId: 1,
-          receivedBy: 'warehouse@kltn-erp.vn',
-          receivedDate: new Date(2026, 5, 8 + (i % 15)),
-          status: 'DONE',
-          note: 'Nhập kho thành công theo đơn PO'
-        }
-      });
-
-      const vb = await prisma.vendorBill.create({
-        data: {
-          billNumber: `BILL-202606-${1000 + i}`,
-          poId: createdPo.id,
-          supplierCode: supCode,
-          status: 'PAID',
-          amountTotal: poTotal,
-          amountPaid: poTotal,
-          amountDue: 0,
-          billDate: new Date(2026, 5, 8 + (i % 15)),
-          dueDate: new Date(2026, 6, 8 + (i % 15))
-        }
-      });
-
-      await prisma.vendorPayment.create({
-        data: {
-          billId: vb.id,
-          amount: poTotal,
-          paymentDate: new Date(2026, 5, 10 + (i % 15)),
-          paymentMethod: 'BANK_TRANSFER',
-          reference: `BANK-REF-${10000 + i}`
-        }
-      });
-    }
   }
 
   // 10. Attendances & Payrolls
@@ -724,6 +624,77 @@ async function main() {
           paidAt: new Date(dateStr)
         }
       });
+    }
+  }
+
+  // 11. Purchase Orders & Receipts
+  console.log('Seeding Purchase Orders...');
+  const sampleSuppliers = await prisma.supplier.findMany({ take: 3 });
+  const sampleProducts = await prisma.product.findMany({ take: 10 });
+  if (sampleSuppliers.length > 0 && sampleProducts.length > 0) {
+    const s1 = sampleSuppliers[0].code;
+    const s2 = sampleSuppliers[1] ? sampleSuppliers[1].code : s1;
+
+    const poSeeds = [
+      {
+        poNumber: 'RFQ-2026-0001', supplierCode: s1, status: 'RFQ', createdBy: 'purchasing', createdAt: new Date('2026-06-01T08:00:00Z'),
+        items: [
+          { productId: sampleProducts[0].productId, quantity: 20, unitCost: 1500000, totalCost: 30000000 },
+          { productId: sampleProducts[1].productId, quantity: 15, unitCost: 4500000, totalCost: 67500000 }
+        ]
+      },
+      {
+        poNumber: 'RFQ-2026-0002', supplierCode: s2, status: 'SENT', createdBy: 'purchasing', createdAt: new Date('2026-06-05T09:30:00Z'),
+        items: [{ productId: sampleProducts[2].productId, quantity: 10, unitCost: 8200000, totalCost: 82000000 }]
+      },
+      {
+        poNumber: 'PO-2026-0003', supplierCode: s1, status: 'QUOTED', createdBy: 'purchasing', createdAt: new Date('2026-06-10T10:15:00Z'),
+        items: [
+          { productId: sampleProducts[3].productId, quantity: 25, unitCost: 2100000, totalCost: 52500000 },
+          { productId: sampleProducts[4].productId, quantity: 12, unitCost: 12500000, totalCost: 150000000 }
+        ]
+      },
+      {
+        poNumber: 'PO-2026-0004', supplierCode: s2, status: 'QUOTED', createdBy: 'purchasing', createdAt: new Date('2026-06-12T14:00:00Z'),
+        items: [{ productId: sampleProducts[5].productId, quantity: 30, unitCost: 1800000, totalCost: 54000000 }]
+      },
+      {
+        poNumber: 'PO-2026-0005', supplierCode: s1, status: 'PO', createdBy: 'purchasing', createdAt: new Date('2026-06-15T11:00:00Z'),
+        items: [{ productId: sampleProducts[6].productId, quantity: 50, unitCost: 950000, totalCost: 47500000 }]
+      },
+      {
+        poNumber: 'PO-2026-0006', supplierCode: s2, status: 'COMPLETED', createdBy: 'purchasing', createdAt: new Date('2026-05-20T09:00:00Z'),
+        items: [{ productId: sampleProducts[7].productId, quantity: 40, unitCost: 1100000, totalCost: 44000000 }]
+      }
+    ];
+
+    for (const po of poSeeds) {
+      const totalAmount = po.items.reduce((sum, item) => sum + item.totalCost, 0);
+      const createdPo = await prisma.purchaseOrder.create({
+        data: {
+          poNumber: po.poNumber,
+          supplierCode: po.supplierCode,
+          status: po.status,
+          totalAmount,
+          createdBy: po.createdBy,
+          createdAt: po.createdAt,
+          items: { create: po.items }
+        }
+      });
+
+      if (po.status === 'PO' || po.status === 'COMPLETED') {
+        await prisma.goodsReceipt.create({
+          data: {
+            receiptNumber: 'GRN-' + po.poNumber,
+            poId: createdPo.id,
+            receivedWarehouseId: 1,
+            receivedBy: 'warehouse',
+            receivedDate: po.status === 'COMPLETED' ? new Date('2026-05-25T10:00:00Z') : null,
+            status: po.status === 'COMPLETED' ? 'DONE' : 'READY',
+            note: 'Nhập kho theo đơn mua ' + po.poNumber
+          }
+        });
+      }
     }
   }
 

@@ -71,12 +71,12 @@ export default function OrderDetailModal({ order, onClose }) {
         {/* Header */}
         <div style={{
           padding: '1.25rem 1.75rem',
-          background: 'linear-gradient(135deg, #eff6ff 0%, #f1f5f9 100%)',
-          color: '#0f172a',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%)',
+          color: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '1.5px solid #cbd5e1',
+          borderBottom: '3px solid #6366f1',
           width: '100%',
           boxSizing: 'border-box'
         }}>
@@ -86,26 +86,26 @@ export default function OrderDetailModal({ order, onClose }) {
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              backgroundColor: '#dbeafe',
-              border: '1px solid #bfdbfe',
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(79, 70, 229, 0.4) 100%)',
+              border: '1px solid rgba(129, 140, 248, 0.5)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#2563eb',
-              boxShadow: '0 2px 6px rgba(37,99,235,0.1)',
+              color: '#a5b4fc',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
               flexShrink: 0
             }}>
               <Package size={22} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Chi Tiết Đơn Hàng #{order.orderId}
               </h3>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}>
-                <Calendar size={13} style={{ color: '#2563eb', flexShrink: 0 }} /> 
-                Ngày đặt: <strong style={{ color: '#0f172a' }}>{order.date || new Date(order.createdAt).toLocaleDateString('vi-VN')}</strong>
-                <span style={{ margin: '0 0.3rem', color: '#cbd5e1' }}>•</span>
-                <span style={{ color: '#2563eb', fontSize: '0.78rem', fontWeight: 700 }}>Kênh: {order.type || 'ONLINE'}</span>
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}>
+                <Calendar size={13} style={{ color: '#818cf8', flexShrink: 0 }} /> 
+                Ngày đặt: <strong style={{ color: '#f8fafc' }}>{order.date || new Date(order.createdAt).toLocaleDateString('vi-VN')}</strong>
+                <span style={{ margin: '0 0.3rem', color: '#64748b' }}>•</span>
+                <span style={{ color: '#a5b4fc', fontSize: '0.78rem', fontWeight: 600 }}>Kênh: {order.type || 'ONLINE'}</span>
               </p>
             </div>
           </div>
@@ -120,7 +120,7 @@ export default function OrderDetailModal({ order, onClose }) {
               color: statusInfo.color,
               backgroundColor: statusInfo.bg,
               border: `1.5px solid ${statusInfo.border}`,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
               whiteSpace: 'nowrap'
             }}>
               {statusInfo.label}
@@ -130,9 +130,9 @@ export default function OrderDetailModal({ order, onClose }) {
               onClick={onClose}
               title="Đóng chi tiết"
               style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#64748b',
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#ffffff',
                 cursor: 'pointer',
                 width: '34px',
                 height: '34px',
@@ -141,11 +141,10 @@ export default function OrderDetailModal({ order, onClose }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 transition: 'all 0.2s',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 flexShrink: 0
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#ef4444'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = '#dc2626'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.8)'; e.currentTarget.style.borderColor = '#ef4444'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
             >
               <X size={18} />
             </button>
@@ -180,29 +179,29 @@ export default function OrderDetailModal({ order, onClose }) {
                 </h4>
               </div>
 
-              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#475569' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#64748b', fontWeight: 500 }}>Họ và tên:</span>
-                  <strong style={{ color: '#0f172a', fontWeight: 700, textAlign: 'right' }}>{order.customerName || 'Khách hàng'}</strong>
+              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', color: '#475569' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ flex: '0 0 95px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Họ và tên:</span>
+                  <strong style={{ flex: 1, color: '#0f172a', fontWeight: 700 }}>{order.customerName || 'Khách hàng'}</strong>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#64748b', fontWeight: 500 }}>Số điện thoại:</span>
-                  <strong style={{ color: '#0f172a', fontWeight: 700, textAlign: 'right' }}>{order.phone || order.customerPhone || 'Chưa cung cấp'}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ flex: '0 0 95px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Số điện thoại:</span>
+                  <strong style={{ flex: 1, color: '#0f172a', fontWeight: 700 }}>{order.phone || order.customerPhone || 'Chưa cung cấp'}</strong>
                 </div>
 
                 {order.email && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#64748b', fontWeight: 500 }}>Email:</span>
-                    <span style={{ color: '#2563eb', fontWeight: 700, backgroundColor: '#eff6ff', border: '1px solid #dbeafe', padding: '2px 8px', borderRadius: '6px', fontSize: '0.8rem', wordBreak: 'break-all', textAlign: 'right' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ flex: '0 0 95px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Email:</span>
+                    <span style={{ color: '#2563eb', fontWeight: 700, backgroundColor: '#eff6ff', border: '1px solid #dbeafe', padding: '2px 8px', borderRadius: '6px', fontSize: '0.8rem', wordBreak: 'break-all' }}>
                       {order.email}
                     </span>
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                  <span style={{ color: '#64748b', fontWeight: 500, flexShrink: 0 }}>Địa chỉ giao:</span>
-                  <span style={{ color: '#0f172a', fontWeight: 600, wordBreak: 'break-word', lineHeight: '1.4', textAlign: 'right' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', paddingTop: '0.1rem' }}>
+                  <span style={{ flex: '0 0 95px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Địa chỉ giao:</span>
+                  <span style={{ flex: 1, color: '#0f172a', fontWeight: 600, wordBreak: 'break-word', lineHeight: '1.4' }}>
                     {order.shippingAddress || order.address || 'Nhận tại cửa hàng (POS)'}
                   </span>
                 </div>
@@ -228,39 +227,50 @@ export default function OrderDetailModal({ order, onClose }) {
                 </h4>
               </div>
 
-              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#475569' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#64748b', fontWeight: 500 }}>Hình thức thanh toán:</span>
-                  <strong style={{ color: '#0f172a', fontWeight: 700, textAlign: 'right' }}>
+              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', color: '#475569' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <span style={{ flex: '0 0 100px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Thanh toán:</span>
+                  <strong style={{ flex: 1, color: '#0f172a', fontWeight: 700, lineHeight: '1.4' }}>
                     {order.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản Ngân hàng' : order.paymentMethod === 'ONLINE_GATEWAY' ? 'Cổng thanh toán Online' : 'COD (Tiền mặt khi nhận)'}
                   </strong>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#64748b', fontWeight: 500 }}>Tạm tính:</span>
-                  <strong style={{ fontWeight: 700, color: '#0f172a', textAlign: 'right' }}>{fmt(order.subtotal || order.totalAmount)}</strong>
-                </div>
+                {(() => {
+                  const itemsSubtotal = (items || []).reduce((sum, i) => sum + (Number(i.price || i.unitPrice || 0) * Number(i.quantity || 1)), 0);
+                  const effectiveSubtotal = order.subtotal || (itemsSubtotal > 0 ? itemsSubtotal : order.totalAmount);
+                  const calculatedFee = order.totalAmount > effectiveSubtotal ? order.totalAmount - effectiveSubtotal : 0;
+                  const effectiveShippingFee = order.shippingFee !== undefined ? order.shippingFee : calculatedFee;
 
-                {order.shippingFee > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#64748b', fontWeight: 500 }}>Phí vận chuyển:</span>
-                    <strong style={{ fontWeight: 700, color: '#0f172a', textAlign: 'right' }}>+{fmt(order.shippingFee)}</strong>
-                  </div>
-                )}
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ flex: '0 0 120px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Tạm tính linh kiện:</span>
+                        <span style={{ flex: 1, textAlign: 'right', fontWeight: 700, color: '#334155' }}>{fmt(effectiveSubtotal)}</span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ flex: '0 0 120px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Phí giao hàng:</span>
+                        <span style={{ flex: 1, textAlign: 'right', fontWeight: 700, color: effectiveShippingFee > 0 ? '#0f172a' : '#16a34a' }}>
+                          {effectiveShippingFee > 0 ? `+${fmt(effectiveShippingFee)}` : 'MIỄN PHÍ'}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {/* Total Box */}
                 <div style={{ 
                   display: 'flex', 
-                  justifyContent: 'space-between', 
+                  justify: 'space-between', 
                   alignItems: 'center',
-                  backgroundColor: '#fff5f5',
+                  backgroundColor: '#fef2f2',
                   border: '1.5px solid #fecaca',
                   padding: '0.75rem 1rem',
                   borderRadius: '10px',
-                  marginTop: '0.3rem'
+                  marginTop: '0.4rem'
                 }}>
                   <span style={{ fontWeight: 800, color: '#991b1b', fontSize: '0.85rem', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>TỔNG THANH TOÁN:</span>
-                  <strong style={{ fontSize: '1.25rem', color: '#dc2626', fontWeight: 900, letterSpacing: '-0.3px' }}>{fmt(order.totalAmount)}</strong>
+                  <strong style={{ fontSize: '1.25rem', color: '#dc2626', fontWeight: 900, letterSpacing: '-0.3px', marginLeft: '0.75rem' }}>{fmt(order.totalAmount)}</strong>
                 </div>
               </div>
             </div>

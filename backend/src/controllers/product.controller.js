@@ -241,21 +241,45 @@ const createProduct = async (req, res, next) => {
 const updateProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, price, stockQuantity, available, description } = req.body;
+    const { name, price, stockQuantity, stock, available, description, descriptionText } = req.body;
+
+    const qty = stockQuantity !== undefined ? parseInt(stockQuantity, 10) : (stock !== undefined ? parseInt(stock, 10) : undefined);
+    const targetPrice = price !== undefined ? parseFloat(price) : undefined;
+    const targetDesc = description || descriptionText;
+
+    const strId = String(id);
+    // Find product by productId or sku
+    let target = await prisma.product.findUnique({ where: { productId: strId } });
+    if (!target) {
+      target = await prisma.product.findFirst({
+        where: {
+          OR: [
+            { productId: strId },
+            { sku: strId },
+            { gearvnId: strId }
+          ]
+        }
+      });
+    }
+
+    if (!target) {
+      return res.status(404).json({ success: false, message: `Không tìm thấy sản phẩm với ID ${id} trong CSDL` });
+    }
 
     const updated = await prisma.product.update({
-      where: { productId: id },
+      where: { productId: target.productId },
       data: {
         ...(name && { name }),
-        ...(price !== undefined && { price: parseFloat(price) }),
-        ...(stockQuantity !== undefined && { stockQuantity: parseInt(stockQuantity) }),
-        ...(available !== undefined && { available }),
-        ...(description && { description })
+        ...(targetPrice !== undefined && !isNaN(targetPrice) && { price: targetPrice }),
+        ...(qty !== undefined && !isNaN(qty) && { stockQuantity: qty }),
+        ...(available !== undefined && { available: Boolean(available) }),
+        ...(targetDesc && { descriptionText: targetDesc })
       }
     });
 
-    res.json({ success: true, data: updated });
+    res.json({ success: true, data: updated, message: 'Đã lưu thay đổi vào cơ sở dữ liệu thành công' });
   } catch (err) {
+    console.error('Lỗi khi cập nhật sản phẩm vào CSDL:', err);
     next(err);
   }
 };

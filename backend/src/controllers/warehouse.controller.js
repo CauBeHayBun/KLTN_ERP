@@ -99,6 +99,11 @@ const validateReceipt = async (req, res, next) => {
       if (receipt.status === 'DONE') throw new Error('Receipt is already validated.');
 
       const po = receipt.po;
+      if (po.status !== 'QA_PASSED') {
+        const error = new Error('Lô hàng phải được QA/QC xác nhận đạt chất lượng trước khi nhập kho.');
+        error.statusCode = 409;
+        throw error;
+      }
 
       // Increment inventory for each item in PO
       for (const item of po.items) {
@@ -161,6 +166,11 @@ const validateReceipt = async (req, res, next) => {
           },
           warehouse: true
         }
+      });
+
+      await tx.purchaseOrder.update({
+        where: { id: po.id },
+        data: { status: 'RECEIVED' }
       });
 
       // Check if all receipts and bills for this PO are completed → update PO status to DONE

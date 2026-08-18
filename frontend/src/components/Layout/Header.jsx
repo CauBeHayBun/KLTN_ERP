@@ -2,14 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useNotification } from '../../context/NotificationContext';
 import {
   ShoppingBag, Cpu, LogIn, LogOut, LayoutDashboard,
   ChevronDown, Tag, Newspaper, Building2, Users,
-  Wrench, Star, X, Menu, Package, Heart, Key, Award, Mail
+  Wrench, Star, X, Menu, Package, Heart, Key, Award, Mail, HelpCircle, Bell, CheckCircle, AlertCircle, Info
 } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { label: 'Sản Phẩm', path: '/', exact: true },
+  { label: 'Sản Phẩm', path: '/products' },
   {
     label: 'Khuyến Mãi',
     path: '/promotions',
@@ -45,6 +46,7 @@ const NAV_ITEMS = [
 export default function Header() {
   const { user, logout, isAuthenticated, updateUser } = useAuth();
   const { cartCount, wishlist, toggleWishlist, addToCart } = useCart();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -59,7 +61,9 @@ export default function Header() {
   const [editPhone, setEditPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editCity, setEditCity] = useState('');
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const notificationRef = useRef(null);
 
   const getTierDisplay = (tier) => {
     if (!tier) return 'Thành viên Đồng';
@@ -98,6 +102,9 @@ export default function Header() {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setOpenDropdown(null);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(e.target)) {
+        setNotificationOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
@@ -161,7 +168,7 @@ export default function Header() {
       <header style={{
         position: 'sticky',
         top: 0,
-        zIndex: 100,
+        zIndex: 9999999,
         background: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
@@ -382,6 +389,121 @@ export default function Header() {
               )}
             </button>
 
+            {/* Notification Bell */}
+            <div style={{ position: 'relative' }} ref={notificationRef}>
+              <button style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '38px',
+                height: '38px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-glass)',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                transition: 'all var(--transition-fast)',
+              }}
+                onClick={() => setNotificationOpen(!notificationOpen)}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-glass)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-4px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    fontWeight: 'bold',
+                    borderRadius: '50%',
+                    padding: '2px 5px',
+                    minWidth: '16px',
+                    textAlign: 'center',
+                    lineHeight: '1.2',
+                    border: '2px solid white'
+                  }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Dropdown */}
+              {notificationOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '0.5rem',
+                  width: '340px',
+                  backgroundColor: '#fff',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                  border: '1px solid #e2e8f0',
+                  zIndex: 99999,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>Thông báo</h3>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllAsRead} style={{ background: 'transparent', border: 'none', color: '#2563eb', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 500 }}>
+                        Đánh dấu đã đọc tất cả
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                        Không có thông báo nào.
+                      </div>
+                    ) : (
+                      notifications.map(note => (
+                        <div key={note.id} 
+                          onClick={() => {
+                            markAsRead(note.id);
+                            if (note.link) {
+                              navigate(note.link);
+                              setNotificationOpen(false);
+                            }
+                          }}
+                          style={{ 
+                            padding: '1rem', 
+                            borderBottom: '1px solid #f1f5f9', 
+                            backgroundColor: note.read ? '#fff' : '#eff6ff',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            gap: '0.75rem',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = note.read ? '#f8fafc' : '#dbeafe'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = note.read ? '#fff' : '#eff6ff'}
+                        >
+                          <div style={{ marginTop: '2px' }}>
+                            {note.type === 'success' && <CheckCircle size={16} color="#10b981" />}
+                            {note.type === 'error' && <AlertCircle size={16} color="#ef4444" />}
+                            {note.type === 'info' && <Info size={16} color="#3b82f6" />}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '0.875rem', color: note.read ? '#475569' : '#0f172a', fontWeight: note.read ? 400 : 500, lineHeight: 1.4 }}>
+                              {note.message}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                              {new Date(note.createdAt).toLocaleString('vi-VN')}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* User Section */}
             {isAuthenticated ? (
               <div 
@@ -425,8 +547,16 @@ export default function Header() {
                   }}>
                     {(user.fullname || user.name || 'K').charAt(0)}
                   </div>
-                  <span>{user.fullname || user.name || 'Khách hàng'}</span>
-                  <ChevronDown size={14} style={{ opacity: 0.7, transition: 'transform 0.2s', transform: userDropdownOpen ? 'rotate(180deg)' : 'none' }} />
+                  <span style={{ 
+                    maxWidth: '140px', 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    whiteSpace: 'nowrap',
+                    display: 'inline-block'
+                  }} title={user.fullname || user.name}>
+                    {(user.fullname || user.name || 'Khách hàng').split(' (')[0]}
+                  </span>
+                  <ChevronDown size={14} style={{ opacity: 0.7, transition: 'transform 0.2s', flexShrink: 0, transform: userDropdownOpen ? 'rotate(180deg)' : 'none' }} />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -436,7 +566,7 @@ export default function Header() {
                     top: '100%',
                     right: 0,
                     paddingTop: '0.5rem', // Bridge the gap between the button and the dropdown
-                    zIndex: 1000,
+                    zIndex: 10000000,
                     animation: 'fadeIn 0.2s ease-out'
                   }}>
                     <div style={{
@@ -525,8 +655,9 @@ export default function Header() {
 
                       {/* Menu links */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <button 
-                          onClick={() => { handleOpenProfile(); setUserDropdownOpen(false); }}
+                        <Link 
+                          to="/profile"
+                          onClick={() => setUserDropdownOpen(false)}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -542,6 +673,7 @@ export default function Header() {
                             cursor: 'pointer',
                             fontFamily: 'var(--font-sans)',
                             width: '100%',
+                            textDecoration: 'none',
                             transition: 'all 0.15s'
                           }}
                           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
@@ -549,7 +681,7 @@ export default function Header() {
                         >
                           <Users size={16} color="#475569" />
                           Thông tin cá nhân
-                        </button>
+                        </Link>
 
                         <button 
                           onClick={() => { setPasswordModalOpen(true); setUserDropdownOpen(false); }}
@@ -577,52 +709,78 @@ export default function Header() {
                           Đổi mật khẩu
                         </button>
 
-                        <Link 
-                          to="/my-orders"
-                          onClick={() => setUserDropdownOpen(false)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            padding: '0.6rem 0.75rem',
-                            borderRadius: '8px',
-                            color: '#334155',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                            textDecoration: 'none',
-                            transition: 'all 0.15s'
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#334155'; }}
-                        >
-                          <Package size={16} color="#475569" />
-                          Đơn hàng của tôi
-                        </Link>
-
+                        {/* Customer-Only Menu Links */}
                         {user.role === 'CUSTOMER' && (
-                          <Link 
-                            to="/member-tier"
-                            onClick={() => setUserDropdownOpen(false)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.6rem',
-                              padding: '0.6rem 0.75rem',
-                              borderRadius: '8px',
-                              color: '#334155',
-                              fontSize: '0.85rem',
-                              fontWeight: 600,
-                              textDecoration: 'none',
-                              transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#334155'; }}
-                          >
-                            <Award size={16} color="#475569" />
-                            Đặc quyền thành viên
-                          </Link>
+                          <>
+                            <Link 
+                              to="/my-orders"
+                              onClick={() => setUserDropdownOpen(false)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                padding: '0.6rem 0.75rem',
+                                borderRadius: '8px',
+                                color: '#334155',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                textDecoration: 'none',
+                                transition: 'all 0.15s'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#334155'; }}
+                            >
+                              <Package size={16} color="#475569" />
+                              Đơn hàng của tôi
+                            </Link>
+
+                            <Link 
+                              to="/my-orders?complaint=true"
+                              onClick={() => setUserDropdownOpen(false)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                padding: '0.6rem 0.75rem',
+                                borderRadius: '8px',
+                                color: '#ef4444',
+                                fontSize: '0.85rem',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                transition: 'all 0.15s'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              <HelpCircle size={16} color="#ef4444" />
+                              Gửi khiếu nại & hỗ trợ
+                            </Link>
+
+                            <Link 
+                              to="/member-tier"
+                              onClick={() => setUserDropdownOpen(false)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                padding: '0.6rem 0.75rem',
+                                borderRadius: '8px',
+                                color: '#334155',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                textDecoration: 'none',
+                                transition: 'all 0.15s'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#334155'; }}
+                            >
+                              <Award size={16} color="#475569" />
+                              Đặc quyền thành viên
+                            </Link>
+                          </>
                         )}
 
+                        {/* Enterprise / Employee Admin Link */}
                         {showAdminLink && (
                           <Link 
                             to="/admin"
@@ -634,16 +792,45 @@ export default function Header() {
                               padding: '0.6rem 0.75rem',
                               borderRadius: '8px',
                               color: '#2563eb',
+                              backgroundColor: '#eff6ff',
                               fontSize: '0.85rem',
                               textDecoration: 'none',
-                              fontWeight: 700,
-                              transition: 'all 0.15s'
+                              fontWeight: 800,
+                              transition: 'all 0.15s',
+                              border: '1px solid #bfdbfe'
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
                           >
                             <LayoutDashboard size={16} color="#2563eb" />
                             Bảng quản trị (ERP)
+                          </Link>
+                        )}
+
+                        {/* Supplier Portal Link */}
+                        {user.role === 'SUPPLIER' && (
+                          <Link 
+                            to="/supplier/portal"
+                            onClick={() => setUserDropdownOpen(false)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              padding: '0.6rem 0.75rem',
+                              borderRadius: '8px',
+                              color: '#2563eb',
+                              backgroundColor: '#eff6ff',
+                              fontSize: '0.85rem',
+                              textDecoration: 'none',
+                              fontWeight: 800,
+                              transition: 'all 0.15s',
+                              border: '1px solid #bfdbfe'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
+                          >
+                            <LayoutDashboard size={16} color="#2563eb" />
+                            Cổng Nhà Cung Cấp
                           </Link>
                         )}
                       </div>
@@ -694,9 +881,9 @@ export default function Header() {
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(5, 7, 12, 0.5)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 999,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 99999999,
           display: 'flex',
           justifyContent: 'flex-end',
         }}
@@ -704,57 +891,86 @@ export default function Header() {
         >
           <div style={{
             width: '100%',
-            maxWidth: '400px',
+            maxWidth: '420px',
             height: '100%',
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-            backdropFilter: 'blur(20px)',
-            borderLeft: '1px solid var(--border-glass)',
-            boxShadow: '-10px 0 30px rgba(0,0,0,0.5)',
+            backgroundColor: '#ffffff',
+            borderLeft: '1px solid #e2e8f0',
+            boxShadow: '-10px 0 40px rgba(0,0,0,0.2)',
             display: 'flex',
             flexDirection: 'column',
             padding: '1.5rem',
             animation: 'slideInWishlist 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            color: '#fff',
+            color: '#0f172a',
+            zIndex: 100000000,
           }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--danger)' }}>
-                <Heart size={20} fill="var(--danger)" />
-                <h3 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 700, fontFamily: 'var(--font-title)' }}>Sản phẩm yêu thích</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Heart size={20} fill="#ef4444" stroke="#ef4444" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: '#0f172a' }}>Sản Phẩm Yêu Thích</h3>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>({wishlist.length} sản phẩm đã lưu)</span>
+                </div>
               </div>
               <button 
                 onClick={() => setWishlistOpen(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem' }}
+                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer', padding: '0.4rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Content List */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {wishlist.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-secondary)' }}>
-                  <Heart size={48} style={{ color: 'var(--text-muted)', strokeWidth: 1, marginBottom: '1rem' }} />
-                  <p style={{ fontSize: '0.9rem' }}>Danh sách yêu thích của bạn đang trống.</p>
-                  <p style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>Hãy bấm biểu tượng tim ở trang chi tiết sản phẩm để lưu lại nhé!</p>
+                <div style={{ textAlign: 'center', padding: '5rem 1rem', color: '#64748b' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+                    <Heart size={32} style={{ color: '#ef4444', strokeWidth: 1.5 }} />
+                  </div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.4rem' }}>Danh sách yêu thích trống</h4>
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
+                    Bạn chưa lưu sản phẩm nào. Hãy bấm biểu tượng trái tim ở các linh kiện để dễ dàng xem lại nhé!
+                  </p>
+                  <Link
+                    to="/products"
+                    onClick={() => setWishlistOpen(false)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      backgroundColor: '#2563eb',
+                      color: '#ffffff',
+                      textDecoration: 'none',
+                      padding: '0.65rem 1.25rem',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: 700
+                    }}
+                  >
+                    Khám Phá Sản Phẩm Ngay
+                  </Link>
                 </div>
               ) : (
                 wishlist.map((item) => (
                   <div key={item.id} style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '1rem',
-                    padding: '0.75rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-glass)',
-                    background: 'rgba(255,255,255,0.01)',
+                    gap: '0.85rem',
+                    padding: '0.85rem',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                    transition: 'all 0.15s'
                   }}>
                     {/* Thumbnail */}
                     <div style={{
-                      width: '56px', height: '56px', background: '#fff',
-                      borderRadius: 'var(--radius-sm)', padding: '0.25rem',
+                      width: '60px', height: '60px', background: '#f8fafc',
+                      borderRadius: '8px', padding: '0.25rem', border: '1px solid #e2e8f0',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}>
                       <img src={item.image || `https://placehold.co/60x60/1e263d/94a3b8?text=${item.brand}`} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
@@ -762,45 +978,87 @@ export default function Header() {
 
                     {/* Details */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <Link to={`/product/${item.id}`} onClick={() => setWishlistOpen(false)} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <Link to={`/product/${item.id}`} onClick={() => setWishlistOpen(false)} style={{ textDecoration: 'none', color: '#0f172a' }}>
                         <h4 style={{
-                          fontSize: '0.8125rem', fontWeight: 600, margin: 0,
+                          fontSize: '0.82rem', fontWeight: 700, margin: 0,
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--secondary)'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+                          onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = '#0f172a'}
                         >
                           {item.name}
                         </h4>
                       </Link>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--success)', marginTop: '4px' }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#16a34a', marginTop: '3px' }}>
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
                       <button
-                        onClick={() => { addToCart(item, 1); alert(`Đã thêm ${item.name} vào giỏ hàng!`); }}
+                        onClick={() => {
+                          const inStock = (Number(item.stockQuantity) > 0 || Number(item.stock) > 0) && !item.isPreorder;
+                          if (!inStock) {
+                            alert('Sản phẩm này hiện đang trong diện ĐẶT TRƯỚC, vui lòng liên hệ CSKH để được hỗ trợ!');
+                            return;
+                          }
+                          addToCart(item, 1);
+                          alert(`✅ Đã thêm ${item.name} vào giỏ hàng!`);
+                        }}
                         style={{
-                          background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(37,99,235,0.3)',
-                          borderRadius: '4px', color: 'var(--primary)', cursor: 'pointer',
-                          padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: '#eff6ff', border: '1px solid #bfdbfe',
+                          borderRadius: '6px', color: '#2563eb', cursor: 'pointer',
+                          padding: '0.4rem 0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.75rem', fontWeight: 700, gap: '0.25rem'
                         }}
                         title="Thêm vào giỏ"
                       >
-                        <ShoppingBag size={13} />
+                        <ShoppingBag size={14} />
                       </button>
                       <button
                         onClick={() => toggleWishlist(item)}
+                        style={{
+                          background: '#fef2f2', border: '1px solid #fecaca',
+                          borderRadius: '6px', color: '#ef4444', cursor: 'pointer',
+                          padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}
+                        title="Xóa khỏi yêu thích"
                       >
-                        <X size={13} />
+                        <X size={14} />
                       </button>
                     </div>
                   </div>
                 ))
               )}
             </div>
+
+            {/* Footer with Clear or Browse */}
+            {wishlist.length > 0 && (
+              <div style={{ paddingTop: '1rem', borderTop: '1px solid #f1f5f9', marginTop: 'auto' }}>
+                <Link
+                  to="/cart"
+                  onClick={() => setWishlistOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    width: '100%',
+                    backgroundColor: '#2563eb',
+                    color: '#ffffff',
+                    textDecoration: 'none',
+                    padding: '0.65rem',
+                    borderRadius: '8px',
+                    fontWeight: 800,
+                    fontSize: '0.88rem'
+                  }}
+                >
+                  <ShoppingBag size={16} /> Đến Giỏ Hàng Mua Sắm
+                </Link>
+              </div>
+            )}
+
           </div>
         </div>
       )}

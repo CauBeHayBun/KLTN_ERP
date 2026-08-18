@@ -574,7 +574,7 @@ function ProductCard({ p, onAddCart, onCompare }) {
             background: 'rgba(16,185,129,0.9)', color: '#fff',
             fontSize: '0.65rem', fontWeight: 700,
             padding: '2px 6px', borderRadius: '4px',
-          }}>Tồn: {p.stockQuantity}</span>
+          }}>Còn {p.stockQuantity} sp</span>
         ) : p.available && p.stockQuantity === 0 ? (
           <span style={{
             position: 'absolute', top: '6px', right: '6px',
@@ -647,9 +647,32 @@ function ProductCard({ p, onAddCart, onCompare }) {
           {formatPrice(p.price)}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 36px 36px', gap: '0.4rem' }}>
-          <button onClick={() => onAddCart(p)} className="btn btn-primary" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
-            <ShoppingCart size={13} /> Mua Ngay
-          </button>
+          {((Number(p.stockQuantity) > 0 || Number(p.stock) > 0) && !p.isPreorder) ? (
+            <button onClick={() => onAddCart(p)} className="btn btn-primary" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
+              <ShoppingCart size={13} /> Thêm Vào Giỏ
+            </button>
+          ) : (
+            <button
+              disabled
+              title="Sản phẩm hết hàng sẵn tại kho, vui lòng liên hệ đặt trước"
+              style={{
+                backgroundColor: '#f1f5f9',
+                color: '#94a3b8',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                padding: '0.5rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.2rem'
+              }}
+            >
+              ⏳ Đặt Trước
+            </button>
+          )}
           <Link to={`/product/${p.id}`} className="btn btn-secondary" style={{ padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Xem chi tiết">
             <Eye size={13} />
           </Link>
@@ -763,7 +786,7 @@ function BestSellerCard({ p, onAddCart, onCompare }) {
             background: 'rgba(16,185,129,0.9)', color: '#fff',
             fontSize: '0.65rem', fontWeight: 700,
             padding: '2px 6px', borderRadius: '4px',
-          }}>Tồn: {p.stockQuantity}</span>
+          }}>Còn {p.stockQuantity} sp</span>
         ) : p.available && p.stockQuantity === 0 ? (
           <span style={{
             position: 'absolute', top: '6px', right: '6px',
@@ -857,24 +880,47 @@ function BestSellerCard({ p, onAddCart, onCompare }) {
           {formatPrice(p.price)}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 38px 38px', gap: '0.4rem' }}>
-          <button onClick={() => onAddCart(p)} className="btn btn-primary" style={{
-            padding: '0.625rem', fontSize: '0.8125rem',
-            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-            border: 'none',
-            color: '#fff',
-            fontWeight: 700,
-            boxShadow: '0 4px 10px rgba(245, 158, 11, 0.2)',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #fbbf24, #f59e0b)';
-            e.currentTarget.style.boxShadow = '0 6px 14px rgba(245, 158, 11, 0.3)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-            e.currentTarget.style.boxShadow = '0 4px 10px rgba(245, 158, 11, 0.2)';
-          }}>
-            <ShoppingCart size={13} /> Mua Ngay
-          </button>
+          {((Number(p.stockQuantity) > 0 || Number(p.stock) > 0) && !p.isPreorder) ? (
+            <button onClick={() => onAddCart(p)} className="btn btn-primary" style={{
+              padding: '0.625rem', fontSize: '0.8125rem',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              border: 'none',
+              color: '#fff',
+              fontWeight: 700,
+              boxShadow: '0 4px 10px rgba(245, 158, 11, 0.2)',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #fbbf24, #f59e0b)';
+              e.currentTarget.style.boxShadow = '0 6px 14px rgba(245, 158, 11, 0.3)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+              e.currentTarget.style.boxShadow = '0 4px 10px rgba(245, 158, 11, 0.2)';
+            }}>
+              <ShoppingCart size={13} /> Thêm Vào Giỏ
+            </button>
+          ) : (
+            <button
+              disabled
+              title="Sản phẩm hết hàng sẵn tại kho, vui lòng liên hệ đặt trước"
+              style={{
+                backgroundColor: '#f1f5f9',
+                color: '#94a3b8',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                padding: '0.5rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.2rem'
+              }}
+            >
+              ⏳ Đặt Trước
+            </button>
+          )}
           <Link to={`/product/${p.id}`} className="btn btn-secondary" style={{ padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Xem chi tiết">
             <Eye size={13} />
           </Link>
@@ -1293,27 +1339,50 @@ function ProductComparison({ products, onAddCart, onClose, initialProduct, clear
           </div>
 
           {!recommendation.isSingle ? (
-            <button
-              onClick={() => onAddCart(recommendation.product)}
-              style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                border: 'none',
-                color: '#fff',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '6px',
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                flexShrink: 0,
-                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <ShoppingCart size={12} /> Mua SP Khuyên Chọn ({formatPrice(recommendation.product.price)})
-            </button>
+            ((Number(recommendation.product?.stockQuantity) > 0 || Number(recommendation.product?.stock) > 0) && !recommendation.product?.isPreorder) ? (
+              <button
+                onClick={() => onAddCart(recommendation.product)}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: 'none',
+                  color: '#fff',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <ShoppingCart size={12} /> Thêm SP Khuyên Chọn Vào Giỏ ({formatPrice(recommendation.product.price)})
+              </button>
+            ) : (
+              <button
+                disabled
+                style={{
+                  backgroundColor: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  color: '#94a3b8',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  cursor: 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                ⏳ SP Khuyên Chọn (Đặt Trước)
+              </button>
+            )
           ) : (
             <button
               onClick={handleAutoCompareCompetitor}
@@ -1546,27 +1615,51 @@ function ProductComparison({ products, onAddCart, onClose, initialProduct, clear
                           >
                             🔍 Đổi
                           </button>
-                          <button
-                            onClick={() => onAddCart(p)}
-                            style={{
-                              flex: 1.3,
-                              padding: '0.3rem',
-                              fontSize: '0.725rem',
-                              background: '#16a34a',
-                              border: 'none',
-                              color: '#fff',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontWeight: 700,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.25rem',
-                              boxShadow: '0 2px 6px rgba(22, 163, 74, 0.2)'
-                            }}
-                          >
-                            <ShoppingCart size={11} /> Mua Nhanh
-                          </button>
+                          {((Number(p.stockQuantity) > 0 || Number(p.stock) > 0) && !p.isPreorder) ? (
+                            <button
+                              onClick={() => onAddCart(p)}
+                              style={{
+                                flex: 1.3,
+                                padding: '0.3rem',
+                                fontSize: '0.725rem',
+                                background: '#16a34a',
+                                border: 'none',
+                                color: '#fff',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.25rem',
+                                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.2)'
+                              }}
+                            >
+                              <ShoppingCart size={11} /> Thêm Vào Giỏ
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              title="Hết hàng sẵn tại kho, vui lòng liên hệ đặt trước"
+                              style={{
+                                flex: 1.3,
+                                padding: '0.3rem',
+                                fontSize: '0.725rem',
+                                backgroundColor: '#f1f5f9',
+                                border: '1px solid #cbd5e1',
+                                color: '#94a3b8',
+                                borderRadius: '6px',
+                                cursor: 'not-allowed',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.2rem'
+                              }}
+                            >
+                              ⏳ Đặt Trước
+                            </button>
+                          )}
                         </div>
                       </>
                     ) : (
@@ -1754,7 +1847,7 @@ function ProductComparison({ products, onAddCart, onClose, initialProduct, clear
                         gap: '0.35rem'
                       }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: isStockAvailable ? '#16a34a' : (isPreOrder ? '#d97706' : '#dc2626') }} />
-                        {isStockAvailable ? `Còn hàng (${p.stockQuantity} sp)` : (isPreOrder ? 'Hết hàng' : 'Ngừng kinh doanh')}
+                        {isStockAvailable ? `Còn ${p.stockQuantity} sản phẩm` : (isPreOrder ? 'Hàng đặt trước' : 'Ngừng kinh doanh')}
                       </span>
                     </td>
                   );
@@ -1855,6 +1948,7 @@ export default function Home() {
   // New states for product filtering & sorting
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [priceRange, setPriceRange] = useState('ALL');
+  const [sliderMaxPrice, setSliderMaxPrice] = useState(50000000);
   const [customMinPrice, setCustomMinPrice] = useState('');
   const [customMaxPrice, setCustomMaxPrice] = useState('');
   const [sortBy, setSortBy] = useState('default');
@@ -1922,7 +2016,9 @@ export default function Home() {
 
         // Price range filter
         let matchPrice = true;
-        if (priceRange !== 'ALL') {
+        if (priceRange === 'SLIDER') {
+          matchPrice = p.price <= sliderMaxPrice;
+        } else if (priceRange !== 'ALL') {
           const preset = PRICE_PRESETS.find(pr => pr.key === priceRange);
           if (preset) {
             matchPrice = p.price >= preset.min && p.price <= preset.max;
@@ -1938,6 +2034,13 @@ export default function Home() {
         return matchSearch && matchCat && matchBrand && matchPrice;
       })
       .sort((a, b) => {
+        // 1. Prioritize In-stock (stockQuantity > 0 || stock > 0) over Preorder
+        const aInStock = (Number(a.stockQuantity) > 0 || Number(a.stock) > 0) && !a.isPreorder;
+        const bInStock = (Number(b.stockQuantity) > 0 || Number(b.stock) > 0) && !b.isPreorder;
+
+        if (aInStock && !bInStock) return -1;
+        if (!aInStock && bInStock) return 1;
+
         if (sortBy === 'price_asc') return a.price - b.price;
         if (sortBy === 'price_desc') return b.price - a.price;
         if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
@@ -1984,9 +2087,41 @@ export default function Home() {
           )}
         </div>
 
-        {/* Price Range Presets */}
+        {/* Price Range Slider & Presets */}
         <div className="filter-group">
           <div className="filter-title">Mức Giá</div>
+
+          {/* Range Slider UI */}
+          <div style={{ backgroundColor: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '0.85rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', fontSize: '0.75rem', color: '#64748b' }}>
+              <span>Từ 0 ₫</span>
+              <span style={{ fontWeight: 800, color: '#2563eb' }}>Đến {formatPrice(sliderMaxPrice)}</span>
+            </div>
+            <input
+              type="range"
+              min="500000"
+              max="50000000"
+              step="500000"
+              value={sliderMaxPrice}
+              onChange={(e) => {
+                setSliderMaxPrice(Number(e.target.value));
+                setPriceRange('SLIDER');
+                setCustomMinPrice('');
+                setCustomMaxPrice('');
+              }}
+              style={{
+                width: '100%',
+                accentColor: '#2563eb',
+                cursor: 'pointer'
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+              <span>500k</span>
+              <span>25 triệu</span>
+              <span>50 triệu+</span>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {PRICE_PRESETS.map((preset) => (
               <label key={preset.key} className="filter-checkbox-label" style={{ fontWeight: priceRange === preset.key ? 600 : 400 }}>
@@ -2361,12 +2496,12 @@ export default function Home() {
         <div style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.45)',
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 9999,
+          zIndex: 100000000,
           padding: '1.25rem',
           boxSizing: 'border-box'
         }}
@@ -2375,23 +2510,32 @@ export default function Home() {
           <div style={{
             width: '95vw',
             maxWidth: '1400px',
-            height: '86vh',
+            height: '88vh',
             minHeight: '680px',
             maxHeight: '92vh',
             backgroundColor: '#ffffff',
             border: '1px solid #cbd5e1',
-            borderRadius: '24px',
-            boxShadow: '0 25px 60px rgba(15, 23, 42, 0.2)',
+            borderRadius: '20px',
+            boxShadow: '0 25px 60px rgba(15, 23, 42, 0.3)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            padding: '1.5rem 1.75rem'
+            padding: '1.5rem 1.75rem',
+            zIndex: 100000001,
           }}
           onClick={e => e.stopPropagation()}
           >
             <ProductComparison 
               products={products} 
-              onAddCart={(p) => addToCart(p, 1)} 
+              onAddCart={(p) => {
+                const inStock = (Number(p.stockQuantity) > 0 || Number(p.stock) > 0) && !p.isPreorder;
+                if (!inStock) {
+                  alert('Sản phẩm này hiện đang trong diện ĐẶT TRƯỚC, vui lòng liên hệ CSKH để được hỗ trợ!');
+                  return;
+                }
+                addToCart(p, 1);
+                alert(`✅ Đã thêm ${p.name} vào giỏ hàng!`);
+              }} 
               onClose={() => setShowCompareModal(false)} 
               initialProduct={initialCompareProduct}
               clearInitialProduct={() => setInitialCompareProduct(null)}

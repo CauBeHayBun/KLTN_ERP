@@ -1,615 +1,675 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   Truck, Package, MapPin, Phone, User, CheckCircle, Clock,
-  XCircle, Navigation, Search, BarChart2, AlertCircle, RefreshCw,
-  Camera, Image, Upload, FileCheck, Eye, Check, X, ShieldCheck
+  XCircle, Navigation, Search, BarChart2, AlertCircle, RefreshCw, Eye, X,
+  Camera, Image, FileText, Calendar, Upload, DollarSign, Check, ChevronRight,
+  TrendingUp, AlertTriangle, ShieldCheck, Award
 } from 'lucide-react';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const STATUS_MAP = {
-  READY_TO_SHIP: { label: 'Chờ lấy hàng', color: '#f59e0b', badge: 'badge-warning' },
-  SHIPPED: { label: 'Đang giao', color: '#6366f1', badge: 'badge-info' },
-  DELIVERED: { label: 'Đã giao', color: '#10b981', badge: 'badge-success' },
-  SHIPPING_FAILED: { label: 'Giao thất bại', color: '#ef4444', badge: 'badge-danger' },
-  CANCELLED: { label: 'Đã huỷ', color: '#ef4444', badge: 'badge-danger' },
+  READY_TO_SHIP: { label: 'Chờ lấy hàng', color: '#f59e0b', bg: '#fffbeb' },
+  SHIPPED: { label: 'Đang giao hàng', color: '#3b82f6', bg: '#eff6ff' },
+  DELIVERED: { label: 'Đã giao thành công', color: '#16a34a', bg: '#f0fdf4' },
+  SHIPPING_FAILED: { label: 'Giao thất bại / Hẹn lại', color: '#ef4444', bg: '#fef2f2' },
+  CANCELLED: { label: 'Đã huỷ', color: '#64748b', bg: '#f8fafc' },
 };
 
+const FAIL_PRESETS = [
+  'Khách không nghe máy (Gọi 3 lần)',
+  'Khách hẹn lại ngày khác',
+  'Địa chỉ sai / Không tìm thấy nhà',
+  'Khách từ chối nhận hàng / Đổi ý',
+  'Khách chưa chuẩn bị đủ tiền mặt',
+  'Hàng bị hư hỏng / móp méo khi vận chuyển'
+];
+
 export default function Delivery() {
-  const { orders, updateOrderStatus } = useERP();
+  const { orders = [], updateOrderStatus, claimOrderForDelivery, returnRequests = [], updateReturnStatus } = useERP() || {};
   const { user } = useAuth();
-  const [tab, setTab] = useState('pending');
-  const [search, setSearch] = useState('');
-  
-  // Modals state
-  const [failModal, setFailModal] = useState(null);
-  const [failReason, setFailReason] = useState('');
-  
-  const [deliverModal, setDeliverModal] = useState(null);
-  const [proofImage, setProofImage] = useState('');
-  const [receiverName, setReceiverName] = useState('');
-  const [deliveryNote, setDeliveryNote] = useState('');
-  const [viewProofModal, setViewProofModal] = useState(null);
-  const [statsTimeRange, setStatsTimeRange] = useState('ALL'); // 'TODAY', 'WEEK', 'MONTH', 'ALL'
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Time Range Filter for Delivered Statistics
-  const getDeliveredOrdersByTime = () => {
-    const now = new Date();
-    return (orders || []).filter(o => {
-      if (!o || o.status !== 'DELIVERED') return false;
-      if (statsTimeRange === 'ALL') return true;
-
-      let oDate;
-      const dateStr = o.deliveredAtTime || o.deliveredDate || o.date;
-      if (dateStr) {
-        if (typeof dateStr === 'string' && dateStr.includes('/')) {
-          const parts = dateStr.split('/');
-          if (parts.length >= 3) {
-            const day = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1;
-            const year = parseInt(parts[2].split(' ')[0]);
-            oDate = new Date(year, month, day);
-          } else {
-            oDate = new Date(dateStr);
-          }
-        } else {
-          oDate = new Date(dateStr);
-        }
-      }
-
-      if (!oDate || isNaN(oDate.getTime())) return true;
-
-      if (statsTimeRange === 'TODAY') {
-        return oDate.toDateString() === now.toDateString();
-      }
-      if (statsTimeRange === 'WEEK') {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        return oDate >= weekAgo && oDate <= now;
-      }
-      if (statsTimeRange === 'MONTH') {
-        return oDate.getMonth() === now.getMonth() && oDate.getFullYear() === now.getFullYear();
-      }
-      return true;
-    });
+  // Active Tab from URL (?tab=overview|pending|active|returns|history)
+  const activeTab = searchParams.get('tab') || 'overview';
+  const setTab = (tKey) => {
+    setSearchParams({ tab: tKey });
+    setSearch('');
   };
 
-  const filteredDeliveredOrders = getDeliveredOrdersByTime();
-  const timeBasedDoneCount = filteredDeliveredOrders.length;
-  const timeBasedTotalValue = filteredDeliveredOrders.reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
+  const [search, setSearch] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const myOrders = orders.filter(o => ['READY_TO_SHIP', 'SHIPPED', 'DELIVERED', 'SHIPPING_FAILED'].includes(o.status));
+  // Delivery Failure Modal State
+  const [failModal, setFailModal] = useState(null);
+  const [failReason, setFailReason] = useState('');
+  const [failNote, setFailNote] = useState('');
 
-  const readyCount = (orders || []).filter(o => o && o.status === 'READY_TO_SHIP').length;
-  const activeCount = (orders || []).filter(o => o && o.status === 'SHIPPED').length;
-  const failedCount = (orders || []).filter(o => o && o.status === 'SHIPPING_FAILED').length;
-  const doneCount = (orders || []).filter(o => o && o.status === 'DELIVERED').length;
+  // Proof of Delivery Modal State (POD)
+  const [deliverModal, setDeliverModal] = useState(null);
+  const [proofPhoto, setProofPhoto] = useState('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80');
+  const [receiverNote, setReceiverNote] = useState('');
 
-  const filteredOrders = myOrders.filter(o => {
-    const matchSearch = !search || o.orderId?.toLowerCase().includes(search.toLowerCase())
-      || o.customerName?.toLowerCase().includes(search.toLowerCase())
-      || o.phone?.includes(search);
-    if (tab === 'pending') return matchSearch && o.status === 'READY_TO_SHIP';
-    if (tab === 'active') return matchSearch && o.status === 'SHIPPED';
-    if (tab === 'failed') return matchSearch && o.status === 'SHIPPING_FAILED';
-    if (tab === 'done') return matchSearch && o.status === 'DELIVERED';
-    return matchSearch;
-  });
+  const isManagerOrAdmin = ['CEO', 'ADMIN', 'WAREHOUSE_MANAGER', 'SALES_MANAGER'].includes(user?.role);
+  const userIdStr = String(user?.id || user?.username || '');
 
   const fmt = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
 
-  const kpis = [
-    { label: 'Chờ lấy hàng', value: readyCount, icon: <Package size={20}/>, color: '#f59e0b' },
-    { label: 'Đang giao', value: activeCount, icon: <Truck size={20}/>, color: '#6366f1' },
-    { label: 'Giao thất bại', value: failedCount, icon: <XCircle size={20}/>, color: '#ef4444' },
-    { label: statsTimeRange === 'TODAY' ? 'Đã giao (Hôm nay)' : statsTimeRange === 'WEEK' ? 'Đã giao (7 ngày)' : statsTimeRange === 'MONTH' ? 'Đã giao (Tháng này)' : 'Đã giao (Tất cả)', value: `${timeBasedDoneCount} đơn`, icon: <CheckCircle size={20}/>, color: '#10b981' },
-    { label: 'Giá trị đã giao', value: fmt(timeBasedTotalValue), icon: <BarChart2 size={20}/>, color: '#0ea5e9', wide: true },
+  // KPI Calculations
+  const myDeliveryOrders = orders.filter(o => 
+    o && ['READY_TO_SHIP', 'SHIPPED', 'DELIVERED', 'SHIPPING_FAILED'].includes(o.status)
+  );
+
+  const readyCount = myDeliveryOrders.filter(o => o.status === 'READY_TO_SHIP').length;
+  const activeCount = myDeliveryOrders.filter(o => 
+    o.status === 'SHIPPED' && (isManagerOrAdmin || !o.assignedShipperId || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username)
+  ).length;
+  const doneCount = myDeliveryOrders.filter(o => 
+    o.status === 'DELIVERED' && (isManagerOrAdmin || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username)
+  ).length;
+  const failedCount = myDeliveryOrders.filter(o => 
+    o.status === 'SHIPPING_FAILED' && (isManagerOrAdmin || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username)
+  ).length;
+
+  const totalCodCollected = myDeliveryOrders
+    .filter(o => o.status === 'DELIVERED' && (isManagerOrAdmin || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username))
+    .reduce((sum, o) => sum + (o.paymentMethod === 'COD' || !o.paymentMethod ? (parseFloat(o.totalAmount || o.total || 0)) : 0), 0);
+
+  const pendingReturns = returnRequests.filter(r => ['RETURN_APPROVED', 'RETURNING_TO_WAREHOUSE'].includes(r.status));
+
+  const stats = [
+    { label: 'Đơn Chờ Nhận Giao', value: `${readyCount} đơn hàng`, change: 'Sẵn sàng lấy tại kho', icon: <Package size={20} />, color: '#f59e0b', bg: '#fffbeb' },
+    { label: 'Đang Giao Trên Đường', value: `${activeCount} chuyến giao`, change: 'Shipper đang phụ trách', icon: <Truck size={20} />, color: '#2563eb', bg: '#eff6ff' },
+    { label: 'Giao Thành Công Hôm Nay', value: `${doneCount} đơn`, change: 'Đã ký nhận & nộp COD', icon: <CheckCircle size={20} />, color: '#16a34a', bg: '#f0fdf4' },
+    { label: 'Giao Thất Bại / Hẹn Lại', value: `${failedCount} đơn`, change: 'Cần liên hệ hẹn lại ngày', icon: <XCircle size={20} />, color: failedCount > 0 ? '#ef4444' : '#64748b', bg: '#fef2f2' },
+    { label: 'Tiền Mặt Thu Hộ (COD)', value: fmt(totalCodCollected), change: 'Tổng tiền cần đối soát kế toán', icon: <DollarSign size={20} />, color: '#0ea5e9', bg: '#f0f9ff' },
+    { label: 'Đơn Thu Hồi Đổi Trả (RMA)', value: `${pendingReturns.length} đơn`, change: 'Cần đến nhà khách lấy về kho', icon: <RefreshCw size={20} />, color: '#8b5cf6', bg: '#f5f3ff' }
   ];
 
-  const handlePickup = (orderId) => {
-    updateOrderStatus(orderId, 'SHIPPED', `Đã lấy hàng và đang giao – NV: ${user?.fullname || user?.name || 'Giao hàng'}`);
-    alert(`✅ Đã nhận đơn ${orderId}. Chuyển sang đang giao hàng.`);
-  };
-
-  // Open Deliver Confirmation Modal with Proof Requirement
-  const handleOpenDeliverModal = (order) => {
-    setDeliverModal(order);
-    setReceiverName(order.customerName || '');
-    setDeliveryNote('Khách hàng đã nhận nguyên vẹn và kiểm tra hàng đầy đủ.');
-    setProofImage('');
-  };
-
-  // Handle Real File Upload
-  const handleImageFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setProofImage(event.target.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Confirm Deliver Action
-  const handleConfirmDeliver = () => {
-    if (!proofImage) {
-      alert('Vui lòng tải ảnh minh chứng hoặc chụp ảnh giao hàng thành công!');
-      return;
-    }
-    if (!receiverName.trim()) {
-      alert('Vui lòng nhập tên người nhận thực tế!');
-      return;
-    }
-
-    const orderId = deliverModal.orderId;
-    const timestampStr = new Date().toLocaleString('vi-VN');
-
-    updateOrderStatus(
-      orderId, 
-      'DELIVERED', 
-      `Đã giao cho ${receiverName.trim()} – NV: ${user?.fullname || 'Shipper'}`,
+  // Chart 1: Delivery Success Ratio Doughnut
+  const deliveryRatioData = {
+    labels: ['Giao Thành Công', 'Đang Giao', 'Chờ Lấy', 'Thất Bại'],
+    datasets: [
       {
-        proofImage,
-        receiverName: receiverName.trim(),
-        deliveryNote: deliveryNote.trim(),
-        deliveredAtTime: timestampStr
+        data: [doneCount || 15, activeCount || 4, readyCount || 6, failedCount || 1],
+        backgroundColor: ['#16a34a', '#3b82f6', '#f59e0b', '#ef4444']
       }
-    );
+    ]
+  };
 
+  // Chart 2: Daily COD Collection Bar
+  const dailyCodData = {
+    labels: ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'],
+    datasets: [
+      {
+        label: 'Doanh Số COD Thu Hộ (Triệu VNĐ)',
+        data: [18.5, 24.2, 16.0, 32.8, 28.5, 45.0, 22.0],
+        backgroundColor: '#2563eb'
+      }
+    ]
+  };
+
+  // Tab Filtering Orders
+  const filteredOrders = useMemo(() => {
+    return myDeliveryOrders.filter(o => {
+      const q = search.toLowerCase();
+      const matchSearch = !search || 
+        o.orderId?.toLowerCase().includes(q) || 
+        o.customerName?.toLowerCase().includes(q) || 
+        o.phone?.includes(q) || 
+        o.shippingAddress?.toLowerCase().includes(q);
+
+      const isAssignedToMe = !o.assignedShipperId || String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username || isManagerOrAdmin;
+      const isMyActiveOrder = String(o.assignedShipperId) === userIdStr || o.assignedShipperId === user?.username || isManagerOrAdmin;
+
+      if (activeTab === 'pending') return matchSearch && o.status === 'READY_TO_SHIP' && isAssignedToMe;
+      if (activeTab === 'active') return matchSearch && o.status === 'SHIPPED' && isMyActiveOrder;
+      if (activeTab === 'history') return matchSearch && ['DELIVERED', 'SHIPPING_FAILED'].includes(o.status) && isMyActiveOrder;
+      return matchSearch;
+    });
+  }, [myDeliveryOrders, search, activeTab, userIdStr, isManagerOrAdmin, user]);
+
+  const handleClaimOrder = (orderId) => {
+    if (typeof claimOrderForDelivery === 'function') {
+      claimOrderForDelivery(orderId, user);
+      alert(`🚚 Đã nhận đơn hàng #${orderId}! Đơn đã được chuyển sang tab "Đang Giao & Minh Chứng".`);
+    } else {
+      updateOrderStatus(orderId, 'SHIPPED');
+      alert(`🚚 Đã nhận đơn hàng #${orderId}!`);
+    }
+  };
+
+  const handleConfirmDelivered = () => {
+    if (!deliverModal) return;
+    updateOrderStatus(deliverModal.orderId || deliverModal.id, 'DELIVERED', {
+      proofPhoto,
+      receiverNote: receiverNote || 'Đã nhận hàng đầy đủ nguyên vẹn',
+      deliveredAt: new Date().toISOString()
+    });
     setDeliverModal(null);
-    setProofImage('');
-    setReceiverName('');
-    setDeliveryNote('');
-    alert(`✅ Đơn ${orderId} đã lưu minh chứng giao hàng & cập nhật trạng thái ĐÃ GIAO HÀNG thành công!`);
+    setReceiverNote('');
+    alert('✅ Giao hàng thành công! Đã lưu ảnh minh chứng POD và ghi nhận thu COD.');
   };
 
-  const handleFail = (orderId) => {
-    setFailReason('');
-    setFailModal({ orderId });
-  };
-
-  const handleConfirmFail = () => {
-    if (!failReason.trim()) {
-      alert('Vui lòng nhập lý do giao thất bại!');
+  const handleFailDelivery = () => {
+    if (!failModal || !failReason) {
+      alert('Vui lòng chọn lý do giao hàng thất bại!');
       return;
     }
-    const { orderId } = failModal;
-    updateOrderStatus(orderId, 'SHIPPING_FAILED', 'Giao thất bại: ' + failReason.trim());
+    updateOrderStatus(failModal.orderId || failModal.id, 'SHIPPING_FAILED', {
+      failReason,
+      failNote
+    });
     setFailModal(null);
     setFailReason('');
-    alert('Đã ghi nhận giao thất bại cho đơn ' + orderId);
+    setFailNote('');
+    alert('⚠️ Đã cập nhật trạng thái Giao Thất Bại / Hẹn Lại Ngày Khác.');
   };
 
-  const FAIL_PRESETS = ['Khách không nghe máy', 'Không có người nhận', 'Địa chỉ sai / không tìm thấy', 'Khách từ chối nhận hàng', 'Hàng bị hư hỏng khi vận chuyển'];
-
   return (
-    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-
-      {/* ── 1. MODAL: PROOF OF DELIVERY CONFIRMATION (DELIVER MODAL) ── */}
-      {deliverModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ padding: '1.75rem', width: '100%', maxWidth: '580px', borderRadius: '16px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
-            
-            {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <div style={{ padding: '0.5rem', backgroundColor: '#dcfce7', color: '#15803d', borderRadius: '10px' }}>
-                  <Camera size={22} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-                    Xác Nhận Giao Hàng & Tải Minh Chứng
-                  </h3>
-                  <span style={{ fontSize: '0.78rem', color: '#2563eb', fontWeight: 700 }}>Mã đơn hàng: #{deliverModal.orderId}</span>
-                </div>
-              </div>
-              <button onClick={() => setDeliverModal(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Customer Info Card */}
-            <div style={{ backgroundColor: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '1.25rem', fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Khách nhận đặt hàng:</span>
-                <strong style={{ color: '#0f172a' }}>{deliverModal.customerName}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Địa chỉ giao hàng:</span>
-                <span style={{ color: '#0f172a', fontWeight: 600, textAlign: 'right', maxWidth: '65%' }}>{deliverModal.shippingAddress || 'N/A'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Tổng thu COD:</span>
-                <strong style={{ color: '#16a34a', fontSize: '0.95rem' }}>{fmt(deliverModal.totalAmount)}</strong>
-              </div>
-            </div>
-
-            {/* Proof Image Upload Box */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
-                📷 Ảnh Minh Chứng Giao Hàng Thành Công <span style={{ color: '#dc2626' }}>*</span>
-              </label>
-
-              {/* Upload Input */}
-              {!proofImage ? (
-                <div style={{ border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '1.25rem', textAlign: 'center', backgroundColor: '#fafafa', position: 'relative' }}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageFileUpload}
-                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-                    title="Chọn hoặc chụp ảnh minh chứng"
-                  />
-                  <Upload size={28} style={{ color: '#2563eb', marginBottom: '0.4rem' }} />
-                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800, color: '#2563eb' }}>
-                    Bấm để Chọn Ảnh từ thiết bị hoặc Chụp Ảnh thực tế
-                  </p>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Hỗ trợ JPG, PNG, WEBP</span>
-                </div>
-              ) : (
-                <div style={{ marginTop: '0.5rem', position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid #cbd5e1', backgroundColor: '#f8fafc', padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <img src={proofImage} alt="Minh chứng giao hàng" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <CheckCircle size={15} /> Đã tải tệp ảnh minh chứng
-                    </div>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Ảnh đã chọn sẵn sàng đính kèm</span>
-                  </div>
-                  <button
-                    onClick={() => setProofImage('')}
-                    style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#fee2e2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '6px', cursor: 'pointer' }}
-                  >
-                    Xóa / Đổi ảnh
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Receiver Name */}
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
-                Họ & Tên Người Nhận Thực Tế <span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={receiverName}
-                onChange={e => setReceiverName(e.target.value)}
-                placeholder="Nhập tên người nhận (Ví dụ: Ngô Thanh Hà - Chính chủ)"
-                style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            {/* Delivery Note */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
-                Ghi Chú Giao Hàng
-              </label>
-              <textarea
-                value={deliveryNote}
-                onChange={e => setDeliveryNote(e.target.value)}
-                placeholder="Ghi chú thêm về tình trạng kiện hàng..."
-                rows={2}
-                style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
-              />
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button onClick={() => setDeliverModal(null)} style={{ flex: 1, padding: '0.65rem', borderRadius: '10px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>
-                Hủy
-              </button>
-              <button
-                onClick={handleConfirmDeliver}
-                disabled={!proofImage || !receiverName.trim()}
-                style={{
-                  flex: 2, padding: '0.65rem', borderRadius: '10px', border: 'none',
-                  backgroundColor: proofImage && receiverName.trim() ? '#16a34a' : '#94a3b8',
-                  color: '#ffffff', fontWeight: 800, fontSize: '0.88rem', cursor: proofImage && receiverName.trim() ? 'pointer' : 'not-allowed',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
-                  boxShadow: proofImage && receiverName.trim() ? '0 4px 12px rgba(22, 163, 74, 0.3)' : 'none'
-                }}
-              >
-                <CheckCircle size={16} /> Xác Nhận Giao Thành Công
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* ── 2. MODAL: VIEW PROOF OF DELIVERY (VIEW PROOF MODAL) ── */}
-      {viewProofModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ padding: '1.5rem', width: '100%', maxWidth: '600px', borderRadius: '16px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ShieldCheck size={22} style={{ color: '#16a34a' }} />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                  Minh Chứng Giao Hàng Đơn #{viewProofModal.orderId}
-                </h3>
-              </div>
-              <button onClick={() => setViewProofModal(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Proof Image Box */}
-            <div style={{ marginBottom: '1rem', borderRadius: '12px', overflow: 'hidden', border: '2px solid #16a34a', backgroundColor: '#0f172a' }}>
-              {viewProofModal.proofImage ? (
-                <img src={viewProofModal.proofImage} alt="Ảnh minh chứng giao hàng" style={{ width: '100%', maxHeight: '350px', objectFit: 'contain' }} />
-              ) : (
-                <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-                  <Image size={40} style={{ opacity: 0.4, marginBottom: '0.5rem' }} />
-                  <p style={{ margin: 0 }}>Đơn hàng này chưa đính kèm tệp ảnh minh chứng.</p>
-                </div>
-              )}
-            </div>
-
-            {/* Proof Metadata */}
-            <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', color: '#475569' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Người nhận thực tế:</span>
-                <strong style={{ color: '#0f172a' }}>{viewProofModal.receiverName || viewProofModal.customerName}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Thời gian giao xong:</span>
-                <strong style={{ color: '#16a34a' }}>{viewProofModal.deliveredAtTime || viewProofModal.date || 'Đã đối soát'}</strong>
-              </div>
-              {viewProofModal.deliveryNote && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '0.4rem', marginTop: '0.2rem' }}>
-                  <span>Ghi chú của Shipper:</span>
-                  <span style={{ color: '#0f172a', fontWeight: 600, fontStyle: 'italic', textAlign: 'right' }}>"{viewProofModal.deliveryNote}"</span>
-                </div>
-              )}
-            </div>
-
-            <button onClick={() => setViewProofModal(null)} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', borderRadius: '8px', border: 'none', backgroundColor: '#2563eb', color: '#ffffff', fontWeight: 800, cursor: 'pointer' }}>
-              Đóng Cửa Sổ
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── 3. MODAL: FAIL REASON ── */}
-      {failModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="card-glass" style={{ padding: '2rem', width: '100%', maxWidth: '440px', borderRadius: '16px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1' }}>
-            <h3 style={{ margin: '0 0 0.5rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <XCircle size={20}/> Ghi nhận giao thất bại
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
-              Đơn <strong style={{ color: '#0f172a' }}>{failModal.orderId}</strong> — Chọn hoặc nhập lý do:
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
-              {FAIL_PRESETS.map(preset => (
-                <button key={preset} onClick={() => setFailReason(preset)}
-                  style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem', borderRadius: '20px', cursor: 'pointer', background: failReason === preset ? '#fee2e2' : '#ffffff', border: failReason === preset ? '1px solid #ef4444' : '1px solid #cbd5e1', color: failReason === preset ? '#dc2626' : '#475569', fontWeight: failReason === preset ? 700 : 500, transition: 'all 0.15s' }}
-                >{preset}</button>
-              ))}
-            </div>
-            <textarea
-              value={failReason}
-              onChange={e => setFailReason(e.target.value)}
-              placeholder="Hoặc nhập lý do khác..."
-              rows={3}
-              style={{ width: '100%', resize: 'vertical', padding: '0.625rem 0.75rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', marginBottom: '1rem' }}
-            />
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button onClick={() => setFailModal(null)} style={{ flex: 1, padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={handleConfirmFail} style={{ flex: 1, padding: '0.55rem', borderRadius: '8px', border: 'none', backgroundColor: '#dc2626', color: '#ffffff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
-                <XCircle size={14} /> Xác nhận thất bại
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Header with Time Range Filter Pills */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '1.5rem 2rem', maxWidth: '1400px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+      
+      {/* ========================================================================= */}
+      {/* 1. TOP HEADER */}
+      {/* ========================================================================= */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0 }}>
-            <Truck size={28} style={{ color: '#2563eb' }} />
-            Giao Hàng & Vận Chuyển
-          </h1>
-          <p style={{ color: '#64748b', marginTop: '0.25rem', fontSize: '0.875rem', margin: 0 }}>
-            Quản lý lộ trình giao hàng, xác nhận giao thành công, tải minh chứng & thống kê hiệu năng.
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Truck size={24} style={{ color: '#2563eb' }} />
+            {activeTab === 'overview' && 'Tổng Quan Giao Vận & Điều Phối (Delivery Dashboard)'}
+            {activeTab === 'pending' && 'Đơn Hàng Sẵn Sàng Giao (Chờ Nhận Đơn Tại Kho)'}
+            {activeTab === 'active' && 'Đang Giao & Xác Nhận Minh Chứng (Proof of Delivery - POD)'}
+            {activeTab === 'returns' && 'Thu Hồi Hàng Đổi Trả Tại Nhà Khách (RMA Pickup)'}
+            {activeTab === 'history' && 'Lịch Sử Giao Hàng & Bảng Kê Thu Hộ (COD Ledger)'}
+          </h2>
+          <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '0.25rem 0 0' }}>
+            Điều phối shipper, xác nhận giao hàng bằng ảnh minh chứng POD và đối soát tiền mặt COD
           </p>
         </div>
-
-        {/* Time Range Filter Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', padding: '0 0.5rem' }}>Thống kê theo:</span>
-          {[
-            { id: 'TODAY', label: 'Hôm nay' },
-            { id: 'WEEK', label: '7 ngày qua' },
-            { id: 'MONTH', label: 'Tháng này' },
-            { id: 'ALL', label: 'Tất cả' }
-          ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setStatsTimeRange(t.id)}
-              style={{
-                padding: '0.35rem 0.85rem',
-                fontSize: '0.78rem',
-                fontWeight: statsTimeRange === t.id ? 800 : 600,
-                color: statsTimeRange === t.id ? '#2563eb' : '#64748b',
-                backgroundColor: statsTimeRange === t.id ? '#ffffff' : 'transparent',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: statsTimeRange === t.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        {kpis.map((k, i) => (
-          <div key={i} className="card-glass" style={{ padding: '1.25rem', borderLeft: `4px solid ${k.color}`, display: 'flex', alignItems: 'center', gap: '1rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ color: k.color, backgroundColor: `${k.color}15`, padding: '0.625rem', borderRadius: '8px' }}>{k.icon}</div>
-            <div>
-              <div style={{ fontSize: k.wide ? '1rem' : '1.75rem', fontWeight: 800, color: '#0f172a' }}>{k.value}</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{k.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Toolbar: Tabs + Search */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #cbd5e1', paddingBottom: '0.75rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {[
-            { key: 'pending', label: `Chờ lấy hàng (${readyCount})` },
-            { key: 'active', label: `Đang giao (${activeCount})` },
-            { key: 'failed', label: `Giao thất bại (${failedCount})` },
-            { key: 'done', label: `Đã giao (${doneCount})` },
-          ].map(t => (
-            <button key={t.key} onClick={() => { setTab(t.key); setSearch(''); }}
-              style={{
-                padding: '0.625rem 1rem', background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '0.875rem', fontWeight: 700,
-                color: tab === t.key ? '#2563eb' : '#64748b',
-                borderBottom: tab === t.key ? '2px solid #2563eb' : '2px solid transparent',
-                transition: 'all 0.2s'
-              }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ position: 'relative', width: '320px', minWidth: '240px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}/>
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm theo mã đơn, tên KH, SĐT..." className="input-field"
-            style={{ paddingLeft: '2.5rem', width: '100%', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0.5rem 0.75rem 0.5rem 2.5rem' }} />
-        </div>
-      </div>
-
-      {/* Orders Grid */}
-      {filteredOrders.length === 0 ? (
-        <div className="card-glass" style={{ padding: '3rem', textAlign: 'center', color: '#64748b', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px' }}>
-          <Truck size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-          <p style={{ fontWeight: 600 }}>Không có đơn hàng nào trong danh sách này</p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem', alignItems: 'stretch' }}>
-          {filteredOrders.map(order => {
-            const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: '#64748b' };
-            return (
-              <div key={order.orderId} style={{
-                padding: '1.25rem', display: 'flex', flexDirection: 'column',
-                backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '14px',
-                borderLeft: `5px solid ${statusInfo.color}`, boxShadow: '0 4px 15px rgba(15,23,42,0.06)',
-                height: '100%'
-              }}>
-                {/* Upper Body Content Wrapper */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                  {/* Order header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ color: '#0f172a', fontSize: '1rem', fontWeight: 800 }}>{order.orderId}</strong>
-                    <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '0.725rem', fontWeight: 800,
-                      backgroundColor: `${statusInfo.color}15`, color: statusInfo.color, border: `1px solid ${statusInfo.color}40` }}>
-                      {statusInfo.label}
-                    </span>
-                  </div>
-
-                  {/* Customer info */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.8125rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f172a' }}>
-                      <User size={14} style={{ color: '#64748b', flexShrink: 0 }} />
-                      <strong style={{ fontWeight: 700 }}>{order.customerName || 'Khách hàng'}</strong>
-                    </div>
-                    {order.phone && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#475569' }}>
-                        <Phone size={14} style={{ color: '#64748b', flexShrink: 0 }} />
-                        <a href={`tel:${order.phone}`} style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>{order.phone}</a>
-                      </div>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', color: '#334155' }}>
-                      <MapPin size={14} style={{ color: '#64748b', flexShrink: 0, marginTop: '2px' }} />
-                      <span style={{ fontWeight: 500 }}>{order.shippingAddress || 'Địa chỉ không xác định'}</span>
-                    </div>
-                  </div>
-
-                  {/* Items summary */}
-                  <div style={{ padding: '0.625rem 0.75rem', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.76rem', color: '#475569', minHeight: '56px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    {(order.items || []).slice(0, 2).map((item, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#0f172a' }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>{item.name || item.productId}</span>
-                        <span style={{ color: '#64748b' }}>x{item.quantity}</span>
-                      </div>
-                    ))}
-                    {(order.items || []).length > 2 && <span style={{ color: '#2563eb', fontWeight: 600, fontSize: '0.7rem' }}>+{order.items.length - 2} sản phẩm khác</span>}
+      {/* ========================================================================= */}
+      {/* TAB 1: OVERVIEW (TỔNG QUAN GIAO VẬN) */}
+      {/* ========================================================================= */}
+      {activeTab === 'overview' && (
+        <div>
+          {/* 6 Balanced KPI Cards (2 Rows x 3 Columns) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
+            {stats.map((st, sIdx) => (
+              <div
+                key={sIdx}
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  padding: '1.1rem 1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  minHeight: '102px',
+                  boxSizing: 'border-box',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                    {st.label}
+                  </span>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: st.bg, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {st.icon}
                   </div>
                 </div>
 
-                {/* Footer Wrapper (Pushed to bottom of card with marginTop: auto) */}
-                <div style={{ marginTop: 'auto', paddingTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  {/* Amount */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #e2e8f0', paddingTop: '0.6rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{order.date}</span>
-                    <strong style={{ color: '#16a34a', fontSize: '1rem', fontWeight: 800 }}>{fmt(order.totalAmount)}</strong>
+                <div style={{ marginTop: '0.45rem' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {st.value}
                   </div>
-
-                  {order.lastNote && (
-                    <div style={{ fontSize: '0.75rem', color: '#be123c', fontStyle: 'italic', fontWeight: 600, padding: '5px 8px', backgroundColor: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '6px' }}>
-                      {order.lastNote}
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.35rem', flexDirection: 'column' }}>
-                    {order.status === 'READY_TO_SHIP' && (
-                      <button onClick={() => handlePickup(order.orderId)} style={{ width: '100%', fontSize: '0.825rem', padding: '0.55rem', borderRadius: '8px', backgroundColor: '#16a34a', color: '#ffffff', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Truck size={15} style={{ marginRight: '4px' }}/> Nhận Giao Đơn Hàng
-                      </button>
-                    )}
-                    {order.status === 'SHIPPING_FAILED' && (
-                      <button onClick={() => handlePickup(order.orderId)} style={{ width: '100%', fontSize: '0.825rem', padding: '0.55rem', borderRadius: '8px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#d97706', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <RefreshCw size={15} style={{ marginRight: '4px' }}/> Thử Giao Lại
-                      </button>
-                    )}
-                    {order.status === 'SHIPPED' && (
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => handleOpenDeliverModal(order)}
-                          style={{ flex: 1, fontSize: '0.825rem', padding: '0.55rem', borderRadius: '8px', backgroundColor: '#2563eb', color: '#ffffff', border: 'none', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(37,99,235,0.2)' }}
-                        >
-                          <CheckCircle size={15} /> Xác Nhận Đã Giao
-                        </button>
-                        <button onClick={() => handleFail(order.orderId)} style={{ fontSize: '0.825rem', padding: '0.55rem 0.85rem', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <XCircle size={15} style={{ marginRight: '4px' }}/> Thất Bại
-                        </button>
-                      </div>
-                    )}
-                    {order.status === 'DELIVERED' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <div style={{ padding: '0.5rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', color: '#16a34a', fontSize: '0.825rem', fontWeight: 800 }}>
-                          <CheckCircle size={15}/> Giao thành công cho {order.receiverName || order.customerName}
-                        </div>
-                        <button
-                          onClick={() => setViewProofModal(order)}
-                          style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
-                        >
-                          <Eye size={13} /> Xem Minh Chứng Giao Hàng
-                        </button>
-                      </div>
-                    )}
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    {st.change}
                   </div>
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Charts Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1.25rem', height: '320px', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', margin: '0 0 1rem 0' }}>
+                Tỷ Lệ Hoàn Thành Giao Hàng
+              </h3>
+              <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Doughnut
+                  data={deliveryRatioData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1.25rem', height: '320px', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', margin: '0 0 1rem 0' }}>
+                Thu Hộ Tiền Mặt (COD) Trong Tuần
+              </h3>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <Bar
+                  data={dailyCodData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+                    scales: {
+                      y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                      x: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Tasks */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1.25rem' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.85rem 0' }}>
+                Đơn Hàng Gần Vị Trí Cần Nhận Giao
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {orders.filter(o => o.status === 'READY_TO_SHIP').slice(0, 3).map((o, oIdx) => (
+                  <div key={o.id || oIdx} style={{ padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>#{o.orderId || o.id} — {o.customerName}</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>📍 {o.shippingAddress || 'Quận 1, TP. Hồ Chí Minh'}</span>
+                    </div>
+                    <button
+                      onClick={() => handleClaimOrder(o.orderId || o.id)}
+                      style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.35rem 0.75rem', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      Nhận Giao
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1.25rem' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.85rem 0' }}>
+                Yêu Cầu Thu Hồi RMA Cần Lấy
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {pendingReturns.slice(0, 3).map((r, rIdx) => (
+                  <div key={r.id || rIdx} style={{ padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>#RMA-{r.id} — {r.customerName}</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>📞 {r.phone}</span>
+                    </div>
+                    <button
+                      onClick={() => setTab('returns')}
+                      style={{ backgroundColor: '#8b5cf6', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.35rem 0.75rem', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      Xem Địa Chỉ
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: PENDING (ĐƠN CHỜ LẤY TẠI KHO) */}
+      {/* ========================================================================= */}
+      {activeTab === 'pending' && (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              Danh Sách Đơn Hàng Đã Đóng Gói — Sẵn Sàng Giao ({filteredOrders.length})
+            </h3>
+            <div style={{ position: 'relative', width: '280px' }}>
+              <input
+                type="text"
+                placeholder="Tìm mã đơn, khách hàng, địa chỉ..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ width: '100%', padding: '0.45rem 0.65rem 0.45rem 2rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+              />
+              <Search size={15} style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Mã Đơn</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Khách Hàng & SĐT</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Địa Chỉ Giao Hàng</th>
+                  <th style={{ padding: '0.65rem 0.85rem', textAlign: 'right' }}>Tiền Thu COD</th>
+                  <th style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map((ord, oIdx) => (
+                  <tr key={ord.id || oIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '0.65rem 0.85rem', fontWeight: 700, color: '#2563eb' }}>#{ord.orderId || ord.id}</td>
+                    <td style={{ padding: '0.65rem 0.85rem' }}>
+                      <strong style={{ color: '#0f172a', display: 'block' }}>{ord.customerName}</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{ord.phone}</span>
+                    </td>
+                    <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>📍 {ord.shippingAddress || 'Quận 1, TP. Hồ Chí Minh'}</td>
+                    <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
+                      {fmt(ord.totalAmount || ord.total)}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleClaimOrder(ord.orderId || ord.id)}
+                        style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.35rem 0.85rem', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                      >
+                        <Truck size={13} /> Nhận Đơn Này
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: ACTIVE (ĐANG GIAO & MINH CHỨNG POD) */}
+      {/* ========================================================================= */}
+      {activeTab === 'active' && (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1.25rem' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.25rem' }}>
+            Đơn Hàng Bạn Đang Phụ Trách Giao Trên Đường ({filteredOrders.length})
+          </h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1rem' }}>
+            {filteredOrders.map((ord, oIdx) => (
+              <div key={ord.id || oIdx} style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '1.25rem', backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#2563eb' }}>#{ord.orderId || ord.id}</span>
+                  <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800 }}>
+                    ĐANG GIAO
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: '#475569', marginBottom: '1rem' }}>
+                  <div><strong>Khách:</strong> {ord.customerName}</div>
+                  <div><strong>SĐT:</strong> <a href={`tel:${ord.phone}`} style={{ color: '#2563eb', fontWeight: 700 }}>{ord.phone}</a></div>
+                  <div><strong>Địa chỉ:</strong> 📍 {ord.shippingAddress || 'TP. Hồ Chí Minh'}</div>
+                  <div style={{ marginTop: '0.25rem', padding: '0.5rem', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0', color: '#15803d', fontWeight: 800 }}>
+                    Thu tiền mặt COD: {fmt(ord.totalAmount || ord.total)}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => setDeliverModal(ord)}
+                    style={{ flex: 1, backgroundColor: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.5rem', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                  >
+                    <CheckCircle size={15} /> Giao Thành Công (POD)
+                  </button>
+                  <button
+                    onClick={() => setFailModal(ord)}
+                    style={{ backgroundColor: '#ffffff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.5rem 0.75rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Báo Lỗi
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: RETURNS (THU HỒI ĐỔI TRẢ RMA) */}
+      {/* ========================================================================= */}
+      {activeTab === 'returns' && (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1.25rem' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <RefreshCw size={18} style={{ color: '#8b5cf6' }} />
+            <span>Thu Hồi Hàng Đổi Trả Tại Nhà Khách (RMA Pickup)</span>
+          </h3>
+          <p style={{ color: '#64748b', fontSize: '0.78rem', marginBottom: '1.25rem' }}>
+            Shipper đến tận địa chỉ khách hàng lấy lại sản phẩm lỗi và bàn giao về kho để QC kiểm định
+          </p>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Mã RMA</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Khách Hàng & SĐT</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Địa Chỉ Lấy Hàng</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Lý Do Đổi Trả</th>
+                  <th style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>Thao Tác Shipper</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingReturns.map((ret, rIdx) => (
+                  <tr key={ret.id || rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '0.65rem 0.85rem', fontWeight: 700, color: '#8b5cf6' }}>#RMA-{ret.id}</td>
+                    <td style={{ padding: '0.65rem 0.85rem' }}>
+                      <strong style={{ color: '#0f172a', display: 'block' }}>{ret.customerName}</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{ret.phone}</span>
+                    </td>
+                    <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>📍 {ret.address || 'Quận 7, TP. Hồ Chí Minh'}</td>
+                    <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>{ret.reason || 'Lỗi không nhận RAM'}</td>
+                    <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
+                      <button
+                        onClick={() => {
+                          updateReturnStatus(ret.id, 'RETURNING_TO_WAREHOUSE', `Shipper ${user?.fullname || user?.username} đã lấy hàng`);
+                          alert('✅ Đã xác nhận nhận hàng thu hồi từ khách! Đang vận chuyển về kho.');
+                        }}
+                        style={{ backgroundColor: '#8b5cf6', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.35rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        ✓ Đã Lấy Hàng Về Kho
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 5: HISTORY (LỊCH SỬ & ĐỐI SOÁT COD) */}
+      {/* ========================================================================= */}
+      {activeTab === 'history' && (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Lịch Sử Giao Hàng & Bảng Kê Đối Soát COD
+              </h3>
+              <p style={{ color: '#64748b', fontSize: '0.78rem', margin: '0.2rem 0 0' }}>
+                Tổng tiền mặt COD đã thu hộ cần nộp lại cho Kế toán: <strong style={{ color: '#16a34a' }}>{fmt(totalCodCollected)}</strong>
+              </p>
+            </div>
+            <button
+              onClick={() => alert('📤 Đã xuất bảng kê nộp tiền COD cho Phòng Kế Toán!')}
+              style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.45rem 1rem', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
+            >
+              Nộp Tiền & Đối Soát COD
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Mã Đơn</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Khách Hàng</th>
+                  <th style={{ padding: '0.65rem 0.85rem', textAlign: 'right' }}>Tiền COD</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Trạng Thái Giao</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Ghi Chú Minh Chứng POD</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map((ord, oIdx) => (
+                  <tr key={ord.id || oIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '0.65rem 0.85rem', fontWeight: 700, color: '#2563eb' }}>#{ord.orderId || ord.id}</td>
+                    <td style={{ padding: '0.65rem 0.85rem', fontWeight: 600, color: '#0f172a' }}>{ord.customerName}</td>
+                    <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{fmt(ord.totalAmount || ord.total)}</td>
+                    <td style={{ padding: '0.65rem 0.85rem' }}>
+                      <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800, backgroundColor: `${STATUS_MAP[ord.status]?.color || '#64748b'}15`, color: STATUS_MAP[ord.status]?.color || '#64748b' }}>
+                        {STATUS_MAP[ord.status]?.label || ord.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.65rem 0.85rem', color: '#64748b', fontSize: '0.75rem' }}>
+                      {ord.receiverNote || ord.failReason || 'Đã giao thành công'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: MINH CHỨNG GIAO HÀNG POD ================= */}
+      {deliverModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', width: '100%', maxWidth: '480px', padding: '1.75rem', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Xác Nhận Giao Hàng (POD) #{deliverModal.orderId || deliverModal.id}</h3>
+              <button onClick={() => setDeliverModal(null)} style={{ background: '#f1f5f9', border: 'none', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.82rem' }}>
+              <div style={{ padding: '0.75rem', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0', color: '#15803d' }}>
+                <strong>Tiền mặt thu hộ COD: {fmt(deliverModal.totalAmount || deliverModal.total)}</strong>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>Ảnh minh chứng giao hàng (POD):</label>
+                <img src={proofPhoto} alt="POD" style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>Ghi chú người nhận:</label>
+                <input
+                  type="text"
+                  placeholder="Khách đã ký nhận nguyên vẹn niêm phong..."
+                  value={receiverNote}
+                  onChange={e => setReceiverNote(e.target.value)}
+                  style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setDeliverModal(null)}
+                  style={{ backgroundColor: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.45rem 1rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelivered}
+                  style={{ backgroundColor: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.45rem 1.1rem', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  ✓ Hoàn Tất Giao Hàng
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: BÁO GIAO THẤT BẠI ================= */}
+      {failModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', width: '100%', maxWidth: '480px', padding: '1.75rem', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ef4444', margin: 0 }}>Báo Giao Thất Bại #{failModal.orderId || failModal.id}</h3>
+              <button onClick={() => setFailModal(null)} style={{ background: '#f1f5f9', border: 'none', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.82rem' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>Lý do không giao được *</label>
+                <select
+                  value={failReason}
+                  onChange={e => setFailReason(e.target.value)}
+                  style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                >
+                  <option value="">-- Chọn lý do --</option>
+                  {FAIL_PRESETS.map((p, pIdx) => <option key={pIdx} value={p}>{p}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>Ghi chú chi tiết:</label>
+                <textarea
+                  rows={3}
+                  placeholder="Ví dụ: Khách hẹn giao lại sau 17h chiều mai..."
+                  value={failNote}
+                  onChange={e => setFailNote(e.target.value)}
+                  style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setFailModal(null)}
+                  style={{ backgroundColor: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.45rem 1rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFailDelivery}
+                  style={{ backgroundColor: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.45rem 1.1rem', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Xác Nhận Hẹn Lại
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

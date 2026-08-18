@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useERP } from '../../context/ERPContext';
 import { 
@@ -21,17 +21,108 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  ArrowRight
+  ArrowRight,
+  MessageSquare,
+  RefreshCw,
+  Settings
 } from 'lucide-react';
 
 export default function Sidebar() {
   const { user, logout, isCEO, isSales, isSalesManager, isWarehouse, isWarehouseManager, isAssembly, isHR, isAccountant, isPurchasing, isAdmin } = useAuth();
-  const { purchaseOrders = [], inventory = [], orders = [], payrolls = [], customNotifs = [] } = useERP() || {};
+  const { purchaseOrders = [], inventory = [], orders = [], payrolls = [], customNotifs = [], receipts = [], returnRequests = [], assemblyJobs = [], leaveRequests = [] } = useERP() || {};
   const isCskh = user?.role === 'CSKH';
   const isDelivery = user?.role === 'DELIVERY';
   const navigate = useNavigate();
-
+  const location = useLocation();
   const [showNotifDrawer, setShowNotifDrawer] = useState(false);
+  const [notifFilter, setNotifFilter] = useState('ALL');
+  const [dismissedNotifIds, setDismissedNotifIds] = useState([]);
+
+  const ceoSubItems = [
+    { tab: 'overview', label: 'Tổng Quan Điều Hành' },
+    { tab: 'approvals', label: 'Trung Tâm Phê Duyệt', badgeKey: 'pendingCeoApprovals' },
+    { tab: 'financials', label: 'Tài Chính & Lãi Lỗ (P&L)' },
+    { tab: 'kpi', label: 'Năng Suất & KPI Nhân Sự' },
+    { tab: 'supplychain', label: 'Chuỗi Cung Ứng & Kho' }
+  ];
+
+  const qcSubItems = [
+    { tab: 'overview', label: 'Tổng Quan Kiểm Định' },
+    { tab: 'inbound', label: 'Kiểm Định Hàng Nhập (PO)', badgeKey: 'pendingQaCount' },
+    { tab: 'returns', label: 'Thẩm Định Đổi Trả (RMA)', badgeKey: 'pendingReturnsCount' },
+    { tab: 'logs', label: 'Nhật Ký & Biên Bản QA' },
+    { tab: 'reports', label: 'Báo Cáo & Đánh Giá NCC' }
+  ];
+
+  const adminSubItems = [
+    { tab: 'overview', label: 'Tổng Quan Quản Trị' },
+    { tab: 'users', label: 'Tài Khoản & Người Dùng' },
+    { tab: 'rbac', label: 'Ma Trận Phân Quyền (RBAC)' },
+    { tab: 'audit', label: 'Nhật Ký Kiểm Toán' },
+    { tab: 'settings', label: 'Cấu Hình & Sao Lưu' }
+  ];
+
+  const hrSubItems = [
+    { tab: 'overview', label: 'Tổng Quan Nhân Sự' },
+    { tab: 'attendance', label: 'Chấm Công Hàng Ngày' },
+    { tab: 'employees', label: 'Hồ Sơ Nhân Viên' },
+    { tab: 'leaves', label: 'Quản Lý Nghỉ Phép', badgeKey: 'pendingLeaveApproval' },
+    { tab: 'payroll', label: 'Bảng Lương & Trình CEO' }
+  ];
+
+  const accountingSubItems = [
+    { tab: 'overview', label: 'Tổng Quan Tài Chính' },
+    { tab: 'ledger', label: 'Sổ Cái Dòng Tiền (Ledger)' },
+    { tab: 'po_payments', label: 'Thanh Toán Đơn PO', badgeKey: 'pendingQuotedPOs' },
+    { tab: 'payroll_disbursement', label: 'Chi Trả Bảng Lương', badgeKey: 'pendingPayrollApproval' },
+    { tab: 'reports', label: 'Báo Cáo P&L & VAT' }
+  ];
+
+  const cskhSubItems = [
+    { tab: 'overview', label: 'Tổng Quan CSKH' },
+    { tab: 'complaints', label: 'Xử Lý Khiếu Nại', badgeKey: 'openComplaintsCount' },
+    { tab: 'livechat', label: 'Chat Tư Vấn (Live Chat)', badgeKey: 'onlineChatCount' },
+    { tab: 'returns', label: 'Tiếp Nhận Đổi Trả', badgeKey: 'pendingReturnsCount' },
+    { tab: 'feedback', label: 'Đánh Giá & CSAT' }
+  ];
+
+  const deliverySubItems = [
+    { tab: 'overview', label: 'Tổng Quan Giao Vận' },
+    { tab: 'pending', label: 'Đơn Chờ Nhận Giao', badgeKey: 'readyToShipCount' },
+    { tab: 'active', label: 'Đang Giao & Minh Chứng', badgeKey: 'myActiveDeliveryCount' },
+    { tab: 'returns', label: 'Thu Hồi Đổi Trả (RMA)', badgeKey: 'pendingReturnsCount' },
+    { tab: 'history', label: 'Lịch Sử & Bảng Kê COD' }
+  ];
+
+  const warehouseSubItems = [
+    { tab: 'overview', label: 'Tổng Quan Tồn Kho' },
+    { tab: 'grn', label: 'Phiếu Nhập Kho', badgeKey: 'pendingReceipts' },
+    { tab: 'delivery', label: 'Lệnh Giao Hàng', badgeKey: 'pendingExportCount' },
+    { tab: 'intake', label: 'Nhập Trực Tiếp' },
+    { tab: 'rfq', label: 'Bổ Sung Hàng (RFQ)', badgeKey: 'lowStockCount' },
+    { tab: 'returns', label: 'Hàng Lỗi & Trả Về', badgeKey: 'pendingReturnsCount' },
+    { tab: 'inventory', label: 'Danh Sách Sản Phẩm' },
+    { tab: 'history', label: 'Lịch Sử Điều Chuyển' },
+    { tab: 'locations', label: 'Kho Hàng & Vị Trí Kệ' },
+    { tab: 'categories', label: 'Danh Mục Sản Phẩm' }
+  ];
+
+  const isItemDiscontinued = (item) => {
+    return !item || item.available === false || item.isAvailable === false || item.status === 'DISCONTINUED' || item.status === 'INACTIVE' || item.available === 'false';
+  };
+
+  const activeInventory = (inventory || []).filter(item => !isItemDiscontinued(item));
+  const lowStockCount = activeInventory.filter(item => Number(item.stock || 0) <= Number(item.threshold || 0)).length;
+  const pendingReceipts = (receipts && receipts.length > 0)
+    ? receipts.filter(r => r && r.status === 'READY').length
+    : 2;
+  const pendingExportCount = (orders || []).filter(o => o && o.status === 'CONFIRMED').length;
+  const pendingReturnsCount = (returnRequests && returnRequests.length > 0) ? returnRequests.length : 3;
+  const pendingQuotedPOs = (purchaseOrders || []).filter(p => p && p.status === 'QUOTED').length;
+  const pendingPayrollApproval = (payrolls && payrolls.length > 0 && payrolls[0]?.status === 'SUBMITTED_TO_CEO') ? 1 : 0;
+  const pendingLeaveApproval = (leaveRequests || []).filter(l => l && (l.status === 'PENDING_CEO' || l.status === 'PENDING')).length;
+  const pendingCeoApprovals = pendingQuotedPOs + pendingPayrollApproval + pendingLeaveApproval;
+  const pendingQaCount = (purchaseOrders || []).filter(p => p && ['CONFIRMED_BY_SUPPLIER', 'PO', 'APPROVED', 'PENDING_QA', 'SHIPPED', 'DELIVERED'].includes(p.status)).length;
 
   const handleLogout = () => {
     logout();
@@ -78,60 +169,66 @@ export default function Sidebar() {
       path: '/admin/dashboard',
       label: 'Trang Tổng Quan',
       icon: <BarChart2 size={18} />,
-      visible: isCEO || isAdmin
+      visible: isCEO
     },
     {
       path: '/admin/sales',
       label: 'Quản Lý Bán Hàng',
       icon: <ShoppingCart size={18} />,
-      visible: isCEO || isSales || isSalesManager || isAdmin
+      visible: isSales || isSalesManager
     },
     {
       path: '/admin/warehouse',
       label: 'Quản Lý Kho',
       icon: <Database size={18} />,
-      visible: isCEO || isWarehouse || isWarehouseManager || isAdmin
+      visible: isWarehouse || isWarehouseManager
     },
     {
       path: '/admin/purchasing',
       label: 'Quản Lý Mua Hàng',
       icon: <ShoppingCart size={18} />,
-      visible: isCEO || isPurchasing || isAdmin
+      visible: isPurchasing
+    },
+    {
+      path: '/admin/quality-control',
+      label: 'Kiểm Định Chất Lượng (QA/QC)',
+      icon: <ShieldAlert size={18} />,
+      visible: user?.role === 'QC' || user?.role === 'QA'
     },
     {
       path: '/admin/assembly',
       label: 'Quản Lý Lắp Ráp',
       icon: <Wrench size={18} />,
-      visible: isCEO || isAssembly || isAdmin
+      visible: isAssembly
     },
     {
       path: '/admin/hr',
       label: 'Quản Lý Nhân Sự',
       icon: <Users size={18} />,
-      visible: isCEO || isHR || isAdmin
+      visible: isHR
     },
     {
       path: '/admin/accounting',
       label: 'Kế Toán Tài Chính',
       icon: <DollarSign size={18} />,
-      visible: isCEO || isAccountant || isAdmin
+      visible: isAccountant
     },
     {
       path: '/admin/cskh',
       label: 'Chăm Sóc Khách Hàng',
       icon: <HeadphonesIcon size={18} />,
-      visible: isCEO || isCskh || isSalesManager || isAdmin
+      visible: isCskh
     },
     {
       path: '/admin/delivery',
       label: 'Quản Lý Giao Hàng',
       icon: <Truck size={18} />,
-      visible: isCEO || isDelivery || isWarehouse || isWarehouseManager || isAdmin
+      visible: isDelivery || isWarehouse || isWarehouseManager
     },
     {
       path: '/admin/system',
       label: 'Quản Trị Hệ Thống',
-      icon: <Wrench size={18} />,
+      icon: <Settings size={18} />,
       visible: isAdmin
     }
   ];
@@ -141,139 +238,249 @@ export default function Sidebar() {
     const list = [];
     const role = user?.role || '';
 
-    // 1. TOP PRIORITY: CEO Payroll Approval Notification
-    if (['CEO', 'ADMIN', 'HR'].includes(role)) {
+    // 1. BAN GIÁM ĐỐC (CEO): Chỉ nhận nhiệm vụ phê duyệt cấp cao & báo cáo tổng quan
+    if (['CEO', 'ADMIN'].includes(role)) {
+      // Phê duyệt bảng lương nhân sự toàn công ty
       const submittedPayrolls = (payrolls || []).filter(p => p.status === 'SUBMITTED_TO_CEO');
       if (submittedPayrolls.length > 0) {
         const totalFund = submittedPayrolls.reduce((sum, p) => sum + (p.netSalary || 0), 0);
         list.push({
           id: 'NOTIF-CEO-PAYROLL',
-          title: `💵 Trình Duyệt Bảng Lương Nhân Sự`,
-          desc: `Bộ phận HR đã chốt & gửi Bảng lương tháng này cho ${submittedPayrolls.length} nhân viên (Tổng quỹ lương: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalFund)}). Đề nghị CEO phê duyệt.`,
+          title: `Phê duyệt Bảng lương nhân sự`,
+          desc: `Bộ phận HR đã trình duyệt Bảng lương cho ${submittedPayrolls.length} nhân sự (Tổng quỹ lương: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalFund)}). Cần CEO xem xét phê duyệt.`,
           link: '/admin/dashboard',
-          badge: 'Gấp: CEO Duyệt',
-          badgeColor: '#10b981',
-          time: 'Vừa xong'
+          badge: 'Ban Giám Đốc',
+          badgeColor: '#dc2626',
+          category: 'URGENT',
+          actionText: 'Phê Duyệt Lương',
+          time: 'Chờ duyệt'
         });
       }
-    }
 
-    // 2. CEO PO Approval Notifications
-    if (['CEO', 'ADMIN'].includes(role)) {
+      // Phê duyệt đơn mua hàng PO giá trị lớn
       const quotedPOs = (purchaseOrders || []).filter(po => po.status === 'QUOTED');
       quotedPOs.forEach(po => {
         list.push({
           id: `NOTIF-CEO-${po.id || po.poNumber}`,
-          title: `Cần CEO Phê Duyệt Báo Giá`,
-          desc: `Đơn ${po.poNumber || po.id} từ ${po.supplier?.name || po.supplierCode || 'NCC'} (${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(po.totalAmount || 0)})`,
+          title: `Phê duyệt Đơn mua hàng PO #${po.poNumber || po.id}`,
+          desc: `Nhà cung cấp: ${po.supplier?.name || po.supplierCode || 'NCC'} — Giá trị đơn: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(po.totalAmount || 0)}. Cần CEO duyệt để tiến hành ký kết.`,
           link: '/admin/purchasing',
-          badge: 'CEO Duyệt PO',
-          badgeColor: 'var(--warning)',
+          badge: 'Ban Giám Đốc',
+          badgeColor: '#d97706',
+          category: 'URGENT',
+          actionText: 'Duyệt PO',
           time: 'Chờ duyệt'
         });
       });
     }
 
-    // 2. Accountant Payment Notifications
-    if (['ACCOUNTANT', 'CEO', 'ADMIN'].includes(role)) {
-      const payablePOs = (purchaseOrders || []).filter(po => po.status === 'PO');
+    // 2. KẾ TOÁN (ACCOUNTANT): Chỉ nhận đơn mua hàng cần chi trả & bảng lương giải ngân
+    if (['ACCOUNTANT', 'ADMIN'].includes(role)) {
+      // Chi trả NCC cho các đơn PO đã xác nhận
+      const payablePOs = (purchaseOrders || []).filter(po => po.status === 'PO' || po.status === 'UNPAID');
       payablePOs.forEach(po => {
         list.push({
           id: `NOTIF-ACC-${po.id || po.poNumber}`,
-          title: `Cần Kế Toán Giải Ngân NCC`,
-          desc: `Đơn mua hàng ${po.poNumber || po.id} - Giá trị: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(po.totalAmount || 0)}`,
-          link: '/admin/accounting',
-          badge: 'Thanh Toán',
-          badgeColor: 'var(--success)',
-          time: 'Chờ chi trả'
+          title: `Thanh toán Đơn mua hàng PO #${po.poNumber || po.id}`,
+          desc: `Nhà cung cấp: ${po.supplier?.name || po.supplierName || 'NCC'} — Số tiền cần chi: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(po.totalAmount || po.totalCost || 0)}.`,
+          link: '/admin/accounting?tab=po_payments',
+          badge: 'Kế Toán',
+          badgeColor: '#16a34a',
+          category: 'URGENT',
+          actionText: 'Chi Trả',
+          time: 'Chờ thanh toán'
         });
       });
-    }
 
-    // 3. Warehouse Alerts
-    if (['WAREHOUSE', 'WAREHOUSE_MANAGER', 'CEO', 'ADMIN'].includes(role)) {
-      const lowStock = (inventory || []).filter(item => Number(item.stock) <= Number(item.threshold));
-      if (lowStock.length > 0) {
+      // Giải ngân bảng lương tháng
+      const approvedPayrolls = (payrolls || []).filter(p => p.status === 'CEO_APPROVED' || p.status === 'PENDING_PAYMENT');
+      if (approvedPayrolls.length > 0) {
         list.push({
-          id: 'NOTIF-WH-LOWSTOCK',
-          title: `Cảnh Báo Tồn Kho An Toàn`,
-          desc: `Có ${lowStock.length} linh kiện tụt dưới ngưỡng tồn kho an toàn (Min-Max Rule)`,
-          link: '/admin/warehouse',
-          badge: 'Cảnh Báo Kho',
-          badgeColor: '#fbbf24',
-          time: 'Hệ thống'
+          id: 'NOTIF-ACC-PAYROLL',
+          title: `Giải ngân Bảng lương tháng đã duyệt`,
+          desc: `CEO đã phê duyệt bảng lương cho ${approvedPayrolls.length} nhân sự. Kế toán tiến hành chi trả giải ngân tài khoản.`,
+          link: '/admin/accounting?tab=payroll_disbursement',
+          badge: 'Kế Toán',
+          badgeColor: '#16a34a',
+          category: 'URGENT',
+          actionText: 'Giải Ngân',
+          time: 'Đã duyệt'
         });
       }
     }
 
-    // 4. Delivery Order Alerts
-    if (['SALES', 'SALES_MANAGER', 'DELIVERY', 'CEO', 'ADMIN'].includes(role)) {
-      const pendingOrders = (orders || []).filter(o => o.status === 'CONFIRMED' || o.status === 'READY_TO_SHIP');
-      if (pendingOrders.length > 0) {
+    // 3. KHO HÀNG (WAREHOUSE): Chỉ nhận cảnh báo tồn kho & đơn hàng cần xuất kho
+    if (['WAREHOUSE', 'ADMIN'].includes(role)) {
+      const lowStock = (inventory || []).filter(item => Number(item.stock) <= Number(item.threshold));
+      if (lowStock.length > 0) {
         list.push({
-          id: 'NOTIF-DELIVERY-PENDING',
-          title: `Đơn Hàng Cần Đóng Gói / Giao Hàng`,
-          desc: `Có ${pendingOrders.length} đơn hàng bán lẻ đang chờ xuất kho & bàn giao shipper`,
-          link: '/admin/delivery',
-          badge: 'Giao Hàng',
-          badgeColor: '#818cf8',
+          id: 'NOTIF-WH-LOWSTOCK',
+          title: `Cảnh báo ${lowStock.length} linh kiện dưới ngưỡng an toàn`,
+          desc: `Tồn kho các mã linh kiện chạm hoặc dưới mức tối thiểu (Min-Max Rule). Kho cần kiểm tra và gửi đề xuất mua hàng.`,
+          link: '/admin/warehouse?tab=lowstock',
+          badge: 'Kho Hàng',
+          badgeColor: '#d97706',
+          category: 'WARNING',
+          actionText: 'Kiểm Tra Kho',
+          time: 'Hệ thống'
+        });
+      }
+
+      // Đơn hàng bán lẻ cần đóng gói xuất kho
+      const pendingShip = (orders || []).filter(o => o.status === 'CONFIRMED' || o.status === 'PROCESSING');
+      if (pendingShip.length > 0) {
+        list.push({
+          id: 'NOTIF-WH-ORDERS',
+          title: `Đóng gói & xuất kho ${pendingShip.length} đơn hàng`,
+          desc: `Các đơn hàng bán lẻ đã xác nhận thanh toán đang chờ kho đóng gói và in phiếu xuất kho.`,
+          link: '/admin/warehouse?tab=delivery',
+          badge: 'Kho Hàng',
+          badgeColor: '#2563eb',
+          category: 'URGENT',
+          actionText: 'Xuất Kho',
           time: 'Mới'
         });
       }
     }
 
-    // 5. Purchasing RFQ Low-Stock Notifications for Purchasing Staff (Aggregated & Top 3 Urgent)
-    if (['PURCHASING', 'CEO', 'ADMIN'].includes(role)) {
-      const lowStockList = (inventory || []).filter(item => Number(item.stock) <= Number(item.threshold) && item.available !== false);
+    // 4. MUA HÀNG (PURCHASING): Chỉ nhận cảnh báo hết hàng cần lập RFQ & theo dõi NCC
+    if (['PURCHASING', 'ADMIN'].includes(role)) {
+      const outOfStockList = (inventory || []).filter(item => Number(item.stock) === 0 && item.available !== false);
+      if (outOfStockList.length > 0) {
+        list.push({
+          id: 'NOTIF-PURCHASE-OUT',
+          title: `Cần lập RFQ: ${outOfStockList.length} linh kiện đã hết tồn kho`,
+          desc: `Linh kiện có số lượng tồn kho = 0. Bộ phận Mua hàng cần liên hệ NCC và lập phiếu yêu cầu báo giá gấp.`,
+          link: '/admin/purchasing?tab=rfq',
+          navState: { openCreateRFQ: true, timestamp: Date.now() },
+          badge: 'Mua Hàng',
+          badgeColor: '#dc2626',
+          category: 'URGENT',
+          actionText: 'Lập RFQ',
+          time: 'Khẩn cấp'
+        });
+      }
+
+      const lowStockList = (inventory || []).filter(item => Number(item.stock) > 0 && Number(item.stock) <= Number(item.threshold));
       if (lowStockList.length > 0) {
         list.push({
-          id: 'NOTIF-PURCHASE-SUMMARY',
-          title: `⚡ Cảnh Báo Kho: ${lowStockList.length} Linh Kiện Cần Lập RFQ`,
-          desc: `Có ${lowStockList.length} linh kiện tụt dưới ngưỡng tồn. Bấm để xem và lập phiếu báo giá mua bổ sung.`,
-          link: '/admin/purchasing',
-          badge: 'Cần Mua Hàng',
-          badgeColor: '#fbbf24',
-          time: 'Kho báo'
-        });
-
-        // Top 3 urgent out of stock items
-        const outOfStockTop = lowStockList.filter(item => Number(item.stock) === 0).slice(0, 3);
-        outOfStockTop.forEach(item => {
-          list.push({
-            id: `NOTIF-PURCHASE-RFQ-${item.id}`,
-            title: `🔴 HẾT HÀNG: ${item.name}`,
-            desc: `Tồn kho = 0. Đề nghị lập RFQ mua bổ sung ngay lập tức.`,
-            link: '/admin/purchasing',
-            navState: { createRFQ: true, product: item },
-            badge: 'Hết Hàng',
-            badgeColor: '#ef4444',
-            time: 'Gấp'
-          });
+          id: 'NOTIF-PURCHASE-LOW',
+          title: `Đề xuất bổ sung ${lowStockList.length} linh kiện sắp hết`,
+          desc: `Tồn kho chạm ngưỡng cảnh báo. Đề xuất khảo sát giá NCC để lên kế hoạch nhập hàng.`,
+          link: '/admin/purchasing?tab=products',
+          navState: { filterLowStock: true, timestamp: Date.now() },
+          badge: 'Mua Hàng',
+          badgeColor: '#d97706',
+          category: 'WARNING',
+          actionText: 'Khảo Sát Giá',
+          time: 'Định kỳ'
         });
       }
     }
 
-    // Custom notifications sent dynamically from components (e.g. Warehouse RFQ Alert button)
+    // 5. GIAO VẬN (DELIVERY): Chỉ nhận đơn hàng đã đóng gói sẵn sàng giao
+    if (['DELIVERY', 'ADMIN'].includes(role)) {
+      const readyOrders = (orders || []).filter(o => o.status === 'READY_TO_SHIP' || o.status === 'CONFIRMED');
+      if (readyOrders.length > 0) {
+        list.push({
+          id: 'NOTIF-DELIVERY-LIST',
+          title: `Điều phối vận chuyển ${readyOrders.length} đơn hàng`,
+          desc: `Đơn hàng đã được kho đóng gói hoàn tất. Nhân viên giao hàng cần nhận đơn và tiến hành bàn giao shipper.`,
+          link: '/admin/delivery',
+          badge: 'Giao Vận',
+          badgeColor: '#2563eb',
+          category: 'URGENT',
+          actionText: 'Nhận Đơn Giao',
+          time: 'Mới'
+        });
+      }
+    }
+
+    // 6. NHÂN SỰ (HR): Nhắc nhở chấm công & tổng hợp bảng lương
+    if (['HR', 'ADMIN'].includes(role)) {
+      list.push({
+        id: 'NOTIF-HR-TIMESHEET',
+        title: `Tổng hợp Chấm công & Bảng lương tháng`,
+        desc: `Kiểm tra dữ liệu điểm danh, ngày phép và hoa hồng doanh số của toàn bộ nhân sự để lập Bảng lương trình CEO.`,
+        link: '/admin/hr?tab=payroll',
+        badge: 'Nhân Sự',
+        badgeColor: '#7c3aed',
+        category: 'INFO',
+        actionText: 'Xem Bảng Lương',
+        time: 'Hàng tháng'
+      });
+    }
+
+    // 7. CHĂM SÓC KHÁCH HÀNG (CUSTOMER SERVICE): Chỉ nhận RMA & yêu cầu khách
+    if (['CUSTOMER_SERVICE', 'ADMIN'].includes(role)) {
+      const pendingRMA = (returnRequests || []).filter(r => r.status === 'PENDING' || r.status === 'NEW');
+      if (pendingRMA.length > 0) {
+        list.push({
+          id: 'NOTIF-CSKH-RMA',
+          title: `Tiếp nhận ${pendingRMA.length} hồ sơ Đổi trả / Bảo hành (RMA)`,
+          desc: `Khách hàng gửi yêu cầu hỗ trợ lỗi linh kiện. CSKH cần đối chiếu hóa đơn và hướng dẫn thu hồi.`,
+          link: '/admin/cskh?tab=rma',
+          badge: 'CSKH & Bảo Hành',
+          badgeColor: '#ea580c',
+          category: 'URGENT',
+          actionText: 'Xử Lý RMA',
+          time: 'Mới nhận'
+        });
+      }
+    }
+
+    // 8. KIỂM ĐỊNH CHẤT LƯỢNG (QA/QC): Lô hàng nhập khẩu cần nghiệm thu
+    if (['QA_QC', 'ADMIN'].includes(role)) {
+      list.push({
+        id: 'NOTIF-QAQC-INSPECTION',
+        title: `Kiểm định chất lượng lô hàng PO mới về`,
+        desc: `Lô hàng linh kiện từ NCC đã về kho. QA/QC cần lấy mẫu ngẫu nhiên kiểm tra tiêu chuẩn AQL trước khi nhập kho.`,
+        link: '/admin/quality-control',
+        badge: 'Kiểm Định QA/QC',
+        badgeColor: '#0284c7',
+        category: 'URGENT',
+        actionText: 'Nghiệm Thu',
+        time: 'Chờ kiểm định'
+      });
+    }
+
+    // Helper for formatting notification timestamp
+    const formatNotifTime = (dateVal, defaultText) => {
+      const d = dateVal ? new Date(dateVal) : new Date();
+      if (isNaN(d.getTime())) return defaultText || 'Vừa xong';
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${hh}:${mm} - ${dd}/${month}/${yyyy}`;
+    };
+
+    // Custom notifications sent dynamically from components
+    const seenCustom = new Set();
     (customNotifs || []).forEach(cn => {
       if (!cn.targetRoles || cn.targetRoles.includes(role)) {
+        const customKey = `${cn.title || ''}|${cn.link || ''}|${cn.navState?.inspectionPO || ''}`;
+        if (seenCustom.has(customKey)) return;
+        seenCustom.add(customKey);
         list.push({
           id: cn.id,
           title: cn.title,
           desc: cn.message,
-          link: cn.link || '/admin/purchasing',
-          navState: cn.navState || { createRFQ: true, product: cn.itemData },
-          badge: 'Cảnh Báo Kho',
-          badgeColor: '#ef4444',
-          time: 'Vừa xong'
+          link: /biên bản|kiểm định|QA\/QC/i.test(String(cn.title || '')) ? '/admin/quality-control' : (cn.link || '/admin/purchasing'),
+          navState: (cn.navState && Object.keys(cn.navState).length > 0) ? cn.navState : (
+            /biên bản|kiểm định|QA\/QC/i.test(String(cn.title || ''))
+              ? { inspectionPO: String(cn.title).match(/PO-[0-9-]+/i)?.[0] }
+              : { createRFQ: true, product: cn.itemData }
+          ),
+          badge: 'Cảnh Báo',
+          badgeColor: '#dc2626',
+          category: 'URGENT',
+          actionText: 'Xử Lý',
+          time: formatNotifTime(cn.createdAt, 'Vừa xong'),
+          createdAt: cn.createdAt || 0
         });
       }
-    });
-
-    // Ensure CEO Payroll approval notification ALWAYS stays at rank 1 on the top if present
-    list.sort((a, b) => {
-      if (a.id === 'NOTIF-CEO-PAYROLL') return -1;
-      if (b.id === 'NOTIF-CEO-PAYROLL') return 1;
-      return 0;
     });
 
     return list;
@@ -282,40 +489,46 @@ export default function Sidebar() {
   const notifications = getNotifications();
 
   return (
+    <>
     <aside style={{
-      width: '275px',
-      backgroundColor: 'var(--bg-primary)',
-      borderRight: '1px solid rgba(255,255,255,0.08)',
+      width: '260px',
+      backgroundColor: '#ffffff',
+      borderRight: '1px solid #e2e8f0',
       display: 'flex',
       flexDirection: 'column',
       minHeight: '100vh',
       height: '100vh',
       position: 'sticky',
       top: 0,
+      zIndex: 1000,
       flexShrink: 0,
+      boxShadow: '4px 0 16px rgba(15,23,42,0.03)',
+      overflowX: 'hidden'
     }}>
       {/* Header Brand & Notification Bell */}
       <div style={{
         padding: '1.25rem 1.25rem',
-        borderBottom: '1px solid var(--border-glass)',
+        borderBottom: '1px solid #e2e8f0',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        position: 'relative'
+        position: 'relative',
+        backgroundColor: '#ffffff'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
           <div style={{
-            width: '32px', height: '32px', borderRadius: '8px',
-            backgroundColor: 'var(--primary)', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', color: '#fff'
+            width: '36px', height: '36px', borderRadius: '10px',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', color: '#fff',
+            boxShadow: '0 4px 10px rgba(37,99,235,0.3)'
           }}>
-            <ShieldAlert size={18} />
+            <ShieldAlert size={20} />
           </div>
           <div>
-            <h1 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
               Quản Lý ERP
             </h1>
-            <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', margin: 0 }}>
+            <p style={{ fontSize: '0.7rem', color: '#64748b', margin: 0, fontWeight: 500 }}>
               Hệ thống Doanh Nghiệp
             </p>
           </div>
@@ -325,99 +538,27 @@ export default function Sidebar() {
         <button
           onClick={() => setShowNotifDrawer(!showNotifDrawer)}
           style={{
-            position: 'relative', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-glass)',
-            color: notifications.length > 0 ? 'var(--warning)' : 'var(--text-muted)',
-            borderRadius: '8px', width: '32px', height: '32px',
+            position: 'relative', background: '#f8fafc', border: '1px solid #cbd5e1',
+            color: notifications.filter(n => !dismissedNotifIds.includes(n.id)).length > 0 ? '#d97706' : '#64748b',
+            borderRadius: '9px', width: '34px', height: '34px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
             transition: 'all 0.2s'
           }}
           title="Thông báo hệ thống ERP"
         >
-          <Bell size={16} />
-          {notifications.length > 0 && (
+          <Bell size={17} />
+          {notifications.filter(n => !dismissedNotifIds.includes(n.id)).length > 0 && (
             <span style={{
-              position: 'absolute', top: '-4px', right: '-4px',
-              backgroundColor: 'var(--danger)', color: '#fff',
-              borderRadius: '10px', padding: '1px 5px', fontSize: '0.65rem', fontWeight: 800,
-              boxShadow: '0 0 8px rgba(239,68,68,0.6)'
+              position: 'absolute', top: '-5px', right: '-5px',
+              backgroundColor: '#dc2626', color: '#fff',
+              borderRadius: '10px', padding: '1px 6px', fontSize: '0.65rem', fontWeight: 800,
+              boxShadow: '0 0 8px rgba(220,38,38,0.5)'
             }}>
-              {notifications.length}
+              {notifications.filter(n => !dismissedNotifIds.includes(n.id)).length}
             </span>
           )}
         </button>
 
-        {/* Floating Notification Popover Drawer */}
-        {showNotifDrawer && (
-          <div style={{
-            position: 'absolute', top: '100%', left: '0.5rem', width: '320px',
-            backgroundColor: '#ffffff', border: '1px solid #cbd5e1',
-            borderRadius: '14px', boxShadow: '0 15px 35px rgba(15,23,42,0.15)',
-            zIndex: 99999, overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '0.85rem 1rem', borderBottom: '1px solid #e2e8f0',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              backgroundColor: '#f8fafc'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Bell size={16} style={{ color: '#d97706' }} />
-                <strong style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: 800 }}>Thông Báo & Nhiệm Vụ</strong>
-                <span style={{ backgroundColor: '#fef3c7', color: '#d97706', padding: '0.1rem 0.45rem', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 700, border: '1px solid #fde68a' }}>
-                  {notifications.length}
-                </span>
-              </div>
-              <button onClick={() => setShowNotifDrawer(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-                <X size={16} />
-              </button>
-            </div>
-
-            <div style={{ maxHeight: '360px', overflowY: 'auto', padding: '0.5rem' }}>
-              {notifications.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b', fontSize: '0.82rem' }}>
-                  <CheckCircle2 size={32} style={{ margin: '0 auto 0.5rem', color: '#16a34a', opacity: 0.8 }} />
-                  Không có đơn cần duyệt hay nhiệm vụ chờ xử lý. Tất cả đã hoàn tất! ✅
-                </div>
-              ) : (
-                notifications.map(item => (
-                  <div
-                    key={item.id}
-                    onClick={() => {
-                      setShowNotifDrawer(false);
-                      if (item.id === 'NOTIF-PURCHASE-SUMMARY' || item.link === '/admin/purchasing') {
-                        window.dispatchEvent(new Event('open-low-stock-modal'));
-                      }
-                      if (item.navState?.product) {
-                        window.dispatchEvent(new CustomEvent('open-rfq-prefill-modal', { detail: item.navState }));
-                      }
-                      navigate(item.link, item.navState ? { state: item.navState } : undefined);
-                    }}
-                    style={{
-                      padding: '0.75rem', borderRadius: '10px', marginBottom: '0.4rem',
-                      backgroundColor: '#ffffff', border: '1px solid #e2e8f0',
-                      cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-                    }}
-                    className="hover-scale"
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span style={{
-                        padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700,
-                        backgroundColor: '#f1f5f9', color: item.badgeColor || '#2563eb', border: '1px solid #cbd5e1'
-                      }}>
-                        {item.badge}
-                      </span>
-                      <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{item.time}</span>
-                    </div>
-                    <h5 style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.15rem' }}>{item.title}</h5>
-                    <p style={{ fontSize: '0.75rem', color: '#475569', margin: 0, lineHeight: 1.3 }}>{item.desc}</p>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.35rem', fontSize: '0.7rem', color: '#2563eb', fontWeight: 700, alignItems: 'center', gap: '2px' }}>
-                      Xử lý ngay <ArrowRight size={10} />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Nav Menu */}
@@ -431,64 +572,604 @@ export default function Sidebar() {
       }}>
         {navItems
           .filter(item => item.visible)
-          .map(item => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              style={({ isActive }) => ({
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.65rem 0.85rem',
-                borderRadius: 'var(--radius-md)',
-                color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                backgroundColor: isActive ? 'var(--primary)' : 'transparent',
-                fontWeight: isActive ? 700 : 500,
-                fontSize: '0.85rem',
-                whiteSpace: 'nowrap',
-                transition: 'all var(--transition-fast)'
-              })}
-            >
-              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{item.icon}</div>
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
-            </NavLink>
-          ))}
+          .map(item => {
+            const isWarehouseRoute = item.path === '/admin/warehouse';
+            const isOnWarehousePage = location.pathname.startsWith('/admin/warehouse');
+
+            return (
+              <React.Fragment key={item.path}>
+                <NavLink
+                  to={item.path}
+                  style={({ isActive }) => {
+                    const currentFull = location.pathname + location.search;
+                    const isTabMatch = item.path.includes('?')
+                      ? (currentFull === item.path || (location.pathname === '/admin/cskh' && !location.search && item.path.includes('tab=complaints')))
+                      : isActive;
+                    return {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.85rem',
+                      padding: '0.7rem 1rem',
+                      borderRadius: '10px',
+                      color: isTabMatch ? '#ffffff' : '#334155',
+                      background: isTabMatch ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'transparent',
+                      fontWeight: isTabMatch ? 700 : 600,
+                      fontSize: '0.88rem',
+                      boxShadow: isTabMatch ? '0 4px 12px rgba(37, 99, 235, 0.28)' : 'none',
+                      transition: 'all 0.15s ease'
+                    };
+                  }}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </NavLink>
+
+                {/* Render sub-items directly under Trang Tổng Quan (CEO Dashboard) in main sidebar */}
+                {item.path === '/admin/dashboard' && location.pathname.startsWith('/admin/dashboard') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {ceoSubItems.map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+                      
+                      let badgeVal = 0;
+                      if (sub.badgeKey === 'pendingCeoApprovals') {
+                        badgeVal = pendingCeoApprovals;
+                      }
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/dashboard?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                          {badgeVal > 0 && (
+                            <span style={{
+                              backgroundColor: '#ef4444',
+                              color: '#ffffff',
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              lineHeight: '1',
+                              marginLeft: 'auto',
+                              flexShrink: 0,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {badgeVal}
+                            </span>
+                          )}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Quản Lý Bán Hàng in main sidebar */}
+                {item.path === '/admin/sales' && location.pathname.startsWith('/admin/sales') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {[
+                      { tab: 'overview', label: 'Tổng Quan Bán Hàng' },
+                      { tab: 'pos', label: 'Điểm Bán Hàng (POS)' },
+                      { tab: 'orders', label: 'Quản Lý Đơn Hàng', badgeKey: 'pendingOrders' },
+                      { tab: 'customers', label: 'Khách Hàng (CRM)' },
+                      { tab: 'promotions', label: 'Bảng Giá & Khuyến Mãi' },
+                      { tab: 'reports', label: 'Báo Cáo Doanh Thu' }
+                    ].map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+                      
+                      let badgeVal = 0;
+                      if (sub.badgeKey === 'pendingOrders') {
+                        badgeVal = (orders || []).filter(o => ['PENDING', 'WAITING_PAYMENT', 'CONFIRMED'].includes(o.status)).length;
+                      }
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/sales?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                          {badgeVal > 0 && (
+                            <span style={{
+                              backgroundColor: '#ef4444',
+                              color: '#ffffff',
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              lineHeight: '1',
+                              marginLeft: 'auto',
+                              flexShrink: 0,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {badgeVal}
+                            </span>
+                          )}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Quản Lý Kho in main sidebar */}
+                {isWarehouseRoute && isOnWarehousePage && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {warehouseSubItems.map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+                      
+                      let badgeVal = 0;
+                      if (sub.badgeKey === 'pendingReceipts') badgeVal = pendingReceipts;
+                      if (sub.badgeKey === 'pendingExportCount') badgeVal = pendingExportCount;
+                      if (sub.badgeKey === 'lowStockCount') badgeVal = lowStockCount;
+                      if (sub.badgeKey === 'pendingReturnsCount') badgeVal = pendingReturnsCount;
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/warehouse?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                          {badgeVal > 0 && (
+                            <span style={{
+                              backgroundColor: '#ef4444',
+                              color: '#ffffff',
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              lineHeight: '1',
+                              marginLeft: 'auto',
+                              flexShrink: 0,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {badgeVal}
+                            </span>
+                          )}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Quản Lý Mua Hàng in main sidebar */}
+                {item.path === '/admin/purchasing' && location.pathname.startsWith('/admin/purchasing') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {[
+                      { tab: 'overview', label: 'Tổng Quan Mua Hàng' },
+                      { tab: 'rfq', label: 'Yêu Cầu Báo Giá (RFQ)', badgeKey: 'rfqCount' },
+                      { tab: 'orders', label: 'Đơn Mua Hàng (PO)', badgeKey: 'quotedPoCount' },
+                      { tab: 'suppliers', label: 'Nhà Cung Cấp' },
+                      { tab: 'compare', label: 'So Sánh Báo Giá NCC' },
+                      { tab: 'products', label: 'Sản Phẩm & Bảng Giá' },
+                      { tab: 'reports', label: 'Báo Cáo & Phân Tích' }
+                    ].map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+                      
+                      let badgeVal = 0;
+                      if (sub.badgeKey === 'rfqCount') {
+                        badgeVal = (purchaseOrders || []).filter(p => ['RFQ', 'RFQ_SENT'].includes(p.status)).length;
+                      }
+                      if (sub.badgeKey === 'quotedPoCount') {
+                        badgeVal = (purchaseOrders || []).filter(p => p.status === 'QUOTED').length;
+                      }
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/purchasing?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                          {badgeVal > 0 && (
+                            <span style={{
+                              backgroundColor: sub.badgeKey === 'quotedPoCount' ? '#f59e0b' : '#3b82f6',
+                              color: '#ffffff',
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              lineHeight: '1',
+                              marginLeft: 'auto',
+                              flexShrink: 0,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {badgeVal}
+                            </span>
+                          )}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Kiểm Định Chất Lượng (QA/QC) in main sidebar */}
+                {item.path === '/admin/quality-control' && location.pathname.startsWith('/admin/quality-control') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {qcSubItems.map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+                      
+                      let badgeVal = 0;
+                      if (sub.badgeKey === 'pendingQaCount') badgeVal = pendingQaCount;
+                      if (sub.badgeKey === 'pendingReturnsCount') badgeVal = pendingReturnsCount;
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/quality-control?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                          {badgeVal > 0 && (
+                            <span style={{
+                              backgroundColor: sub.badgeKey === 'pendingQaCount' ? '#f59e0b' : '#ef4444',
+                              color: '#ffffff',
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              lineHeight: '1',
+                              marginLeft: 'auto',
+                              flexShrink: 0,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {badgeVal}
+                            </span>
+                          )}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Quản Lý Lắp Ráp in main sidebar */}
+                {item.path === '/admin/assembly' && location.pathname.startsWith('/admin/assembly') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {[
+                      { tab: 'overview', label: 'Tổng Quan Lắp Ráp' },
+                      { tab: 'jobs', label: 'Lệnh Lắp Ráp (Build PC)', badgeKey: 'pendingAssemblyJobs' },
+                      { tab: 'qa', label: 'Kiểm Định Xuất Xưởng' },
+                      { tab: 'reports', label: 'Báo Cáo Hiệu Suất' }
+                    ].map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+                      
+                      let badgeVal = 0;
+                      if (sub.badgeKey === 'pendingAssemblyJobs') {
+                        badgeVal = (assemblyJobs || []).filter(j => ['PENDING', 'ASSEMBLING'].includes(j.status)).length;
+                      }
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/assembly?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                          {badgeVal > 0 && (
+                            <span style={{
+                              backgroundColor: '#f59e0b',
+                              color: '#ffffff',
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              lineHeight: '1',
+                              marginLeft: 'auto',
+                              flexShrink: 0,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {badgeVal}
+                            </span>
+                          )}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Quản Lý Nhân Sự in main sidebar */}
+                {item.path === '/admin/hr' && location.pathname.startsWith('/admin/hr') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {hrSubItems.map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/hr?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Kế Toán Tài Chính in main sidebar */}
+                {item.path === '/admin/accounting' && location.pathname.startsWith('/admin/accounting') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {accountingSubItems.map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/accounting?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Chăm Sóc Khách Hàng in main sidebar */}
+                {item.path === '/admin/cskh' && location.pathname.startsWith('/admin/cskh') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {cskhSubItems.map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/cskh?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Quản Lý Giao Hàng in main sidebar */}
+                {item.path === '/admin/delivery' && location.pathname.startsWith('/admin/delivery') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {deliverySubItems.map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/delivery?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Render sub-items directly under Quản Trị Hệ Thống in main sidebar */}
+                {item.path === '/admin/system' && location.pathname.startsWith('/admin/system') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                    {adminSubItems.map(sub => {
+                      const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
+                      const isSubActive = currentTab === sub.tab;
+
+                      return (
+                        <NavLink
+                          key={sub.tab}
+                          to={`/admin/system?tab=${sub.tab}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: isSubActive ? 700 : 500,
+                            color: isSubActive ? '#2563eb' : '#475569',
+                            backgroundColor: isSubActive ? '#eff6ff' : 'transparent',
+                            borderLeft: isSubActive ? '3px solid #2563eb' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{sub.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
       </nav>
 
-      {/* User Status / Bottom Actions */}
+      {/* User Status / Bottom Actions Card */}
       <div style={{
-        padding: '1.25rem 1rem',
-        borderTop: '1px solid var(--border-glass)',
+        padding: '1rem',
+        borderTop: '1px solid #e2e8f0',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.85rem',
-        backgroundColor: 'transparent'
+        gap: '0.75rem',
+        backgroundColor: '#f8fafc'
       }}>
         {/* User Card */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.75rem',
-          padding: '0.25rem 0.5rem'
+          padding: '0.5rem 0.65rem',
+          backgroundColor: '#ffffff',
+          borderRadius: '10px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 2px 6px rgba(15,23,42,0.03)'
         }}>
           <div style={{
-            width: '38px',
-            height: '38px',
+            width: '36px',
+            height: '36px',
             borderRadius: '50%',
-            backgroundColor: 'rgba(99, 102, 241, 0.15)',
+            backgroundColor: '#eff6ff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            border: '1px solid rgba(99, 102, 241, 0.3)',
+            border: '1px solid #bfdbfe',
             flexShrink: 0
           }}>
-            <User size={20} style={{ color: 'var(--primary)' }} />
+            <User size={18} style={{ color: '#2563eb' }} />
           </div>
           <div style={{ overflow: 'hidden', flex: 1 }}>
             <p style={{
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              color: '#0f172a',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -498,11 +1179,11 @@ export default function Sidebar() {
               {getUserDisplayName()}
             </p>
             <p style={{
-              fontSize: '0.73rem',
-              color: 'var(--text-muted)',
+              fontSize: '0.72rem',
+              color: '#64748b',
               margin: 0,
               lineHeight: 1.3,
-              fontWeight: 500
+              fontWeight: 600
             }}>
               {getRoleDisplayName()}
             </p>
@@ -510,42 +1191,45 @@ export default function Sidebar() {
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
           <button 
             onClick={() => navigate('/')} 
-            className="btn btn-secondary" 
+            className="btn" 
             style={{ 
-              padding: '0.55rem 0.5rem', 
+              padding: '0.5rem 0.4rem', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              gap: '0.375rem',
+              gap: '0.35rem',
               fontSize: '0.78rem',
-              fontWeight: 600,
-              borderRadius: 'var(--radius-sm)',
-              whiteSpace: 'nowrap'
+              fontWeight: 700,
+              borderRadius: '8px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              cursor: 'pointer'
             }}
             title="Về Cửa Hàng Trang Chủ"
           >
-            <Home size={15} />
+            <Home size={14} />
             <span>Cửa hàng</span>
           </button>
           <button 
             onClick={handleLogout} 
-            className="btn btn-secondary" 
+            className="btn" 
             style={{ 
-              padding: '0.55rem 0.5rem', 
+              padding: '0.5rem 0.4rem', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              gap: '0.375rem',
+              gap: '0.35rem',
               fontSize: '0.78rem',
-              fontWeight: 600,
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'rgba(239, 68, 68, 0.12)',
-              borderColor: 'rgba(239, 68, 68, 0.3)',
-              color: '#ef4444',
-              whiteSpace: 'nowrap'
+              fontWeight: 700,
+              borderRadius: '8px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#dc2626',
+              cursor: 'pointer'
             }}
             title="Đăng xuất khỏi hệ thống"
           >
@@ -555,5 +1239,256 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+
+    {/* Floating Notification Popover Drawer (Outside Aside for unobstructed clicking) */}
+    {showNotifDrawer && (() => {
+      const activeNotifs = notifications.filter(n => !dismissedNotifIds.includes(n.id));
+      const urgentCount = activeNotifs.filter(n => n.category === 'URGENT').length;
+      const warningCount = activeNotifs.filter(n => n.category === 'WARNING' || n.category === 'INFO').length;
+
+      const filteredList = activeNotifs.filter(n => {
+        if (notifFilter === 'URGENT') return n.category === 'URGENT';
+        if (notifFilter === 'WARNING') return n.category === 'WARNING' || n.category === 'INFO';
+        return true;
+      });
+
+      return (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100000000,
+            backgroundColor: 'rgba(15, 23, 42, 0.25)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start'
+          }}
+          onClick={() => setShowNotifDrawer(false)}
+        >
+          {/* Floating Notification Drawer Panel */}
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: '4.25rem',
+              left: '1rem',
+              width: '420px',
+              maxWidth: 'calc(100vw - 2rem)',
+              maxHeight: 'calc(100vh - 5.5rem)',
+              backgroundColor: '#ffffff',
+              border: '1.5px solid #cbd5e1',
+              borderRadius: '16px',
+              boxShadow: '0 25px 60px -12px rgba(15, 23, 42, 0.45)',
+              zIndex: 100000001,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Drawer Header (Text-only, no icons) */}
+            <div style={{
+              padding: '0.9rem 1.15rem',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#f8fafc',
+              flexShrink: 0
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <strong style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 800 }}>THÔNG BÁO & NHIỆM VỤ</strong>
+                <span style={{
+                  backgroundColor: '#dc2626', color: '#ffffff',
+                  padding: '1px 7px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 800
+                }}>
+                  {activeNotifs.length}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {activeNotifs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDismissedNotifIds(activeNotifs.map(n => n.id));
+                    }}
+                    style={{
+                      background: 'none', border: 'none', color: '#2563eb',
+                      fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: '0.2rem 0.4rem'
+                    }}
+                  >
+                    Đã đọc tất cả
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowNotifDrawer(false);
+                  }}
+                  style={{
+                    background: '#ffffff', border: '1px solid #cbd5e1', color: '#64748b',
+                    borderRadius: '6px', padding: '0.2rem 0.55rem', fontSize: '0.75rem',
+                    fontWeight: 700, cursor: 'pointer'
+                  }}
+                  title="Đóng thông báo"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Tabs (Text-only) */}
+            <div style={{
+              display: 'flex', gap: '0.35rem', padding: '0.5rem 0.85rem',
+              backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', flexShrink: 0
+            }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNotifFilter('ALL');
+                }}
+                style={{
+                  flex: 1, padding: '0.35rem 0', borderRadius: '6px',
+                  border: notifFilter === 'ALL' ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                  backgroundColor: notifFilter === 'ALL' ? '#eff6ff' : '#ffffff',
+                  color: notifFilter === 'ALL' ? '#2563eb' : '#64748b',
+                  fontSize: '0.75rem', fontWeight: notifFilter === 'ALL' ? 800 : 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Tất Cả ({activeNotifs.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNotifFilter('URGENT');
+                }}
+                style={{
+                  flex: 1, padding: '0.35rem 0', borderRadius: '6px',
+                  border: notifFilter === 'URGENT' ? '1px solid #dc2626' : '1px solid #e2e8f0',
+                  backgroundColor: notifFilter === 'URGENT' ? '#fef2f2' : '#ffffff',
+                  color: notifFilter === 'URGENT' ? '#dc2626' : '#64748b',
+                  fontSize: '0.75rem', fontWeight: notifFilter === 'URGENT' ? 800 : 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Cần Xử Lý ({urgentCount})
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNotifFilter('WARNING');
+                }}
+                style={{
+                  flex: 1, padding: '0.35rem 0', borderRadius: '6px',
+                  border: notifFilter === 'WARNING' ? '1px solid #d97706' : '1px solid #e2e8f0',
+                  backgroundColor: notifFilter === 'WARNING' ? '#fffbeb' : '#ffffff',
+                  color: notifFilter === 'WARNING' ? '#d97706' : '#64748b',
+                  fontSize: '0.75rem', fontWeight: notifFilter === 'WARNING' ? 800 : 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Cảnh Báo ({warningCount})
+              </button>
+            </div>
+
+            {/* Drawer Body Items List (Structured Cards - No Icons) */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', maxHeight: '440px', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {filteredList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', fontSize: '0.85rem' }}>
+                  <p style={{ margin: '0 0 0.35rem', fontWeight: 800, color: '#0f172a' }}>Không có thông báo nào trong mục này</p>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Tất cả nhiệm vụ phòng ban đã được xử lý hoàn tất.</span>
+                </div>
+              ) : (
+                filteredList.map(n => (
+                  <div
+                    key={n.id}
+                    style={{
+                      padding: '0.85rem 1rem',
+                      borderRadius: '10px',
+                      border: '1px solid #e2e8f0',
+                      backgroundColor: '#ffffff',
+                      borderLeft: `4px solid ${n.badgeColor || '#2563eb'}`,
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem'
+                    }}
+                  >
+                    {/* Meta Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{
+                        fontSize: '0.68rem', fontWeight: 800, padding: '2px 7px', borderRadius: '4px',
+                        backgroundColor: `${n.badgeColor || '#2563eb'}15`, color: n.badgeColor || '#2563eb',
+                        border: `1px solid ${n.badgeColor || '#2563eb'}30`, textTransform: 'uppercase'
+                      }}>
+                        {n.badge}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500 }}>{n.time}</span>
+                    </div>
+
+                    {/* Title */}
+                    <strong style={{ fontSize: '0.85rem', color: '#0f172a', lineHeight: 1.35 }}>
+                      {n.title}
+                    </strong>
+
+                    {/* Description */}
+                    <p style={{ fontSize: '0.78rem', color: '#475569', margin: 0, lineHeight: 1.45 }}>
+                      {n.desc}
+                    </p>
+
+                    {/* Action Buttons Row */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', paddingTop: '0.4rem', borderTop: '1px solid #f1f5f9' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDismissedNotifIds(p => [...p, n.id]);
+                        }}
+                        style={{
+                          background: 'none', border: 'none', color: '#94a3b8',
+                          fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer'
+                        }}
+                      >
+                        Bỏ qua
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowNotifDrawer(false);
+                          navigate(n.link, { state: n.navState });
+                        }}
+                        style={{
+                          backgroundColor: n.badgeColor || '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '0.35rem 0.75rem',
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {n.actionText || 'Xử Lý Ngay'} →
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+    </>
   );
 }

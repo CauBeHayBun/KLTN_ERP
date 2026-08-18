@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useCart } from '../../context/CartContext';
-import { MessageSquare, X, Send, Sparkles, ShoppingCart, ArrowRight } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { optimizePCBuild } from '../../config/pcBuilderAIKnowledge';
+import { MessageSquare, X, Send, Sparkles, ShoppingCart, ArrowRight, Headphones, UserCheck } from 'lucide-react';
 
 // ============================================================================
-//  TEXT RENDERING: Parse bold (**), bullet points (- / *)
+//  TEXT RENDERING: Parse bold (**), bullet points (- / *), high contrast light mode
 // ============================================================================
-const renderMessageText = (text) => {
+const renderMessageText = (text, isUserMessage = false) => {
   if (!text) return null;
   const lines = text.split('\n');
   return lines.map((line, lineIdx) => {
@@ -20,20 +22,20 @@ const renderMessageText = (text) => {
     const parts = content.split('**');
     const renderedLine = parts.map((part, partIdx) => {
       if (partIdx % 2 === 1) {
-        return <strong key={partIdx} style={{ color: '#fff', fontWeight: 700 }}>{part}</strong>;
+        return <strong key={partIdx} style={{ color: isUserMessage ? '#ffffff' : '#0f172a', fontWeight: 800 }}>{part}</strong>;
       }
       return part;
     });
     if (isBullet) {
       return (
         <div key={lineIdx} style={{ display: 'flex', gap: '0.4rem', marginLeft: '0.5rem', marginBottom: '0.25rem' }}>
-          <span style={{ color: 'var(--primary)', flexShrink: 0 }}>•</span>
-          <span style={{ flex: 1, minWidth: 0 }}>{renderedLine}</span>
+          <span style={{ color: isUserMessage ? '#bfdbfe' : '#2563eb', flexShrink: 0, fontWeight: 800 }}>•</span>
+          <span style={{ flex: 1, minWidth: 0, color: isUserMessage ? '#ffffff' : '#0f172a' }}>{renderedLine}</span>
         </div>
       );
     }
     return (
-      <div key={lineIdx} style={{ marginBottom: line.trim() === '' ? '0.5rem' : '0.25rem', minHeight: line.trim() === '' ? '0.5rem' : 'auto' }}>
+      <div key={lineIdx} style={{ marginBottom: line.trim() === '' ? '0.5rem' : '0.25rem', minHeight: line.trim() === '' ? '0.5rem' : 'auto', color: isUserMessage ? '#ffffff' : '#0f172a' }}>
         {renderedLine}
       </div>
     );
@@ -46,7 +48,6 @@ const renderMessageText = (text) => {
 const detectCategoryAndKeywords = (text) => {
   const cleanText = text.toLowerCase();
   
-  // Order matters: more specific matches first
   if (cleanText.includes('lót chuột') || cleanText.includes('lot chuot') || cleanText.includes('mousepad') || cleanText.includes('bàn di')) {
     return { category: 'OTHER', search: 'lót chuột', label: 'Lót chuột' };
   }
@@ -96,14 +97,12 @@ const extractBudget = (text) => {
   const cleanText = text.toLowerCase();
   let budget = 0;
 
-  // "15 triệu", "15tr", "15 tr", "15 trieu"
   const trMatch = cleanText.match(/(\d+(?:\.\d+)?)\s*(triệu|trieu|tr)\b/);
   if (trMatch) {
     const num = parseFloat(trMatch[1]);
     if (!isNaN(num) && num >= 1 && num <= 500) budget = num * 1000000;
   }
 
-  // "15t" — careful not to match random "t"
   if (budget === 0) {
     const tMatch = cleanText.match(/(\d+)\s*t\b/);
     if (tMatch) {
@@ -112,7 +111,6 @@ const extractBudget = (text) => {
     }
   }
 
-  // Raw numbers: "5000000" or "5.000.000" or "5,000,000"
   if (budget === 0) {
     const dotNum = cleanText.match(/(\d{1,3}(?:\.\d{3}){1,})/);
     if (dotNum) {
@@ -131,144 +129,17 @@ const extractBudget = (text) => {
   return budget;
 };
 
-// ============================================================================
-//  SPEC KEYWORD EXTRACTION: Parse specs like "144hz", "4K", "27 inch", etc.
-// ============================================================================
-const extractSpecKeywords = (text) => {
-  const cleanText = text.toLowerCase();
-  const keywords = [];
-
-  // Hz / refresh rate
-  const hzMatch = cleanText.match(/(\d+)\s*hz/);
-  if (hzMatch) keywords.push({ type: 'hz', value: parseInt(hzMatch[1]), raw: hzMatch[0] });
-
-  // Resolution
-  if (cleanText.includes('4k') || cleanText.includes('2160p')) keywords.push({ type: 'resolution', value: '4K', raw: '4K' });
-  if (cleanText.includes('2k') || cleanText.includes('1440p') || cleanText.includes('qhd')) keywords.push({ type: 'resolution', value: '2K', raw: '2K' });
-  if (cleanText.includes('1080p') || cleanText.includes('full hd') || cleanText.includes('fullhd')) keywords.push({ type: 'resolution', value: 'FHD', raw: 'Full HD' });
-
-  // Size (inches)
-  const inchMatch = cleanText.match(/(\d+(?:\.\d+)?)\s*(?:inch|"|'')/);
-  if (inchMatch) keywords.push({ type: 'size', value: parseFloat(inchMatch[1]), raw: inchMatch[0] });
-
-  // RAM capacity
-  const gbMatch = cleanText.match(/(\d+)\s*gb/);
-  if (gbMatch) keywords.push({ type: 'capacity', value: parseInt(gbMatch[1]), raw: gbMatch[0] });
-
-  // Storage capacity
-  const tbMatch = cleanText.match(/(\d+)\s*tb/);
-  if (tbMatch) keywords.push({ type: 'capacity_tb', value: parseInt(tbMatch[1]), raw: tbMatch[0] });
-
-  // Specific product models / series
-  const modelPatterns = [
-    /rtx\s*\d{4}/i, /gtx\s*\d{4}/i, /rx\s*\d{4}/i,
-    /ryzen\s*\d/i, /core\s*i\d/i, /i\d[-\s]\d{4,5}/i,
-    /ddr[45]/i, /nvme/i, /m\.?2/i, /sata/i,
-  ];
-  for (const pat of modelPatterns) {
-    const m = cleanText.match(pat);
-    if (m) keywords.push({ type: 'model', value: m[0].trim(), raw: m[0].trim() });
-  }
-
-  // Brand keywords in the user message
-  const brands = ['asus', 'msi', 'gigabyte', 'aoc', 'dell', 'lg', 'samsung', 'viewsonic', 'acer', 'corsair', 'kingston', 'gskill', 'logitech', 'razer', 'steelseries', 'deepcool', 'noctua', 'coolermaster', 'nzxt', 'lian li', 'intel', 'amd', 'nvidia', 'pny', 'galax', 'inno3d', 'colorful'];
-  for (const b of brands) {
-    if (cleanText.includes(b)) keywords.push({ type: 'brand', value: b, raw: b });
-  }
-
-  return keywords;
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 };
 
-// ============================================================================
-//  PRODUCT SCORING: Score products based on how well they match user criteria
-// ============================================================================
-const scoreProduct = (product, specKeywords, budget) => {
-  let score = 0;
-  const name = product.name.toLowerCase();
-  const brand = (product.brand || '').toLowerCase();
-  const specs = product.specs || {};
-  const specsStr = JSON.stringify(specs).toLowerCase();
-  const price = parseFloat(product.price) || 0;
-
-  for (const kw of specKeywords) {
-    switch (kw.type) {
-      case 'hz':
-        // Check if product name or specs mention the Hz value
-        if (name.includes(`${kw.value}hz`) || specsStr.includes(`${kw.value}hz`) || specsStr.includes(`${kw.value} hz`)) {
-          score += 30;
-        } else {
-          // Check for higher Hz (e.g., asked 144hz but product has 165hz — still good)
-          const hzInName = name.match(/(\d+)\s*hz/);
-          if (hzInName && parseInt(hzInName[1]) >= kw.value) score += 30;
-        }
-        break;
-      case 'resolution':
-        if (name.includes(kw.value.toLowerCase()) || specsStr.includes(kw.value.toLowerCase())) score += 25;
-        break;
-      case 'size':
-        if (name.includes(`${kw.value}`) || name.includes(`${Math.round(kw.value)}`)) score += 20;
-        break;
-      case 'capacity':
-        if (name.includes(`${kw.value}gb`) || specsStr.includes(`${kw.value}gb`) || specsStr.includes(`${kw.value} gb`)) score += 25;
-        break;
-      case 'capacity_tb':
-        if (name.includes(`${kw.value}tb`) || specsStr.includes(`${kw.value}tb`)) score += 25;
-        break;
-      case 'model':
-        if (name.includes(kw.value) || specsStr.includes(kw.value)) score += 35;
-        break;
-      case 'brand':
-        if (brand.includes(kw.value) || name.includes(kw.value)) score += 15;
-        break;
-    }
-  }
-
-  // Budget scoring: closer to budget = better
-  if (budget > 0 && price > 0) {
-    const ratio = price / budget;
-    if (ratio >= 0.5 && ratio <= 1.2) {
-      // Within budget range — good. Closer to 1.0 = better
-      score += 20 - Math.abs(ratio - 0.9) * 15;
-    } else if (ratio > 1.2 && ratio <= 1.5) {
-      // Slightly over budget
-      score += 5;
-    } else if (ratio > 1.5) {
-      // Way over budget
-      score -= 10;
-    } else if (ratio < 0.5) {
-      // Way under budget — might be too low-end
-      score += 5;
-    }
-  }
-
-  return score;
-};
-
-// ============================================================================
-//  INTENT DETECTION: Accurately classify user intent
-// ============================================================================
 const detectIntent = (text) => {
   const cleanText = text.toLowerCase();
-
-  // Greetings
-  const greetings = ['xin chào', 'hello', 'hi', 'chào', 'hey', 'ê', 'alo', 'chào bạn', 'chào shop', 'chào cửa hàng'];
-  if (greetings.some(g => cleanText.includes(g)) && cleanText.length < 30) {
-    return 'greeting';
+  
+  if (cleanText.includes('gặp cskh') || cleanText.includes('liên hệ cskh') || cleanText.includes('nhân viên cskh') || cleanText.includes('gặp nhân viên')) {
+    return 'cskh';
   }
 
-  // Thanks
-  const thanks = ['cảm ơn', 'cam on', 'thanks', 'thank', 'cám ơn'];
-  if (thanks.some(t => cleanText.includes(t))) {
-    return 'thanks';
-  }
-
-  // Bye
-  const byes = ['tạm biệt', 'bye', 'goodbye', 'hẹn gặp', 'tôi đi'];
-  if (byes.some(b => cleanText.includes(b))) {
-    return 'bye';
-  }
-
-  // PC Build request — STRICT: must explicitly mention PC/cấu hình/lắp ráp/build
   const pcBuildKeywords = [
     'build pc', 'cấu hình pc', 'cấu hình máy tính', 'lắp ráp pc', 'lắp ráp máy tính',
     'bộ máy tính', 'bộ pc', 'tư vấn pc', 'tư vấn máy tính', 'tu van pc', 'tu van may tinh',
@@ -281,7 +152,6 @@ const detectIntent = (text) => {
     return 'pc_build';
   }
 
-  // Policy questions
   const policyKeywords = ['bảo hành', 'bao hanh', 'đổi trả', 'doi tra', 'giao hàng', 'giao hang',
     'ship', 'vận chuyển', 'van chuyen', 'phí ship', 'phi ship', 'trả góp', 'tra gop',
     'thanh toán', 'thanh toan', 'cod', 'giờ mở cửa', 'gio mo cua', 'liên hệ', 'lien he',
@@ -292,7 +162,6 @@ const detectIntent = (text) => {
     return 'policy';
   }
 
-  // Add to cart intent
   const addCartKeywords = ['thêm vào giỏ', 'them vao gio', 'thêm giỏ hàng', 'them gio hang',
     'mua hết', 'mua het', 'mua cấu hình này', 'thêm những món đó', 'mua cau hinh nay',
     'mua bộ này', 'mua bo nay', 'lấy hết', 'lay het'];
@@ -300,13 +169,11 @@ const detectIntent = (text) => {
     return 'add_to_cart';
   }
 
-  // Product search — has a category keyword
   const detectedCategory = detectCategoryAndKeywords(cleanText);
   if (detectedCategory) {
     return 'product_search';
   }
 
-  // General product inquiry (tìm, mua, có bán...)
   const searchKeywords = ['tìm', 'tim', 'có bán', 'co ban', 'mua', 'cần', 'can', 'gợi ý', 'goi y', 'tư vấn', 'tu van', 'chọn', 'chon', 'so sánh', 'so sanh'];
   if (searchKeywords.some(kw => cleanText.includes(kw))) {
     return 'product_search';
@@ -316,12 +183,16 @@ const detectIntent = (text) => {
 };
 
 // ============================================================================
-//  MAIN COMPONENT
+//  MAIN COMPONENT - Modern Light Theme Chatbot & Realtime CSKH Support
 // ============================================================================
 export default function Chatbot() {
+  const authContext = useAuth();
+  const user = authContext?.user || null;
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [chatMode, setChatMode] = useState('ai'); // 'ai' or 'cskh'
+  
   const [products, setProducts] = useState(() => {
     const cached = localStorage.getItem('aetherpc_products');
     if (cached) {
@@ -346,11 +217,158 @@ export default function Chatbot() {
       time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
+
+  const [cskhMessages, setCskhMessages] = useState([
+    {
+      sender: 'cskh',
+      text: 'Xin chào! 🎧 Bạn đang kết nối trực tiếp với Chuyên viên CSKH AetherPC (Trực tuyến 24/7). Hãy gửi thắc mắc của bạn, nhân viên CSKH sẵn sàng phản hồi bạn ngay lập tức theo thời gian thực!',
+      time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
+
   const [consultAnswers, setConsultAnswers] = useState({ usage: '', budget: 0, brand: '' });
 
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const messagesEndRef = useRef(null);
+
+  // Helper to add entire build to cart
+  const addWholeBuildToCart = (buildData) => {
+    if (!buildData) return;
+    let count = 0;
+    let total = 0;
+    Object.values(buildData).forEach(item => {
+      if (item) {
+        addToCart(item, 1, { pc_build_bundle: 'custom_pc' });
+        count++;
+        total += (parseFloat(item.price) || 0);
+      }
+    });
+    setMessages(prev => [...prev, {
+      sender: 'bot',
+      text: `Dạ rồi ạ! Tôi đã thêm toàn bộ **${count} linh kiện** trong cấu hình (~${formatPrice(total)}) vào giỏ hàng của bạn thành công! 🛒✨ Hãy mở giỏ hàng để tiến hành chốt đơn nhé.`,
+      time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    }]);
+  };
+
+  const applyBuildToPCBuilder = (buildData) => {
+    if (!buildData) return;
+    try {
+      localStorage.setItem('aetherpc_active_build', JSON.stringify(buildData));
+      localStorage.setItem('aetherpc_ai_selected_build', JSON.stringify(buildData));
+      
+      window.dispatchEvent(new CustomEvent('aetherpc_apply_ai_build', { detail: buildData }));
+      
+      setIsOpen(false);
+      if (window.location.pathname === '/pc-builder') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        navigate('/pc-builder');
+      }
+    } catch (e) {
+      console.warn("Failed to save active build", e);
+    }
+  };
+
+  const wsRef = useRef(null);
+
+  // Get dynamic session ID & customer name based on logged in user
+  const getCSKHSessionInfo = () => {
+    let sessId = 'session_guest';
+    let custName = 'Khách Hàng Website';
+
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const stored = localStorage.getItem('user');
+        if (stored) currentUser = JSON.parse(stored);
+      } catch (e) {}
+    }
+
+    if (currentUser) {
+      const displayName = currentUser.fullname || currentUser.fullName || currentUser.name || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : null);
+
+      if (displayName && String(displayName) !== 'undefined' && String(displayName).trim() !== '') {
+        const cleanUserSlug = String(displayName).toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        sessId = `session_user_${cleanUserSlug}`;
+        custName = `${displayName} (Khách Hàng)`;
+        return { sessId, custName };
+      }
+    }
+
+    let storedGuestId = localStorage.getItem('aetherpc_cskh_guest_id');
+    if (!storedGuestId) {
+      storedGuestId = `session_guest_${Math.floor(1000 + Math.random() * 9000)}`;
+      localStorage.setItem('aetherpc_cskh_guest_id', storedGuestId);
+    }
+    sessId = storedGuestId;
+    custName = `Khách Hàng Trực Tuyến (#${storedGuestId.replace('session_guest_', '')})`;
+    return { sessId, custName };
+  };
+
+  // Reset CSKH messages when user switches accounts
+  useEffect(() => {
+    const { custName } = getCSKHSessionInfo();
+    setCskhMessages([
+      {
+        sender: 'cskh',
+        text: `Xin chào ${custName.replace(' (Khách Hàng)', '')}! 🎧 Bạn đang kết nối trực tiếp với Chuyên viên CSKH AetherPC (Trực tuyến 24/7). Hãy gửi thắc mắc của bạn, nhân viên CSKH sẵn sàng phản hồi bạn ngay lập tức theo thời gian thực!`,
+        time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+  }, [user]);
+
+  // WebSocket Realtime CSKH connection
+  useEffect(() => {
+    let reconnectTimeout = null;
+
+    const connectWS = () => {
+      try {
+        const ws = new WebSocket('ws://localhost:5000/ws/cskh');
+        wsRef.current = ws;
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'INIT_SESSIONS' || data.type === 'UPDATE_SESSIONS') {
+              const { sessId, custName } = getCSKHSessionInfo();
+              const currentSession = data.sessions?.find(s => s.id === sessId);
+
+              if (currentSession && currentSession.messages && currentSession.messages.length > 0) {
+                const mapped = currentSession.messages.map(m => ({
+                  sender: m.sender === 'staff' ? 'cskh' : 'user',
+                  text: m.text,
+                  time: m.time
+                }));
+                setCskhMessages(mapped);
+              } else {
+                setCskhMessages([
+                  {
+                    sender: 'cskh',
+                    text: `Xin chào ${custName.replace(' (Khách Hàng)', '')}! 🎧 Bạn đang kết nối trực tiếp với Chuyên viên CSKH AetherPC (Trực tuyến 24/7). Hãy gửi thắc mắc của bạn, nhân viên CSKH sẵn sàng phản hồi bạn ngay lập tức theo thời gian thực!`,
+                    time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                  }
+                ]);
+              }
+            }
+          } catch (e) {}
+        };
+
+        ws.onclose = () => {
+          reconnectTimeout = setTimeout(connectWS, 3000);
+        };
+      } catch (e) {
+        reconnectTimeout = setTimeout(connectWS, 3000);
+      }
+    };
+
+    connectWS();
+
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, [user]);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -370,258 +388,53 @@ export default function Chatbot() {
   }, [products.length]);
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isOpen, isTyping]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, cskhMessages, isTyping, chatMode]);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-  };
-
-  // ==========================================================================
-  //  OFFLINE PRODUCT SEARCH: Smart search with specs matching + budget filter
-  // ==========================================================================
-  const searchProducts = (text, maxResults = 4) => {
-    if (products.length === 0) return [];
-
-    const cleanText = text.toLowerCase();
-    const detectedCategory = detectCategoryAndKeywords(cleanText);
-    const budget = extractBudget(text);
-    const specKeywords = extractSpecKeywords(text);
-
-    // Step 1: Filter by category
-    let candidates = [...products];
-    if (detectedCategory) {
-      if (detectedCategory.search) {
-        // For "OTHER" category with search term (tai nghe, lót chuột)
-        candidates = products.filter(p => p.name.toLowerCase().includes(detectedCategory.search));
-      } else {
-        candidates = products.filter(p => p.category === detectedCategory.category);
-      }
-    }
-
-    // Step 2: If budget specified, filter to reasonable range (30% — 150% of budget)
-    if (budget > 0) {
-      const budgetFiltered = candidates.filter(p => {
-        const price = parseFloat(p.price) || 0;
-        return price >= budget * 0.3 && price <= budget * 1.5;
-      });
-      // Only apply budget filter if it doesn't eliminate all results
-      if (budgetFiltered.length > 0) {
-        candidates = budgetFiltered;
-      }
-    }
-
-    // Step 3: Score each candidate
-    const scored = candidates.map(p => ({
-      ...p,
-      _score: scoreProduct(p, specKeywords, budget),
-    }));
-
-    // Step 4: Sort by score descending, then by price ascending for ties
-    scored.sort((a, b) => {
-      if (b._score !== a._score) return b._score - a._score;
-      return (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0);
-    });
-
-    // Step 5: Return top results
-    return scored.slice(0, maxResults);
-  };
-
-  // ==========================================================================
-  //  OFFLINE PROCESS MESSAGE: Comprehensive rule-based fallback
-  // ==========================================================================
-  const processMessage = (text) => {
-    const cleanText = text.toLowerCase();
-    const botTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    const intent = detectIntent(text);
-    const detectedCategory = detectCategoryAndKeywords(cleanText);
-    const budget = extractBudget(text);
-    const specKeywords = extractSpecKeywords(text);
-
-    // --- Greeting ---
-    if (intent === 'greeting') {
-      return {
-        sender: 'bot',
-        text: 'Xin chào bạn! 👋 Tôi là Trợ lý AI của AetherPC. Tôi có thể giúp bạn:\n- **Tìm sản phẩm** theo ngân sách và nhu cầu (ví dụ: "Tìm màn hình 144Hz dưới 5 triệu")\n- **Tư vấn cấu hình PC** (ví dụ: "Build PC gaming 25 triệu")\n- **Giải đáp chính sách** bảo hành, trả góp, giao hàng\n\nBạn cần hỗ trợ gì ạ?',
-        time: botTime,
-      };
-    }
-
-    // --- Thanks ---
-    if (intent === 'thanks') {
-      return {
-        sender: 'bot',
-        text: 'Không có gì ạ! 😊 Rất vui được hỗ trợ bạn. Nếu cần thêm thông tin gì, cứ nhắn cho tôi nhé!',
-        time: botTime,
-      };
-    }
-
-    // --- Bye ---
-    if (intent === 'bye') {
-      return {
-        sender: 'bot',
-        text: 'Cảm ơn bạn đã ghé thăm AetherPC! 👋 Chúc bạn một ngày tốt lành. Hẹn gặp lại!',
-        time: botTime,
-      };
-    }
-
-    // --- Policy Questions ---
-    if (intent === 'policy') {
-      // Shipping
-      if (cleanText.includes('ship') || cleanText.includes('giao hàng') || cleanText.includes('giao hang') || cleanText.includes('vận chuyển') || cleanText.includes('phí ship')) {
-        return {
-          sender: 'bot',
-          text: '**Chính sách giao hàng AetherPC:**\n\n- **Miễn phí vận chuyển** cho đơn hàng từ 500.000₫ trở lên\n- **TP.HCM**: Giao siêu tốc trong 1-2 giờ\n- **Các tỉnh thành khác**: Giao trong 1-3 ngày\n- Đơn dưới 500.000₫: Phí ship 30.000₫ - 50.000₫ tùy khu vực\n- Hỗ trợ theo dõi đơn hàng realtime qua trang "Đơn hàng của tôi"',
-          time: botTime,
-        };
-      }
-
-      // Warranty
-      if (cleanText.includes('bảo hành') || cleanText.includes('bao hanh') || cleanText.includes('đổi trả') || cleanText.includes('doi tra') || cleanText.includes('hỏng') || cleanText.includes('lỗi')) {
-        return {
-          sender: 'bot',
-          text: '**Chính sách bảo hành AetherPC:**\n\n- **Bảo hành chính hãng** 24 - 36 tháng tùy sản phẩm\n- **Đổi mới 1-đổi-1** trong 7 ngày đầu nếu phát hiện lỗi từ nhà sản xuất\n- Hỗ trợ gửi bảo hành tận nhà cho khách ở xa\n- Trung tâm bảo hành tiếp nhận xử lý trong 24 giờ làm việc\n- Sản phẩm thay thế tạm thời cho các đơn hàng VIP',
-          time: botTime,
-        };
-      }
-
-      // Payment / Installment
-      if (cleanText.includes('thanh toán') || cleanText.includes('thanh toan') || cleanText.includes('trả góp') || cleanText.includes('tra gop') || cleanText.includes('cod')) {
-        return {
-          sender: 'bot',
-          text: '**Hình thức thanh toán tại AetherPC:**\n\n- **COD** — Thanh toán khi nhận hàng\n- **Chuyển khoản QR** — Chiết khấu thêm 0.5%\n- **Trả góp 0% lãi suất** qua thẻ tín dụng liên kết 25 ngân hàng\n- **Ví điện tử** — MoMo, ZaloPay, VNPay\n- Hỗ trợ xuất hóa đơn VAT cho doanh nghiệp',
-          time: botTime,
-        };
-      }
-
-      // Promotions / Membership
-      if (cleanText.includes('khuyến mãi') || cleanText.includes('khuyen mai') || cleanText.includes('giảm giá') || cleanText.includes('ưu đãi') || cleanText.includes('thành viên') || cleanText.includes('tích điểm')) {
-        return {
-          sender: 'bot',
-          text: '**Chương trình ưu đãi AetherPC:**\n\n- **Thành viên mới**: Giảm 5% đơn hàng đầu tiên\n- **Tích điểm**: Mỗi 10.000₫ = 1 điểm. 100 điểm = giảm 50.000₫\n- **Hạng thành viên**: REGULAR → SILVER (500 điểm) → GOLD (2000 điểm) → PLATINUM (5000 điểm)\n- **Ưu đãi hạng cao**: Freeship, giảm giá độc quyền, quà sinh nhật, ưu tiên bảo hành\n\nTruy cập trang **Hạng thành viên** để xem chi tiết nhé!',
-          time: botTime,
-        };
-      }
-
-      // Contact / Hours
-      if (cleanText.includes('giờ mở cửa') || cleanText.includes('liên hệ') || cleanText.includes('hotline') || cleanText.includes('địa chỉ') || cleanText.includes('điện thoại')) {
-        return {
-          sender: 'bot',
-          text: '**Thông tin liên hệ AetherPC:**\n\n- **Hotline**: 1900 6789 (8:00 - 21:00 hàng ngày)\n- **Email**: support@aetherpc.vn\n- **Giờ mở cửa**: 8:00 - 21:00 hàng ngày (kể cả CN & lễ)\n- **Địa chỉ**: 123 Nguyễn Văn Linh, Quận 7, TP.HCM\n- Chat trực tuyến 24/7 tại website',
-          time: botTime,
-        };
-      }
-
-      // Generic policy fallback
-      return {
-        sender: 'bot',
-        text: '**Chính sách tại AetherPC:**\n\n- 🚚 Miễn phí vận chuyển đơn từ 500.000₫. TP.HCM giao 1-2h\n- 🛡️ Bảo hành chính hãng 24-36 tháng. Đổi mới 1-đổi-1 trong 7 ngày\n- 💳 Trả góp 0% qua 25 ngân hàng. Hỗ trợ COD, QR, ví điện tử\n- 📞 Hotline: 1900 6789 (8:00 - 21:00)\n\nBạn muốn tìm hiểu chi tiết về chính sách nào ạ?',
-        time: botTime,
-      };
-    }
-
-    // --- PC Build Request ---
-    if (intent === 'pc_build') {
-      if (budget === 0) {
-        return {
-          sender: 'bot',
-          text: 'Để tôi tư vấn cấu hình tối ưu nhất cho bạn, vui lòng cho biết ngân sách bạn muốn đầu tư:',
-          time: botTime,
-          layout: 'quick_budgets',
-        };
-      }
-
-      // Determine usage
-      let usage = 'gaming';
-      if (cleanText.includes('đồ họa') || cleanText.includes('thiết kế') || cleanText.includes('render') || cleanText.includes('photoshop') || cleanText.includes('premiere')) {
-        usage = 'graphics';
-      } else if (cleanText.includes('lập trình') || cleanText.includes('code') || cleanText.includes('deep learning')) {
-        usage = 'ai';
-      } else if (cleanText.includes('văn phòng') || cleanText.includes('học tập') || cleanText.includes('word') || cleanText.includes('excel')) {
-        usage = 'office';
-      }
-
-      let brandPref = 'all';
-      if (cleanText.includes('intel')) brandPref = 'intel';
-      else if (cleanText.includes('amd') || cleanText.includes('ryzen')) brandPref = 'amd';
-
-      const build = runBuildAlgorithm(usage, budget, brandPref);
-      if (!build) {
-        return {
-          sender: 'bot',
-          text: 'Xin lỗi, tôi chưa thể tạo cấu hình lúc này. Vui lòng thử lại sau hoặc truy cập trang **PC Builder** để tự chọn linh kiện nhé!',
-          time: botTime,
-        };
-      }
-
-      const totalBuildPrice = Object.values(build).reduce((sum, item) => sum + (item ? parseFloat(item.price) : 0), 0);
-      return {
-        sender: 'bot',
-        text: `Dưới đây là cấu hình máy tính tôi đã tự động tối ưu dựa trên nhu cầu **${usage === 'gaming' ? 'chơi game' : usage === 'graphics' ? 'đồ họa' : usage === 'ai' ? 'AI/lập trình' : 'văn phòng'}** với ngân sách ~${formatPrice(budget)}:`,
-        time: botTime,
-        layout: 'build_recommendation',
-        buildData: build,
-        totalPrice: totalBuildPrice,
-      };
-    }
-
-    // --- Product Search (single category or general) ---
-    if (intent === 'product_search') {
-      const matched = searchProducts(text, 4);
-
-      if (matched.length > 0) {
-        // Build a descriptive text
-        let desc = '';
-        if (detectedCategory) {
-          desc = `Tôi đã tìm thấy **${matched.length} mẫu ${detectedCategory.label}** phù hợp`;
-        } else {
-          desc = `Tôi đã tìm thấy **${matched.length} sản phẩm** phù hợp`;
-        }
-        if (budget > 0) desc += ` trong tầm giá ~${formatPrice(budget)}`;
-        if (specKeywords.length > 0) {
-          const specDesc = specKeywords.map(kw => `**${kw.raw}**`).join(', ');
-          desc += ` (${specDesc})`;
-        }
-        desc += ' tại AetherPC:';
-
-        return {
-          sender: 'bot',
-          text: desc,
-          time: botTime,
-          layout: 'product_list',
-          productsData: matched,
-        };
-      }
-
-      // No products found
-      let noResultText = 'Xin lỗi, tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn';
-      if (detectedCategory) noResultText += ` trong danh mục ${detectedCategory.label}`;
-      if (budget > 0) noResultText += ` ở tầm giá ${formatPrice(budget)}`;
-      noResultText += '. Bạn có thể thử mở rộng ngân sách hoặc thay đổi tiêu chí tìm kiếm nhé!';
-
-      return {
-        sender: 'bot',
-        text: noResultText,
-        time: botTime,
-      };
-    }
-
-    // --- Default ---
-    return {
-      sender: 'bot',
-      text: 'Tôi là Trợ lý AI AetherPC. Bạn có thể hỏi tôi về:\n- **Tìm sản phẩm**: "Tìm màn hình 144Hz dưới 5 triệu"\n- **Tư vấn cấu hình PC**: "Build PC gaming 25 triệu"\n- **Chính sách**: "Bảo hành như thế nào?" hoặc "Có trả góp không?"\n- **Tìm linh kiện**: "Tìm VGA RTX 4060" hoặc "RAM 32GB DDR5"\n\nHãy thử nhé! 🚀',
-      time: botTime,
-    };
-  };
-
-  // ==========================================================================
-  //  HANDLE SEND: Main message handler
-  // ==========================================================================
+  // Handle user send message
   const handleSend = async (textToSend) => {
     const text = textToSend || input;
-    if (!text.trim() || isTyping) return;
+    if (!text.trim()) return;
+
+    const cleanText = text.toLowerCase();
+
+    // Check CSKH transfer intent
+    if (chatMode === 'cskh' || cleanText.includes('gặp cskh') || cleanText.includes('liên hệ cskh') || cleanText.includes('nhân viên cskh') || cleanText.includes('gặp nhân viên')) {
+      if (chatMode !== 'cskh') setChatMode('cskh');
+      
+      const cskhUserMsg = {
+        sender: 'user',
+        text: text,
+        time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      };
+      setCskhMessages(prev => [...prev, cskhUserMsg]);
+      if (!textToSend) setInput('');
+
+      const { sessId, custName } = getCSKHSessionInfo();
+      const payload = {
+        sessionId: sessId,
+        sender: 'customer',
+        text: text,
+        time: cskhUserMsg.time,
+        customerName: custName
+      };
+
+      // 1. Send via WebSocket Realtime
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: 'CUSTOMER_SEND_MSG',
+          payload
+        }));
+      } else {
+        // Fallback to HTTP API
+        try {
+          api.post('/chat/cskh/send', payload);
+        } catch (e) {
+          console.warn("Failed to send CSKH msg to backend", e);
+        }
+      }
+      return;
+    }
 
     const userMsg = {
       sender: 'user',
@@ -631,9 +444,7 @@ export default function Chatbot() {
     setMessages(prev => [...prev, userMsg]);
     if (!textToSend) setInput('');
 
-    const cleanText = text.toLowerCase();
-    
-    // Check if user is asking for PC building / consulting to start the interactive quiz
+    // Check PC build prompt & Budget extraction
     const pcBuildKeywords = [
       'build pc', 'cấu hình pc', 'cấu hình máy tính', 'lắp ráp pc', 'lắp ráp máy tính',
       'bộ máy tính', 'bộ pc', 'tư vấn pc', 'tư vấn máy tính', 'tu van pc', 'tu van may tinh',
@@ -642,124 +453,58 @@ export default function Chatbot() {
       'build máy', 'build may', 'bộ case', 'full bộ', 'full bo',
       'case gaming', 'pc gaming'
     ];
-    if (pcBuildKeywords.some(kw => cleanText.includes(kw))) {
-      startInteractiveQuiz();
-      return;
-    }
-    const intent = detectIntent(text);
 
-    // ==========================================================================
-    //  ADD TO CART INTENT — Handle locally without calling API
-    // ==========================================================================
-    if (intent === 'add_to_cart') {
-      const detectedCategory = detectCategoryAndKeywords(cleanText);
+    const extractedBudget = extractBudget(cleanText);
+    const isBuildIntent = pcBuildKeywords.some(kw => cleanText.includes(kw)) || (extractedBudget > 0 && (cleanText.includes('pc') || cleanText.includes('máy') || cleanText.includes('dàn')));
 
-      // Try adding a specific category product
-      if (detectedCategory) {
-        const specificProduct = findProductForCategory(detectedCategory, messages, products);
-        if (specificProduct) {
-          addToCart(specificProduct, 1);
-          setIsTyping(true);
-          setTimeout(() => {
-            setMessages(prev => [...prev, {
-              sender: 'bot',
-              text: `Dạ rồi ạ! Tôi đã thêm mẫu ${detectedCategory.label} **${specificProduct.name}** (~${formatPrice(specificProduct.price)}) vào giỏ hàng của bạn. Bạn có thể kiểm tra lại giỏ hàng nhé! 🛒✨`,
-              time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-            }]);
-            setIsTyping(false);
-          }, 800);
-          return;
-        }
-      }
-
-      // Try adding the last recommended build
-      let lastBuildMsg = [...messages].reverse().find(msg => msg.sender === 'bot' && msg.layout === 'build_recommendation' && msg.buildData);
-      let buildDataToAdd = lastBuildMsg?.buildData;
-
-      // Fallback: Try to parse products from last bot message text
-      if (!buildDataToAdd && products.length > 0) {
-        const lastBotMsg = [...messages].reverse().find(msg => msg.sender === 'bot' && msg.text);
-        if (lastBotMsg) {
-          const botText = lastBotMsg.text.toLowerCase();
-          const cleanString = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
-          const normBotText = cleanString(botText);
-          const sortedProducts = [...products].sort((a, b) => b.name.length - a.name.length);
-          const categories = ['CPU', 'MAINBOARD', 'RAM', 'VGA', 'PSU', 'STORAGE', 'CASE', 'COOLER'];
-          const parsedBuild = {};
-          let matchedCount = 0;
-          categories.forEach(cat => {
-            const catProducts = sortedProducts.filter(p => p.category === cat);
-            for (const p of catProducts) {
-              const normProdName = cleanString(p.name);
-              if (normProdName.length > 5 && normBotText.includes(normProdName)) {
-                parsedBuild[cat] = p;
-                matchedCount++;
-                break;
-              }
-            }
-          });
-          if (matchedCount >= 3) buildDataToAdd = parsedBuild;
-        }
-      }
-
-      // Fallback: Extract budget from history and generate a build
-      if (!buildDataToAdd) {
-        let histBudget = 0;
-        let usage = 'gaming';
-        let brandPref = 'all';
-        for (let i = messages.length - 1; i >= 0; i--) {
-          const msgText = messages[i].text ? messages[i].text.toLowerCase() : '';
-          if (!msgText) continue;
-          if (brandPref === 'all') {
-            if (msgText.includes('intel')) brandPref = 'intel';
-            else if (msgText.includes('amd') || msgText.includes('ryzen')) brandPref = 'amd';
-          }
-          if (histBudget === 0) histBudget = extractBudget(msgText);
-        }
-        if (histBudget > 0) {
-          const generatedBuild = runBuildAlgorithm(usage, histBudget, brandPref);
-          if (generatedBuild) buildDataToAdd = generatedBuild;
-        }
-      }
-
-      if (buildDataToAdd) {
-        let addedCount = 0;
-        let totalPriceAdded = 0;
-        Object.entries(buildDataToAdd).forEach(([_, item]) => {
-          if (item) {
-            addToCart(item, 1, { pc_build_bundle: 'custom_pc' });
-            addedCount++;
-            totalPriceAdded += parseFloat(item.price);
-          }
-        });
+    if (isBuildIntent) {
+      if (extractedBudget > 0) {
         setIsTyping(true);
+        const botTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        
+        let recommendedBuild = null;
+        let totalPrice = 0;
+
+        try {
+          const result = optimizePCBuild({
+            promptText: text,
+            budgetInput: extractedBudget,
+            workloadInput: cleanText.includes('đồ họa') || cleanText.includes('3d') ? 'RENDER_3D' : cleanText.includes('ai') ? 'AI_DEEP_LEARNING' : 'GAMING',
+            brandInput: cleanText.includes('intel') ? 'intel' : cleanText.includes('amd') ? 'amd' : 'all',
+            cpuBrandInput: cleanText.includes('intel') ? 'intel' : cleanText.includes('amd') ? 'amd' : 'all',
+            gpuBrandInput: 'all',
+            mfgBrandInput: 'all',
+            availableProducts: products,
+            allProducts: products
+          });
+
+          if (result && result.build) {
+            recommendedBuild = result.build;
+            totalPrice = result.totalPrice;
+          }
+        } catch (e) {
+          console.warn("Failed to generate direct build", e);
+        }
+
         setTimeout(() => {
           setMessages(prev => [...prev, {
             sender: 'bot',
-            text: `Dạ, tôi đã thêm toàn bộ **${addedCount} linh kiện** trong cấu hình đề xuất (~${formatPrice(totalPriceAdded)}) vào giỏ hàng cho bạn rồi ạ! Nhấn vào biểu tượng giỏ hàng để xem chi tiết nhé. 🛒✨`,
-            time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+            text: `Dạ, Trợ lý AI đã tự động phân tích và thiết kế cấu hình PC tối ưu nhất cho mức ngân sách **${formatPrice(extractedBudget)}** (~${formatPrice(totalPrice)}).\n\nBạn có thể xem danh sách từng linh kiện bên dưới và nhấn **"Thêm Toàn Bộ Vào Giỏ Hàng"** để chốt đơn ngay nhé! 🛒✨`,
+            time: botTime,
+            layout: 'build_recommendation',
+            buildData: recommendedBuild,
+            totalPrice: totalPrice
           }]);
           setIsTyping(false);
-        }, 800);
+        }, 400);
+        return;
+      } else {
+        startInteractiveQuiz();
         return;
       }
-
-      // Can't find anything to add
-      setIsTyping(true);
-      setTimeout(() => {
-        setMessages(prev => [...prev, {
-          sender: 'bot',
-          text: 'Dạ, tôi chưa tìm thấy sản phẩm hoặc cấu hình nào trong cuộc trò chuyện để thêm vào giỏ hàng. Bạn hãy yêu cầu tôi tìm sản phẩm hoặc tư vấn cấu hình PC trước nhé! 😊',
-          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-        }]);
-        setIsTyping(false);
-      }, 800);
-      return;
     }
 
-    // ==========================================================================
-    //  CALL BACKEND API — Try Gemini first, fallback to offline
-    // ==========================================================================
+    // Call Backend API / Gemini
     setIsTyping(true);
     const botTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
@@ -774,7 +519,6 @@ export default function Chatbot() {
         history: filteredHistory
       });
 
-      // Backend returned a structured response with products
       if (res && res.success && !res.fallback && res.reply) {
         const botMsg = {
           sender: 'bot',
@@ -782,12 +526,10 @@ export default function Chatbot() {
           time: botTime,
         };
 
-        // If backend returned product data, show product list
         if (res.products && res.products.length > 0) {
-          // Map backend products to the format expected by product_list layout
           botMsg.layout = 'product_list';
           botMsg.productsData = res.products.map(p => ({
-            id: p.productId,
+            id: p.productId || p.id,
             name: p.name,
             brand: p.brand,
             price: p.price,
@@ -798,196 +540,25 @@ export default function Chatbot() {
           }));
         }
 
-        // If backend says it's a pc_build intent, use the local build algorithm
-        // (since Gemini can't build the component layout directly)
-        if (res.intent === 'pc_build') {
-          const budget = extractBudget(text);
-          if (budget > 0) {
-            let usage = 'gaming';
-            const ct = cleanText;
-            if (ct.includes('đồ họa') || ct.includes('thiết kế') || ct.includes('render')) usage = 'graphics';
-            else if (ct.includes('lập trình') || ct.includes('code') || ct.includes('deep learning')) usage = 'ai';
-            else if (ct.includes('văn phòng') || ct.includes('học tập')) usage = 'office';
-
-            let brandPref = 'all';
-            if (ct.includes('intel')) brandPref = 'intel';
-            else if (ct.includes('amd') || ct.includes('ryzen')) brandPref = 'amd';
-
-            const build = runBuildAlgorithm(usage, budget, brandPref);
-            if (build) {
-              const totalBuildPrice = Object.values(build).reduce((sum, item) => sum + (item ? parseFloat(item.price) : 0), 0);
-              botMsg.layout = 'build_recommendation';
-              botMsg.buildData = build;
-              botMsg.totalPrice = totalBuildPrice;
-            }
-          } else {
-            botMsg.layout = 'quick_budgets';
-          }
-        }
-
         setMessages(prev => [...prev, botMsg]);
       } else {
-        // Backend fallback (API key not configured, or error)
-        const reply = processMessage(text);
+        const reply = {
+          sender: 'bot',
+          text: 'Dạ, tôi đã tiếp nhận thắc mắc của bạn! Bạn có thể xem thêm danh mục sản phẩm trên website hoặc bấm **"Gặp NV CSKH"** để trò chuyện trực tiếp với chuyên viên CSKH AetherPC nhé! 😊',
+          time: botTime
+        };
         setMessages(prev => [...prev, reply]);
       }
     } catch (err) {
-      console.warn("Backend chat API error, falling back to offline mode:", err);
-      const reply = processMessage(text);
-      setMessages(prev => [...prev, reply]);
+      console.warn("Backend chat API error:", err);
+      setMessages(prev => [...prev, {
+        sender: 'bot',
+        text: 'Cảm ơn bạn đã nhắn tin! Để hỗ trợ chính xác nhất, bạn có thể chọn các nút tư vấn nhanh bên dưới hoặc nhấp **"Gặp NV CSKH"** để nhân viên hỗ trợ ngay nhé!',
+        time: botTime
+      }]);
     } finally {
       setIsTyping(false);
     }
-  };
-
-  // ==========================================================================
-  //  FIND PRODUCT FOR CATEGORY: Used by add-to-cart logic
-  // ==========================================================================
-  const findProductForCategory = (categoryInfo, history, allProducts) => {
-    if (allProducts.length === 0) return null;
-
-    let candidates = allProducts.filter(p => p.category === categoryInfo.category);
-    if (categoryInfo.search) {
-      const term = categoryInfo.search.toLowerCase();
-      candidates = allProducts.filter(p => p.name.toLowerCase().includes(term));
-    }
-    if (candidates.length === 0) return null;
-
-    const brands = ['viewsonic', 'asus', 'gigabyte', 'msi', 'samsung', 'lg', 'acer', 'aoc', 'dell', 'hp', 'lenovo', 'corsair', 'kingston', 'gskill', 'pny', 'deepcool', 'id-cooling', 'intel', 'amd', 'nvidia', 'rtx', 'ryzen'];
-    let brandKeyword = '';
-    for (let i = history.length - 1; i >= 0; i--) {
-      const t = history[i].text ? history[i].text.toLowerCase() : '';
-      if (!t) continue;
-      const foundBrand = brands.find(b => t.includes(b));
-      if (foundBrand) { brandKeyword = foundBrand; break; }
-    }
-    if (brandKeyword) {
-      const brandMatches = candidates.filter(p =>
-        p.brand.toLowerCase().includes(brandKeyword) || p.name.toLowerCase().includes(brandKeyword)
-      );
-      if (brandMatches.length > 0) return brandMatches[0];
-    }
-    return candidates[0];
-  };
-
-  // ==========================================================================
-  //  BUILD ALGORITHM: Generate PC build from local products
-  // ==========================================================================
-  const runBuildAlgorithm = (usage, budgetLimit, brandPref) => {
-    if (products.length === 0) return null;
-
-    const cpuList = products.filter(p => p.category === 'CPU');
-    const mbList = products.filter(p => p.category === 'MAINBOARD');
-    const ramList = products.filter(p => p.category === 'RAM');
-    const vgaList = products.filter(p => p.category === 'VGA');
-    const psuList = products.filter(p => p.category === 'PSU');
-    const storageList = products.filter(p => p.category === 'STORAGE');
-    const caseList = products.filter(p => p.category === 'CASE');
-    const coolerList = products.filter(p => p.category === 'COOLER');
-
-    if (cpuList.length === 0 || mbList.length === 0) return null;
-
-    let cpuPct = 0.20, mbPct = 0.15, vgaPct = 0.35, ramPct = 0.10, psuPct = 0.08, storagePct = 0.07, casePct = 0.05, coolerPct = 0.05;
-
-    if (usage === 'office') {
-      cpuPct = 0.30; mbPct = 0.20; vgaPct = 0.00; ramPct = 0.15; psuPct = 0.10; storagePct = 0.15; casePct = 0.05; coolerPct = 0.05;
-    } else if (usage === 'graphics') {
-      cpuPct = 0.25; mbPct = 0.15; vgaPct = 0.25; ramPct = 0.15; psuPct = 0.08; storagePct = 0.07; casePct = 0.05; coolerPct = 0.05;
-    } else if (usage === 'ai') {
-      cpuPct = 0.22; mbPct = 0.15; vgaPct = 0.38; ramPct = 0.13; psuPct = 0.08; storagePct = 0.04; casePct = 0.05; coolerPct = 0.05;
-    }
-
-    let targetCPU = budgetLimit * cpuPct;
-    let targetMB = budgetLimit * mbPct;
-    let targetVGA = budgetLimit * vgaPct;
-    let targetRAM = budgetLimit * ramPct;
-    let targetPSU = budgetLimit * psuPct;
-    let targetStorage = budgetLimit * storagePct;
-    let targetCase = budgetLimit * casePct;
-    let targetCooler = budgetLimit * coolerPct;
-
-    const findBestProduct = (list, targetPrice, filterFn = () => true) => {
-      const candidates = list.filter(filterFn);
-      if (candidates.length === 0) {
-        return list.reduce((best, item) => Math.abs(item.price - targetPrice) < Math.abs(best.price - targetPrice) ? item : best);
-      }
-      return candidates.reduce((best, item) => Math.abs(item.price - targetPrice) < Math.abs(best.price - targetPrice) ? item : best);
-    };
-
-    let cpuFilter = () => true;
-    if (brandPref === 'intel') cpuFilter = p => p.brand.toUpperCase().includes('INTEL');
-    else if (brandPref === 'amd') cpuFilter = p => p.brand.toUpperCase().includes('AMD');
-
-    const selectedCPU = findBestProduct(cpuList, targetCPU, cpuFilter);
-    const cpuSocket = selectedCPU?.specs?.socket;
-
-    let selectedMB = findBestProduct(mbList, targetMB, p => {
-      const mbSocket = p.specs?.socket;
-      return cpuSocket && mbSocket && mbSocket.toLowerCase() === cpuSocket.toLowerCase();
-    });
-    const mbRamType = selectedMB?.specs?.ram_type;
-
-    let selectedRAM = findBestProduct(ramList, targetRAM, p => {
-      const ramType = p.specs?.ram_type;
-      return mbRamType && ramType && ramType.toLowerCase() === mbRamType.toLowerCase();
-    });
-
-    let selectedVGA = null;
-    if (targetVGA > 0) {
-      let vgaFilter = () => true;
-      if (usage === 'ai') {
-        vgaFilter = p => p.brand.toUpperCase().includes('NVIDIA') || p.name.toUpperCase().includes('RTX') || p.name.toUpperCase().includes('GTX');
-      }
-      selectedVGA = findBestProduct(vgaList, targetVGA, vgaFilter);
-    }
-
-    let estTdp = 100;
-    if (selectedCPU) estTdp += (selectedCPU.specs?.tdp || 65);
-    if (selectedVGA) estTdp += (selectedVGA.specs?.tdp || 150);
-    const requiredWattage = Math.ceil(estTdp * 1.25);
-
-    let selectedPSU = findBestProduct(psuList, targetPSU, p => {
-      const psuWattage = p.specs?.wattage;
-      return psuWattage >= requiredWattage;
-    });
-
-    let selectedStorage = findBestProduct(storageList, targetStorage);
-    let selectedCase = findBestProduct(caseList, targetCase);
-
-    let selectedCooler = findBestProduct(coolerList, targetCooler, p => {
-      const support = p.specs?.socket_support;
-      const cpuSock = cpuSocket?.toLowerCase();
-      if (Array.isArray(support) && support.length > 0 && cpuSock) {
-        return support.some(s => s.toLowerCase() === cpuSock);
-      }
-      return true;
-    });
-
-    return {
-      CPU: selectedCPU || null,
-      MAINBOARD: selectedMB || null,
-      RAM: selectedRAM || null,
-      VGA: selectedVGA || null,
-      PSU: selectedPSU || null,
-      STORAGE: selectedStorage || null,
-      CASE: selectedCase || null,
-      COOLER: selectedCooler || null
-    };
-  };
-
-  const applyBuildToPCBuilder = (buildData) => {
-    localStorage.setItem('aetherpc_ai_selected_build', JSON.stringify(buildData));
-    navigate('/pc-builder');
-    setIsOpen(false);
-  };
-
-  const addWholeBuildToCart = (buildData) => {
-    Object.entries(buildData).forEach(([_, item]) => {
-      if (item) {
-        addToCart(item, 1, { pc_build_bundle: 'custom_pc' });
-      }
-    });
-    alert('Đã thêm toàn bộ linh kiện của cấu hình này vào giỏ hàng thành công!');
   };
 
   const startInteractiveQuiz = () => {
@@ -1001,11 +572,10 @@ export default function Chatbot() {
         layout: 'quiz_usage'
       }]);
       setIsTyping(false);
-    }, 500);
+    }, 400);
   };
 
   const handleQuizAnswer = (step, val, textLabel) => {
-    // 1. Add user message
     const botTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     const userMsg = {
       sender: 'user',
@@ -1017,16 +587,14 @@ export default function Chatbot() {
 
     setTimeout(() => {
       if (step === 1) {
-        // Just selected usage, go to step 2 (budget)
         setConsultAnswers(prev => ({ ...prev, usage: val }));
         setMessages(prev => [...prev, {
           sender: 'bot',
-          text: `Tuyệt vời! Tôi đã ghi nhận nhu cầu của bạn là **${textLabel}**. Tiếp theo, bạn muốn đầu tư khoảng ngân sách bao nhiêu cho cấu hình này? (Chọn phương án hoặc nhập ngân sách mong muốn của bạn):`,
+          text: `Tuyệt vời! Tôi đã ghi nhận nhu cầu của bạn là **${textLabel}**. Tiếp theo, bạn muốn đầu tư khoảng ngân sách bao nhiêu cho cấu hình này?`,
           time: botTime,
           layout: 'quiz_budget'
         }]);
       } else if (step === 2) {
-        // Just selected budget, go to step 3 (brand)
         setConsultAnswers(prev => ({ ...prev, budget: val }));
         setMessages(prev => [...prev, {
           sender: 'bot',
@@ -1035,124 +603,170 @@ export default function Chatbot() {
           layout: 'quiz_brand'
         }]);
       } else if (step === 3) {
-        // Selected brand, calculate build and recommend!
         const finalAnswers = { ...consultAnswers, brand: val };
-        setConsultAnswers({ usage: '', budget: 0, brand: '' }); // Reset
+        setConsultAnswers({ usage: '', budget: 0, brand: '' });
+        
+        let recommendedBuild = null;
+        let totalPrice = 0;
 
-        const build = runBuildAlgorithm(finalAnswers.usage, finalAnswers.budget, finalAnswers.brand);
-        if (build) {
-          const totalBuildPrice = Object.values(build).reduce((sum, item) => sum + (item ? parseFloat(item.price) : 0), 0);
-          
-          let usageText = '';
-          if (finalAnswers.usage === 'gaming') usageText = 'chơi game';
-          else if (finalAnswers.usage === 'graphics') usageText = 'đồ họa & thiết kế';
-          else if (finalAnswers.usage === 'ai') usageText = 'lập trình & AI';
-          else if (finalAnswers.usage === 'office') usageText = 'học tập & văn phòng';
+        try {
+          const result = optimizePCBuild({
+            promptText: '',
+            budgetInput: finalAnswers.budget || 20000000,
+            workloadInput: finalAnswers.usage === 'gaming' ? 'GAMING' : finalAnswers.usage === 'graphics' ? 'RENDER_3D' : finalAnswers.usage === 'ai' ? 'AI_DEEP_LEARNING' : 'OFFICE_STUDENT',
+            brandInput: finalAnswers.brand,
+            cpuBrandInput: finalAnswers.brand,
+            gpuBrandInput: 'all',
+            mfgBrandInput: 'all',
+            availableProducts: products,
+            allProducts: products
+          });
 
-          setMessages(prev => [...prev, {
-            sender: 'bot',
-            text: `Chúc mừng! 🎉 Tôi đã thiết kế xong cấu hình máy tính tối ưu nhất cho nhu cầu **${usageText}** với mức ngân sách của bạn:\n\n- **Tổng chi phí**: **${formatPrice(totalBuildPrice)}**\n- **CPU tối ưu**: **${build.CPU?.name || 'Chưa chọn'}**\n- **VGA (Đồ họa)**: **${build.VGA?.name || 'Không dùng (Tích hợp)'}**\n\nBạn có thể kiểm tra danh sách linh kiện bên dưới và bấm **Áp dụng** sang trang tự ráp hoặc thêm nhanh vào giỏ hàng nhé! 👇`,
-            time: botTime,
-            layout: 'build_recommendation',
-            buildData: build,
-            totalPrice: totalBuildPrice
-          }]);
-        } else {
-          setMessages(prev => [...prev, {
-            sender: 'bot',
-            text: 'Xin lỗi, tôi chưa thể tìm thấy linh kiện phù hợp với ngân sách này. Vui lòng thử lại với một tầm giá khác nhé! 😢',
-            time: botTime
-          }]);
+          if (result && result.build) {
+            recommendedBuild = result.build;
+            totalPrice = result.totalPrice;
+          }
+        } catch (e) {
+          console.warn("Failed to generate build via AI Knowledge", e);
         }
+
+        setMessages(prev => [...prev, {
+          sender: 'bot',
+          text: `Chúc mừng! 🎉 Trợ lý AI đã thiết kế xong cấu hình máy tính tối ưu nhất cho bạn (~${formatPrice(totalPrice)}).\n\nBạn có thể xem danh sách từng linh kiện bên dưới và nhấn **"Thêm Toàn Bộ Vào Giỏ Hàng"** để chốt đơn ngay nhé! 🛒✨`,
+          time: botTime,
+          layout: 'build_recommendation',
+          buildData: recommendedBuild,
+          totalPrice: totalPrice
+        }]);
       }
       setIsTyping(false);
-    }, 800);
+    }, 400);
   };
 
-  // ==========================================================================
-  //  RENDER
-  // ==========================================================================
+  const currentActiveMessages = chatMode === 'cskh' ? cskhMessages : messages;
+
   return (
-    <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 1000 }}>
+    <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 9999 }}>
       {/* Floating Chat Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
           style={{
-            width: '60px',
-            height: '60px',
+            width: '62px',
+            height: '62px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--primary), #4f46e5)',
+            background: 'linear-gradient(135deg, #2563eb, #3b82f6)',
             border: 'none',
-            color: '#fff',
+            color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            boxShadow: '0 4px 20px rgba(99, 102, 241, 0.4)',
+            boxShadow: '0 8px 25px rgba(37, 99, 235, 0.4)',
             transition: 'transform 0.2s',
           }}
           onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
           onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
         >
-          <MessageSquare size={26} />
+          <MessageSquare size={28} />
         </button>
       )}
 
-      {/* Expandable Chat Window */}
+      {/* Expandable Chat Window - Modern Bright Theme */}
       {isOpen && (
         <div style={{
-          width: '380px',
-          height: '520px',
-          backgroundColor: '#0c111d',
-          border: '1px solid var(--border-glass)',
-          borderRadius: '16px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(16px)',
+          width: '415px',
+          height: '540px',
+          backgroundColor: '#ffffff',
+          border: '1.5px solid #cbd5e1',
+          borderRadius: '20px',
+          boxShadow: '0 16px 45px rgba(15, 23, 42, 0.18)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
           transition: 'all 0.3s'
         }}>
-          {/* Header */}
+          {/* Header with Mode Switching (AI / CSKH) */}
           <div style={{
-            padding: '1rem',
-            background: 'linear-gradient(135deg, rgba(21, 27, 44, 0.95), rgba(11, 15, 25, 0.95))',
-            borderBottom: '1px solid var(--border-glass)',
+            padding: '0.85rem 1rem',
+            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            color: '#fff'
+            gap: '0.5rem',
+            color: '#ffffff'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 0 }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div style={{
-                  width: '36px',
-                  height: '36px',
+                  width: '38px',
+                  height: '38px',
                   borderRadius: '50%',
-                  background: 'rgba(99, 102, 241, 0.1)',
-                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                  background: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'var(--primary)'
+                  color: '#2563eb'
                 }}>
-                  <Sparkles size={18} />
+                  {chatMode === 'ai' ? <Sparkles size={20} /> : <Headphones size={20} />}
                 </div>
-                <div style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', border: '2px solid #0c111d', position: 'absolute', bottom: 0, right: 0 }} />
+                <div style={{ width: '10px', height: '10px', background: '#22c55e', borderRadius: '50%', border: '2px solid #2563eb', position: 'absolute', bottom: 0, right: 0 }} />
               </div>
-              <div>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>AetherPC AI Assistant</h4>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Hỗ trợ trực tuyến 24/7</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h4 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {chatMode === 'ai' ? 'Trợ lý AI AetherPC' : 'CSKH AetherPC'}
+                </h4>
+                <div style={{ fontSize: '0.72rem', color: '#dbeafe', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {chatMode === 'ai' ? 'Hỗ trợ tự động 24/7' : '🟢 Sẵn sàng chat live'}
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem' }}
-            >
-              <X size={18} />
-            </button>
+
+            {/* Mode Switch Pills & Close */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+              <div style={{ display: 'flex', backgroundColor: 'rgba(255,255,255,0.22)', padding: '3px', borderRadius: '20px' }}>
+                <button
+                  onClick={() => setChatMode('ai')}
+                  style={{
+                    padding: '0.25rem 0.65rem', borderRadius: '14px', border: 'none',
+                    fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
+                    backgroundColor: chatMode === 'ai' ? '#ffffff' : 'transparent',
+                    color: chatMode === 'ai' ? '#2563eb' : '#ffffff',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  🤖 AI
+                </button>
+                <button
+                  onClick={() => setChatMode('cskh')}
+                  style={{
+                    padding: '0.25rem 0.65rem', borderRadius: '14px', border: 'none',
+                    fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
+                    backgroundColor: chatMode === 'cskh' ? '#ffffff' : 'transparent',
+                    color: chatMode === 'cskh' ? '#2563eb' : '#ffffff',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  🎧 CSKH
+                </button>
+              </div>
+
+              <button
+                onClick={() => setIsOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
+
+          {/* Active Mode Banner */}
+          {chatMode === 'cskh' && (
+            <div style={{ backgroundColor: '#eff6ff', borderBottom: '1px solid #bfdbfe', padding: '0.4rem 0.85rem', fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <UserCheck size={14} color="#2563eb" />
+              <span>Đang kết nối live chat với Chuyên viên CSKH AetherPC</span>
+            </div>
+          )}
 
           {/* Messages Body */}
           <div style={{
@@ -1161,13 +775,13 @@ export default function Chatbot() {
             padding: '1rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem',
-            backgroundColor: 'rgba(255,255,255,0.015)'
+            gap: '0.85rem',
+            backgroundColor: '#f8fafc'
           }}>
-            {messages.map((msg, i) => (
+            {currentActiveMessages.map((msg, i) => (
               <div key={i} style={{
                 alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '85%',
+                maxWidth: '86%',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start',
@@ -1175,75 +789,38 @@ export default function Chatbot() {
               }}>
                 <div style={{
                   padding: '0.75rem 1rem',
-                  borderRadius: msg.sender === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                  background: msg.sender === 'user' ? 'linear-gradient(135deg, var(--primary), #4f46e5)' : 'rgba(255,255,255,0.035)',
-                  border: msg.sender === 'user' ? 'none' : '1px solid var(--border-glass)',
-                  color: '#fff',
+                  borderRadius: msg.sender === 'user' ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                  background: msg.sender === 'user' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#ffffff',
+                  border: msg.sender === 'user' ? 'none' : '1.5px solid #e2e8f0',
+                  boxShadow: msg.sender === 'user' ? '0 4px 12px rgba(37,99,235,0.2)' : '0 2px 8px rgba(0,0,0,0.04)',
+                  color: msg.sender === 'user' ? '#ffffff' : '#0f172a',
                   fontSize: '0.85rem',
-                  lineHeight: '1.4',
+                  lineHeight: '1.5',
                   whiteSpace: 'normal',
                   maxWidth: '100%',
                   minWidth: 0,
                   boxSizing: 'border-box'
                 }}>
-                  {renderMessageText(msg.text)}
+                  {renderMessageText(msg.text, msg.sender === 'user')}
 
                   {/* CUSTOM LAYOUTS */}
-                  {/* Quick Budgets Layout */}
-                  {msg.layout === 'quick_budgets' && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.75rem' }}>
-                      {[
-                        { budget: '15 Triệu', text: 'Tư vấn bộ PC chơi game 15 triệu' },
-                        { budget: '25 Triệu', text: 'Tư vấn bộ PC gaming đồ họa 25 triệu' },
-                        { budget: '35 Triệu', text: 'Cấu hình đồ họa cao cấp 35 triệu' },
-                        { budget: '50 Triệu', text: 'Bộ PC High-End 50 triệu' }
-                      ].map((item, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleSend(item.text)}
-                          style={{
-                            padding: '0.25rem 0.5rem',
-                            fontSize: '0.75rem',
-                            borderRadius: '6px',
-                            border: '1px solid rgba(255,255,255,0.15)',
-                            backgroundColor: 'rgba(255,255,255,0.05)',
-                            color: '#fff',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {item.budget}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-
-                  {/* Quiz Usage Layout */}
                   {msg.layout === 'quiz_usage' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.75rem' }}>
                       {[
                         { label: '🎮 Chơi Game', val: 'gaming' },
                         { label: '🎨 Đồ Hoạ & Thiết Kế', val: 'graphics' },
-                        { label: '💻 Lập Trình & Trí Tuệ Nhân Tạo (AI)', val: 'ai' },
+                        { label: '💻 Lập Trình & AI', val: 'ai' },
                         { label: '💼 Học Tập & Văn Phòng', val: 'office' }
                       ].map((item, idx) => (
                         <button
                           key={idx}
                           onClick={() => handleQuizAnswer(1, item.val, item.label)}
                           style={{
-                            padding: '0.4rem 0.75rem',
-                            fontSize: '0.8rem',
-                            textAlign: 'left',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(99, 102, 241, 0.3)',
-                            backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            fontWeight: 600
+                            padding: '0.4rem 0.75rem', fontSize: '0.8rem', textAlign: 'left',
+                            borderRadius: '8px', border: '1.5px solid #bfdbfe',
+                            backgroundColor: '#eff6ff', color: '#2563eb', cursor: 'pointer',
+                            fontWeight: 700
                           }}
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.2)'}
-                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)'}
                         >
                           {item.label}
                         </button>
@@ -1251,7 +828,6 @@ export default function Chatbot() {
                     </div>
                   )}
 
-                  {/* Quiz Budget Layout */}
                   {msg.layout === 'quiz_budget' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', marginTop: '0.75rem' }}>
                       {[
@@ -1264,19 +840,10 @@ export default function Chatbot() {
                           key={idx}
                           onClick={() => handleQuizAnswer(2, item.val, item.label)}
                           style={{
-                            padding: '0.4rem',
-                            fontSize: '0.75rem',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(99, 102, 241, 0.3)',
-                            backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            fontWeight: 600,
-                            textAlign: 'center'
+                            padding: '0.4rem', fontSize: '0.75rem', borderRadius: '8px',
+                            border: '1.5px solid #bfdbfe', backgroundColor: '#eff6ff',
+                            color: '#2563eb', cursor: 'pointer', fontWeight: 700, textAlign: 'center'
                           }}
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.2)'}
-                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)'}
                         >
                           {item.label}
                         </button>
@@ -1284,7 +851,6 @@ export default function Chatbot() {
                     </div>
                   )}
 
-                  {/* Quiz Brand Layout */}
                   {msg.layout === 'quiz_brand' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.75rem' }}>
                       {[
@@ -1296,19 +862,11 @@ export default function Chatbot() {
                           key={idx}
                           onClick={() => handleQuizAnswer(3, item.val, item.label)}
                           style={{
-                            padding: '0.4rem 0.75rem',
-                            fontSize: '0.8rem',
-                            textAlign: 'left',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(99, 102, 241, 0.3)',
-                            backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            fontWeight: 600
+                            padding: '0.4rem 0.75rem', fontSize: '0.8rem', textAlign: 'left',
+                            borderRadius: '8px', border: '1.5px solid #bfdbfe',
+                            backgroundColor: '#eff6ff', color: '#2563eb', cursor: 'pointer',
+                            fontWeight: 700
                           }}
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.2)'}
-                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)'}
                         >
                           {item.label}
                         </button>
@@ -1319,178 +877,178 @@ export default function Chatbot() {
                   {/* Product Search List Layout */}
                   {msg.layout === 'product_list' && msg.productsData && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
-                      {msg.productsData.map((p, idx) => (
-                        <div key={idx} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.4rem',
-                          background: 'rgba(0,0,0,0.2)',
-                          border: '1px solid rgba(255,255,255,0.05)',
-                          borderRadius: '6px'
-                        }}>
-                          <img src={p.image || `https://placehold.co/40x40`} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '4px' }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--success)', fontWeight: 700 }}>{formatPrice(p.price)}</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexShrink: 0 }}>
-                            <a href={`/product/${p.id || p.productId}`} target="_blank" rel="noreferrer" style={{ fontSize: '0.7rem', color: 'var(--primary)', textDecoration: 'none' }}>
-                              Xem
-                            </a>
-                            <button
+                      {msg.productsData.map((p, idx) => {
+                        const prodId = p.id || p.productId;
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.6rem 0.75rem',
+                              background: '#ffffff',
+                              border: '1.5px solid #e2e8f0',
+                              borderRadius: '10px',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {/* Clickable Image + Name + Price -> Navigates to Product Detail */}
+                            <div
                               onClick={() => {
-                                addToCart(p, 1);
-                                setMessages(prev => [...prev, {
-                                  sender: 'bot',
-                                  text: `Dạ rồi ạ! Tôi đã thêm sản phẩm **${p.name}** (~${formatPrice(p.price)}) vào giỏ hàng cho bạn thành công! 🛒✨`,
-                                  time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-                                }]);
+                                navigate(`/product/${prodId}`);
+                                setIsOpen(false); // Close chatbot overlay to show detail page cleanly
                               }}
                               style={{
-                                padding: '0.2rem 0.4rem',
-                                fontSize: '0.7rem',
-                                borderRadius: '4px',
-                                border: 'none',
-                                backgroundColor: 'var(--success)',
-                                color: '#fff',
-                                cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.15rem'
+                                gap: '0.6rem',
+                                flex: 1,
+                                minWidth: 0,
+                                cursor: 'pointer'
                               }}
+                              title={`Xem trang chi tiết sản phẩm: ${p.name}`}
                             >
-                              <ShoppingCart size={10} /> Thêm
-                            </button>
+                              <img
+                                src={p.image || `https://placehold.co/40x40`}
+                                alt={p.name}
+                                style={{ width: '44px', height: '44px', objectFit: 'contain', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', flexShrink: 0 }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{ fontSize: '0.8rem', fontWeight: 800, color: '#2563eb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}
+                                >
+                                  {p.name}
+                                </div>
+                                <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 800 }}>{formatPrice(p.price)}</div>
+                              </div>
+                            </div>
+
+                            {/* Action Button: Thêm Giỏ */}
+                            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexShrink: 0 }}>
+                              <button
+                                onClick={() => {
+                                  addToCart(p, 1);
+                                  setMessages(prev => [...prev, {
+                                    sender: 'bot',
+                                    text: `Dạ rồi ạ! Tôi đã thêm sản phẩm **${p.name}** (~${formatPrice(p.price)}) vào giỏ hàng cho bạn thành công! 🛒✨`,
+                                    time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                                  }]);
+                                }}
+                                style={{
+                                  padding: '0.35rem 0.65rem',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  backgroundColor: '#16a34a',
+                                  color: '#ffffff',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.2rem'
+                                }}
+                              >
+                                <ShoppingCart size={12} /> Thêm Giỏ
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
                   {/* AI Build Recommendation Layout */}
                   {msg.layout === 'build_recommendation' && msg.buildData && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', width: '100%', minWidth: 0 }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.25rem', display: 'flex', justifyContent: 'space-between', gap: '0.5rem', minWidth: 0 }}>
-                        <span style={{ flexShrink: 0 }}>Linh kiện đề xuất</span>
-                        <span style={{ color: 'var(--success)', flexShrink: 0 }}>{formatPrice(msg.totalPrice)}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem', background: '#f1f5f9', padding: '0.65rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', width: '100%', minWidth: 0 }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', borderBottom: '1px solid #cbd5e1', paddingBottom: '0.35rem', display: 'flex', justifyContent: 'space-between', gap: '0.5rem', minWidth: 0 }}>
+                        <span>Linh kiện PC đề xuất</span>
+                        <span style={{ color: '#16a34a', fontWeight: 800 }}>{formatPrice(msg.totalPrice)}</span>
                       </div>
                       
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '140px', overflowY: 'auto', width: '100%', minWidth: 0 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: '160px', overflowY: 'auto', width: '100%', minWidth: 0 }}>
                         {Object.entries(msg.buildData).map(([slot, item]) => {
                           if (!item) return null;
                           return (
-                            <div key={slot} style={{ fontSize: '0.7rem', display: 'flex', justifyContent: 'space-between', gap: '0.5rem', width: '100%', minWidth: 0 }}>
-                              <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>{slot}:</span>
+                            <div key={slot} style={{ fontSize: '0.72rem', display: 'flex', justifyContent: 'space-between', gap: '0.5rem', width: '100%', minWidth: 0 }}>
+                              <span style={{ color: '#64748b', fontWeight: 700, flexShrink: 0 }}>{slot}:</span>
                               <Link
                                 to={`/product/${item.id}`}
                                 target="_blank"
-                                style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right', flex: 1, minWidth: 0, color: 'var(--primary)', textDecoration: 'none' }}
+                                style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right', flex: 1, minWidth: 0, color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}
                                 title={item.name}
-                                onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                                onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
                               >
-                                {item.name}
+                                {item.name} (~{formatPrice(item.price)})
                               </Link>
                             </div>
                           );
                         })}
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', borderTop: '1px solid #cbd5e1', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
                         <button
                           onClick={() => applyBuildToPCBuilder(msg.buildData)}
                           style={{
-                            padding: '0.35rem 0.5rem',
-                            fontSize: '0.75rem',
-                            borderRadius: '4px',
-                            border: '1px solid var(--primary)',
-                            backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                            color: '#fff',
+                            padding: '0.4rem 0.5rem',
+                            fontSize: '0.72rem',
+                            borderRadius: '6px',
+                            border: '1.5px solid #2563eb',
+                            backgroundColor: '#eff6ff',
+                            color: '#2563eb',
                             cursor: 'pointer',
-                            fontWeight: 600,
+                            fontWeight: 800,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: '0.25rem'
                           }}
                         >
-                          <Sparkles size={11} /> Áp dụng
+                          <Sparkles size={12} /> Xem Chi Tiết
                         </button>
                         <button
                           onClick={() => addWholeBuildToCart(msg.buildData)}
                           style={{
-                            padding: '0.35rem 0.5rem',
-                            fontSize: '0.75rem',
-                            borderRadius: '4px',
+                            padding: '0.4rem 0.5rem',
+                            fontSize: '0.72rem',
+                            borderRadius: '6px',
                             border: 'none',
-                            backgroundColor: 'var(--success)',
-                            color: '#fff',
+                            backgroundColor: '#16a34a',
+                            color: '#ffffff',
                             cursor: 'pointer',
-                            fontWeight: 600,
+                            fontWeight: 800,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: '0.25rem'
                           }}
                         >
-                          <ShoppingCart size={11} /> Thêm Giỏ
+                          <ShoppingCart size={12} /> Thêm Giỏ Hàng
                         </button>
                       </div>
                     </div>
                   )}
 
                 </div>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{msg.time}</span>
+                <span style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '0.25rem', fontWeight: 600 }}>{msg.time}</span>
               </div>
             ))}
+
             {isTyping && (
-              <div style={{
-                alignSelf: 'flex-start',
-                maxWidth: '85%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                minWidth: 0
-              }}>
-                <div style={{
-                  padding: '0.75rem 1rem',
-                  borderRadius: '12px 12px 12px 2px',
-                  background: 'rgba(255,255,255,0.035)',
-                  border: '1px solid var(--border-glass)',
-                  color: 'var(--text-muted)',
-                  fontSize: '0.85rem',
-                  lineHeight: '1.4',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  maxWidth: '100%',
-                  minWidth: 0,
-                  boxSizing: 'border-box'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    gap: '4px',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '12px'
-                  }}>
-                    <span style={{ width: '6px', height: '6px', backgroundColor: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'pulse 1.5s infinite ease-in-out' }}></span>
-                    <span style={{ width: '6px', height: '6px', backgroundColor: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'pulse 1.5s infinite ease-in-out', animationDelay: '0.2s' }}></span>
-                    <span style={{ width: '6px', height: '6px', backgroundColor: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'pulse 1.5s infinite ease-in-out', animationDelay: '0.4s' }}></span>
-                  </div>
-                  <span style={{ marginLeft: '4px' }}>AI đang trả lời...</span>
+              <div style={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
+                <div style={{ padding: '0.6rem 0.85rem', borderRadius: '12px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.8rem', fontWeight: 700 }}>
+                  💬 Đang phản hồi...
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Prompts options */}
+          {/* Quick Prompts Options */}
           <div style={{
-            padding: '0.5rem 1rem',
-            borderTop: '1px solid var(--border-glass)',
-            backgroundColor: 'rgba(0,0,0,0.1)',
+            padding: '0.5rem 0.75rem',
+            borderTop: '1px solid #e2e8f0',
+            backgroundColor: '#ffffff',
             display: 'flex',
             gap: '0.4rem',
             overflowX: 'auto',
@@ -1498,28 +1056,26 @@ export default function Chatbot() {
             flexShrink: 0
           }}>
             {[
-              { label: '⚡ Tư vấn PC theo nhu cầu', text: 'Tư vấn nhu cầu' },
-              { label: '🖥️ Màn hình', text: 'Tìm màn hình chơi game 144Hz' },
-              { label: '📦 Bảo hành', text: 'Chính sách bảo hành và đổi trả như thế nào?' },
-              { label: '💳 Trả góp', text: 'Cửa hàng có hỗ trợ mua trả góp không?' }
+              { label: '🎧 Gặp NV CSKH', action: () => setChatMode('cskh') },
+              { label: '⚡ Tư vấn PC', action: () => handleSend('Tư vấn nhu cầu') },
+              { label: '📦 Chính sách bảo hành', action: () => handleSend('Chính sách bảo hành và đổi trả như thế nào?') },
+              { label: '💳 Trả góp', action: () => handleSend('Cửa hàng có hỗ trợ mua trả góp không?') }
             ].map((p, idx) => (
               <button
                 key={idx}
-                onClick={() => handleSend(p.text)}
+                onClick={p.action}
                 style={{
                   padding: '0.35rem 0.75rem',
-                  fontSize: '0.72rem',
+                  fontSize: '0.73rem',
                   borderRadius: '20px',
-                  border: '1px solid var(--border-glass)',
-                  backgroundColor: 'rgba(255,255,255,0.02)',
-                  color: 'var(--text-secondary)',
+                  border: '1.5px solid #bfdbfe',
+                  backgroundColor: '#eff6ff',
+                  color: '#2563eb',
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  fontFamily: 'var(--font-sans)',
-                  transition: 'all 0.2s',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  transition: 'all 0.15s'
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = '#fff'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-glass)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
               >
                 {p.label}
               </button>
@@ -1530,49 +1086,47 @@ export default function Chatbot() {
           <form
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
             style={{
-              padding: '1rem',
-              borderTop: '1px solid var(--border-glass)',
+              padding: '0.75rem 0.85rem',
+              borderTop: '1px solid #cbd5e1',
               display: 'flex',
               gap: '0.5rem',
               alignItems: 'center',
-              backgroundColor: 'rgba(0,0,0,0.15)'
+              backgroundColor: '#ffffff'
             }}
           >
             <input
               type="text"
-              placeholder="Nhập nội dung tin nhắn..."
+              placeholder={chatMode === 'cskh' ? "Nhắn tin trực tiếp với NV CSKH..." : "Nhập nội dung tin nhắn..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               style={{
                 flex: 1,
-                padding: '0.5rem 1rem',
-                backgroundColor: 'rgba(255,255,255,0.035)',
-                border: '1px solid var(--border-glass)',
-                borderRadius: '20px',
-                color: '#fff',
+                padding: '0.55rem 0.85rem',
+                backgroundColor: '#f8fafc',
+                border: '1.5px solid #cbd5e1',
+                borderRadius: '12px',
+                color: '#0f172a',
                 fontSize: '0.85rem',
+                fontWeight: 600,
                 outline: 'none'
               }}
             />
             <button
               type="submit"
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--primary)',
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                backgroundColor: '#2563eb',
                 border: 'none',
-                color: '#fff',
+                color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'opacity 0.2s'
+                cursor: 'pointer'
               }}
-              onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
-              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
-              <Send size={15} />
+              <Send size={16} />
             </button>
           </form>
         </div>
