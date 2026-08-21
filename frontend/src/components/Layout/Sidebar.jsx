@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar() {
-  const { user, logout, isCEO, isSales, isSalesManager, isWarehouse, isWarehouseManager, isAssembly, isHR, isAccountant, isPurchasing, isAdmin } = useAuth();
+  const { user, logout, switchRole, isCEO, isSales, isSalesManager, isWarehouse, isWarehouseManager, isAssembly, isHR, isAccountant, isPurchasing, isAdmin } = useAuth();
   const { purchaseOrders = [], inventory = [], orders = [], payrolls = [], customNotifs = [], receipts = [], returnRequests = [], assemblyJobs = [], leaveRequests = [] } = useERP() || {};
   const isCskh = user?.role === 'CSKH';
   const isDelivery = user?.role === 'DELIVERY';
@@ -58,6 +58,7 @@ export default function Sidebar() {
     { tab: 'overview', label: 'Tổng Quan Quản Trị' },
     { tab: 'users', label: 'Tài Khoản & Người Dùng' },
     { tab: 'rbac', label: 'Ma Trận Phân Quyền (RBAC)' },
+    { tab: 'suppliers', label: 'Đối Tác & Nhà Cung Cấp' },
     { tab: 'audit', label: 'Nhật Ký Kiểm Toán' },
     { tab: 'settings', label: 'Cấu Hình & Sao Lưu' }
   ];
@@ -125,6 +126,28 @@ export default function Sidebar() {
   const pendingLeaveApproval = (leaveRequests || []).filter(l => l && (l.status === 'PENDING_CEO' || l.status === 'PENDING')).length;
   const pendingCeoApprovals = pendingQuotedPOs + pendingPayrollApproval + pendingLeaveApproval;
   const pendingQaCount = (purchaseOrders || []).filter(p => p && ['CONFIRMED_BY_SUPPLIER', 'PO', 'APPROVED', 'PENDING_QA', 'SHIPPED', 'DELIVERED'].includes(p.status)).length;
+
+  
+  const handleQuickSwitch = (roleKey) => {
+    if (!switchRole) return;
+    switchRole(roleKey);
+    const ROLE_ROUTES = {
+      'ceo': '/admin/dashboard',
+      'sales': '/admin/sales',
+      'sales_manager': '/admin/sales',
+      'warehouse': '/admin/warehouse',
+      'warehouse_manager': '/admin/warehouse',
+      'purchasing': '/admin/purchasing',
+      'qc': '/admin/quality-control',
+      'assembly': '/admin/assembly',
+      'hr': '/admin/hr',
+      'accounting': '/admin/accounting',
+      'cskh': '/admin/cskh',
+      'delivery': '/admin/delivery',
+      'admin': '/admin/system?tab=overview'
+    };
+    navigate(ROLE_ROUTES[roleKey] || '/admin/dashboard');
+  };
 
   const handleLogout = () => {
     logout();
@@ -1169,6 +1192,70 @@ export default function Sidebar() {
         gap: '0.75rem',
         backgroundColor: '#f8fafc'
       }}>
+                {/* Quick Role Switcher for Admin / Any role returning to Admin */}
+        {isAdmin ? (
+          <div style={{ backgroundColor: '#eff6ff', padding: '0.6rem 0.65rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+              Đăng nhập với vai trò:
+            </label>
+            <select
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleQuickSwitch(e.target.value);
+                }
+              }}
+              defaultValue=""
+              style={{
+                width: '100%',
+                height: '32px',
+                padding: '0 0.4rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                border: '1px solid #93c5fd',
+                borderRadius: '6px',
+                backgroundColor: '#ffffff',
+                color: '#0f172a',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value="" disabled>-- Chọn vai trò quản lý --</option>
+              <option value="ceo">Ban Giám Đốc</option>
+              <option value="sales_manager">Quản Lý Bán Hàng</option>
+              <option value="sales">Nhân Viên Bán Hàng</option>
+              <option value="warehouse_manager">Quản Lý Kho</option>
+              <option value="warehouse">Thủ Kho</option>
+              <option value="purchasing">Nhân Viên Mua Hàng</option>
+              <option value="qc">Kiểm Định Chất Lượng</option>
+              <option value="assembly">Kỹ Thuật Lắp Ráp</option>
+              <option value="hr">Quản Lý Nhân Sự</option>
+              <option value="accounting">Kế Toán Trưởng</option>
+              <option value="cskh">Chăm Sóc Khách Hàng</option>
+              <option value="delivery">Nhân Viên Giao Hàng</option>
+            </select>
+          </div>
+        ) : (
+          <div style={{ backgroundColor: '#f1f5f9', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center' }}>
+            <button
+              onClick={() => handleQuickSwitch('admin')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#2563eb',
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem'
+              }}
+              title="Quay lại quyền Quản Trị Hệ Thống"
+            >
+              Quay lại quyền Quản Trị Hệ Thống
+            </button>
+          </div>
+        )}
+
         {/* User Card */}
         <div style={{
           display: 'flex',

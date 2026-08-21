@@ -3,6 +3,7 @@ const router = express.Router();
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const {
   getSuppliers,
+  createSupplier,
   getPurchasingProducts,
   getPurchaseOrders,
   createPurchaseOrder,
@@ -14,6 +15,7 @@ const {
 
 // @route   GET /api/v1/purchasing/suppliers
 router.get('/suppliers', authMiddleware(), getSuppliers);
+router.post('/suppliers', authMiddleware(['ADMIN', 'CEO']), createSupplier);
 
 // @route   GET /api/v1/purchasing/products
 router.get('/products', authMiddleware(), getPurchasingProducts);

@@ -157,10 +157,10 @@ export default function ActorNotificationBar() {
 
     bannerTitle = 'Trung Tâm Nhiệm Vụ Giao Vận (Delivery Task Center)';
     bannerDesc = myAssignedOrders.length > 0
-      ? `🚚 THÔNG BÁO MỚI: Bạn có ${myAssignedOrders.length} đơn hàng mới đã được Thủ kho bàn giao, sẵn sàng xuất phát đi giao và thu tiền COD!`
+      ? `Thông báo: Bạn có ${myAssignedOrders.length} đơn hàng mới đã được Thủ kho bàn giao, sẵn sàng xuất phát đi giao và thu tiền COD.`
       : readyAtWarehouse.length > 0
-        ? `📦 Có ${readyAtWarehouse.length} đơn hàng đã đóng gói xong tại kho đang chờ Shipper nhận chuyến!`
-        : 'Hiện tại tất cả các chuyến giao hàng của bạn đã hoàn tất. Không có đơn tồn đọng!';
+        ? `Có ${readyAtWarehouse.length} đơn hàng đã đóng gói xong tại kho đang chờ Shipper nhận chuyến.`
+        : 'Hiện tại tất cả các chuyến giao hàng của bạn đã hoàn tất. Không có đơn tồn đọng.';
     actionText = 'Xem Chuyến Giao Ngay';
     actionPath = '/admin/delivery?tab=pending';
     badgeText = `${totalDeliveryTasks} Chuyến Cần Giao`;

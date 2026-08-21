@@ -333,7 +333,43 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
+  
+  const switchRole = (roleKey) => {
+    if (!roleKey) return null;
+    const key = String(roleKey).toLowerCase();
+    
+    const ROLE_MAP = {
+      'ceo': 'ceo',
+      'sales': 'sales',
+      'sales_manager': 'sales_manager',
+      'warehouse': 'warehouse',
+      'warehouse_manager': 'warehouse_manager',
+      'purchasing': 'purchasing',
+      'assembly': 'assembly',
+      'hr': 'hr',
+      'accountant': 'accounting',
+      'accounting': 'accounting',
+      'qc': 'qc',
+      'qa': 'qc',
+      'cskh': 'cskh',
+      'delivery': 'delivery',
+      'admin': 'admin'
+    };
+
+    const targetKey = ROLE_MAP[key] || key;
+    const mock = MOCK_USERS[targetKey] || Object.values(MOCK_USERS).find(m => m.user.role.toLowerCase() === key || m.user.username.toLowerCase() === key);
+    
+    if (mock) {
+      localStorage.setItem('erp_token', mock.token);
+      localStorage.setItem('erp_user', JSON.stringify(mock.user));
+      setUser(mock.user);
+      return mock.user;
+    }
+    return null;
+  };
+
   const value = {
+    switchRole,
     user,
     loading,
     login,

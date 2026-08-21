@@ -29,7 +29,8 @@ services:
       - "5000:5000"
     # Tải biến môi trường từ tệp tin cục bộ .env để lấy GEMINI_API_KEY, v.v.
     env_file:
-      - ./backend/.env
+      - path: ./backend/.env
+        required: false
     # Ghi đè DATABASE_URL để kết nối tới DB container thay vì localhost của host machine
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/kltn_erp?schema=public

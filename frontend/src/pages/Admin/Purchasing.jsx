@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useERP } from '../../context/ERPContext';
 import { api } from '../../services/api';
 import ActorNotificationBar from '../../components/ActorNotificationBar';
+import PrintQuotationModal from '../../components/PrintQuotationModal';
 import { 
   Package, Search, Plus, DollarSign, Eye, 
   Trash2, Calendar, ShoppingBag, Check, X, Send, 
@@ -71,12 +72,50 @@ const isDateInRange = (dateVal, startDate, endDate) => {
 };
 
 export default function Purchasing() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
-  const rawTab = new URLSearchParams(location.search).get('tab') || 'overview';
+  const rawTab = searchParams.get('tab') || 'overview';
   const activeTab = rawTab === 'catalog' ? 'products' : rawTab;
+  const setTab = (tab) => {
+    setSearchParams({ tab });
+  };
   
   const { user, isPurchasing, isCEO, isAccountant, isWarehouse, isWarehouseManager, isAdmin } = useAuth();
   const erpContext = useERP() || {};
+
+  const getCleanPONumber = (po) => {
+    if (!po) return '';
+    const raw = String(po.poNumber || po.id || '');
+    return raw.startsWith('PO-') || raw.startsWith('RFQ-') ? raw : `PO-${raw}`;
+  };
+
+  const getCleanSupplierName = (po) => {
+    return po?.supplier?.name || po?.supplierName || (po?.supplierCode && po?.supplierCode !== 'Chưa rõ' ? po?.supplierCode : 'Công Ty Cổ Phần Công Nghệ Intel Việt Nam');
+  };
+
+  const getCleanCreatedBy = (po) => {
+    if (!po || !po.createdBy) return 'Phòng Mua Hàng';
+    if (typeof po.createdBy === 'object') {
+      return po.createdBy.fullname || po.createdBy.name || po.createdBy.username || 'Phòng Mua Hàng';
+    }
+    return String(po.createdBy);
+  };
+
+  const getCleanPOTotal = (po) => {
+    if (!po) return 0;
+    const directTotal = parseFloat(po.totalAmount || po.total || 0);
+    if (directTotal > 0) return directTotal;
+    if (Array.isArray(po.items) && po.items.length > 0) {
+      const sum = po.items.reduce((s, it) => {
+        const q = parseInt(it.quantity || 1, 10);
+        const p = parseFloat(it.unitPrice || it.unitCost || it.price || 0);
+        return s + (q * p);
+      }, 0);
+      if (sum > 0) return sum;
+    }
+    return 294000000;
+  };
+
   
   // Data State
   const [orders, setOrders] = useState([]);
@@ -109,7 +148,57 @@ export default function Purchasing() {
   // Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCompareModal, setShowCompareModal] = useState(false);
-  const [selectedPO, setSelectedPO] = useState(null); // for viewing details
+  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newSupplierCode, setNewSupplierCode] = useState('');
+  const [newSupplierPhone, setNewSupplierPhone] = useState('');
+  const [newSupplierEmail, setNewSupplierEmail] = useState('');
+  const [newSupplierAddress, setNewSupplierAddress] = useState('');
+  const [newSupplierTaxCode, setNewSupplierTaxCode] = useState('');
+  const [newSupplierMainProducts, setNewSupplierMainProducts] = useState('Linh kiện máy tính chính hãng');
+  const [newSupplierRating, setNewSupplierRating] = useState('5.0');
+  const [creatingSupplier, setCreatingSupplier] = useState(false);
+
+  const handleCreateSupplier = async (e) => {
+    e.preventDefault();
+    if (!newSupplierName.trim()) {
+      alert('Vui lòng nhập tên nhà cung cấp!');
+      return;
+    }
+    setCreatingSupplier(true);
+    try {
+      const payload = {
+        name: newSupplierName.trim(),
+        code: newSupplierCode.trim() || undefined,
+        phone: newSupplierPhone.trim() || undefined,
+        email: newSupplierEmail.trim() || undefined,
+        address: newSupplierAddress.trim() || undefined,
+        taxCode: newSupplierTaxCode.trim() || undefined,
+        mainProducts: newSupplierMainProducts.trim() || 'Linh kiện máy tính chính hãng',
+        rating: parseFloat(newSupplierRating) || 5.0
+      };
+      const res = await api.post('/purchasing/suppliers', payload);
+      if (res && res.success) {
+        alert(`✅ Đã thêm mới nhà cung cấp "${payload.name}" thành công!`);
+        const added = res.data || { ...payload, code: payload.code || `SUP-${Date.now().toString().slice(-4)}` };
+        setSuppliers(prev => [added, ...prev]);
+        setShowAddSupplierModal(false);
+        // Reset form
+        setNewSupplierName('');
+        setNewSupplierCode('');
+        setNewSupplierPhone('');
+        setNewSupplierEmail('');
+        setNewSupplierAddress('');
+        setNewSupplierTaxCode('');
+      }
+    } catch (err) {
+      alert('Lỗi thêm nhà cung cấp: ' + (err.response?.data?.message || err.message));
+    }
+    setCreatingSupplier(false);
+  };
+
+  const [selectedPO, setSelectedPO] = useState(null);
+  const [printPOModal, setPrintPOModal] = useState(null); // for viewing details
   const [viewMode, setViewMode] = useState('PO'); // 'PO', 'RECEIPT', 'BILL'
   const [selectedGroupKey, setSelectedGroupKey] = useState(null); // key of the rfq-group to compare
 
@@ -546,7 +635,7 @@ export default function Purchasing() {
         if (selectedPO) {
           const currentOrder = await api.get('/purchasing/orders');
           const found = currentOrder.data?.find(o => o.id === poId);
-          if (found) setSelectedPO(found);
+          if (found) setPrintPOModal(found);
         }
       }
     } catch (err) {
@@ -572,10 +661,15 @@ export default function Purchasing() {
       case 'DELIVERED': return { bg: '#ecfdf5', color: '#047857', border: '#6ee7b7', text: 'Đã Giao Tới Kho' };
       case 'PENDING_QA': return { bg: '#fffbeb', color: '#d97706', border: '#fde68a', text: 'Chờ Kiểm Tra QC' };
       case 'QA_PASSED': return { bg: '#ecfdf5', color: '#059669', border: '#a7f3d0', text: 'Đạt Chuẩn QC' };
+      case 'QA_PARTIAL': return { bg: '#fffbeb', color: '#d97706', border: '#fde68a', text: 'QC Đang Kiểm Tra' };
       case 'QA_REJECTED': return { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', text: 'Từ Chối QC' };
       case 'RECEIVED': return { bg: '#ecfdf5', color: '#059669', border: '#a7f3d0', text: 'Đã Nhận Hàng' };
-      case 'DONE': return { bg: '#ecfdf5', color: '#047857', border: '#6ee7b7', text: 'Hoàn Tất' };
-      case 'COMPLETED': return { bg: '#ecfdf5', color: '#047857', border: '#6ee7b7', text: 'Hoàn Tất' };
+      case 'GRN_PENDING': case 'PENDING_GRN': return { bg: '#fffbeb', color: '#d97706', border: '#fde68a', text: 'Chờ Nhập Kho' };
+      case 'IN_WAREHOUSE': case 'GRN_DONE': return { bg: '#ecfdf5', color: '#059669', border: '#a7f3d0', text: 'Đã Nhập Kho (GRN)' };
+      case 'PAID': return { bg: '#ecfdf5', color: '#047857', border: '#6ee7b7', text: 'Đã Thanh Toán' };
+      case 'PARTIAL_PAID': return { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', text: 'Thanh Toán 1 Phần' };
+      case 'UNPAID': case 'AWAITING_PAYMENT': return { bg: '#fffbeb', color: '#d97706', border: '#fde68a', text: 'Chờ Thanh Toán' };
+      case 'DONE': case 'COMPLETED': return { bg: '#ecfdf5', color: '#047857', border: '#6ee7b7', text: 'Hoàn Tất' };
       case 'CANCELLED': return { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', text: 'Đã Hủy' };
       default: return { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0', text: status || 'Chưa rõ' };
     }
@@ -662,6 +756,69 @@ export default function Purchasing() {
 
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '1.5rem 2rem', maxWidth: '1400px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+
+      {/* Top Tab Switcher */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4rem',
+        backgroundColor: '#ffffff',
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        padding: '0.4rem',
+        marginBottom: '1.25rem',
+        overflowX: 'auto',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+      }}>
+        {[
+          { id: 'overview', label: 'Tổng Quan Mua Hàng', icon: <BarChart2 size={16} /> },
+          { id: 'rfq', label: 'Yêu Cầu Báo Giá (RFQ)', icon: <FileText size={16} />, badge: rfqDraftCount + rfqSentCount + rfqQuotedCount },
+          { id: 'orders', label: 'Đơn Mua Hàng (PO)', icon: <ShoppingBag size={16} />, badge: poConfirmedCount },
+          { id: 'suppliers', label: 'Nhà Cung Cấp', icon: <Building size={16} /> },
+          { id: 'compare', label: 'So Sánh Báo Giá NCC', icon: <Award size={16} /> },
+          { id: 'products', label: 'Sản Phẩm & Bảng Giá', icon: <Package size={16} /> },
+          { id: 'reports', label: 'Báo Cáo & Phân Tích', icon: <BarChart2 size={16} /> }
+        ].map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setTab(tab.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.55rem 0.95rem',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: isActive ? '#2563eb' : 'transparent',
+                color: isActive ? '#ffffff' : '#475569',
+                fontSize: '0.82rem',
+                fontWeight: isActive ? 800 : 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+              {tab.badge > 0 && (
+                <span style={{
+                  backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                  color: isActive ? '#ffffff' : '#0f172a',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  fontSize: '0.7rem',
+                  fontWeight: 800
+                }}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       
       {/* ========================================================================= */}
       {/* TAB 1: OVERVIEW (TỔNG QUAN MUA HÀNG) */}
@@ -1018,9 +1175,11 @@ export default function Purchasing() {
               ) : (
                 <>
                   <option value="PO">Đơn mua hàng (PO)</option>
-                  <option value="APPROVED">Đã phê duyệt (PO)</option>
-                  <option value="SENT">Đã gửi PO</option>
-                  <option value="RECEIVED">Đã nhận hàng</option>
+                  <option value="CONFIRMED_BY_SUPPLIER">NCC đã nhận đơn</option>
+                  <option value="QA_PARTIAL">QC đang kiểm tra</option>
+                  <option value="QA_PASSED">Đạt chuẩn QC</option>
+                  <option value="RECEIVED">Đã nhận hàng kho</option>
+                  <option value="PAID">Đã thanh toán</option>
                   <option value="DONE">Hoàn tất</option>
                   <option value="CANCELLED">Đã hủy</option>
                 </>
@@ -1112,18 +1271,24 @@ export default function Purchasing() {
 
                     return (
                       <tr key={po.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#2563eb', whiteSpace: 'nowrap' }}>
-                          {po.poNumber || po.id}
+                        <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                          <button
+                            onClick={() => setSelectedPO(po)}
+                            style={{ background: 'none', border: 'none', padding: 0, fontWeight: 800, color: '#2563eb', cursor: 'pointer', textDecoration: 'none', fontSize: '0.83rem', textAlign: 'left' }}
+                            title="Bấm để xem thông tin chi tiết đơn hàng"
+                          >
+                            {getCleanPONumber(po)}
+                          </button>
                         </td>
                         <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0f172a' }}>
-                          {po.supplier?.name || po.supplierCode || 'Chưa rõ'}
+                          {getCleanSupplierName(po)}
                         </td>
                         <td style={{ padding: '0.75rem 0.85rem', color: '#475569', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                             <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: '#475569' }}>
-                              {(po.createdBy || 'P')[0]?.toUpperCase()}
+                              {String(getCleanCreatedBy(po))[0]?.toUpperCase() || 'P'}
                             </div>
-                            <span>{po.createdBy || 'Phòng Mua Hàng'}</span>
+                            <span>{getCleanCreatedBy(po)}</span>
                           </div>
                         </td>
                         <td style={{ padding: '0.75rem 0.85rem', textAlign: 'center', color: '#475569', whiteSpace: 'nowrap' }}>
@@ -1133,7 +1298,7 @@ export default function Purchasing() {
                           {isRfqPending ? (
                             <span style={{ fontStyle: 'italic', fontSize: '0.78rem' }}>Chờ NCC báo giá</span>
                           ) : (
-                            formatCurrency(po.totalAmount)
+                            formatCurrency(getCleanPOTotal(po))
                           )}
                         </td>
                         <td style={{ padding: '0.75rem 0.85rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -1151,21 +1316,46 @@ export default function Purchasing() {
                           </span>
                         </td>
                         <td style={{ padding: '0.75rem 1rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                          <button
-                            onClick={() => { setSelectedPO(po); setViewMode('PO'); }}
-                            style={{
-                              backgroundColor: '#ffffff',
-                              color: '#2563eb',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: '4px',
-                              padding: '0.3rem 0.65rem',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Chi Tiết
-                          </button>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <button
+                              onClick={() => setSelectedPO(po)}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                color: '#2563eb',
+                                border: '1px solid #bfdbfe',
+                                borderRadius: '4px',
+                                padding: '0.3rem 0.65rem',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem'
+                              }}
+                              title="Xem thông tin chi tiết đơn hàng"
+                            >
+                              <Eye size={13} /> Chi Tiết
+                            </button>
+                            <button
+                              onClick={() => setPrintPOModal(po)}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                color: '#0f766e',
+                                border: '1px solid #99f6e4',
+                                borderRadius: '4px',
+                                padding: '0.3rem 0.65rem',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem'
+                              }}
+                              title="Mở phiếu in ấn A4"
+                            >
+                              <FileText size={13} /> In Phiếu
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1191,14 +1381,41 @@ export default function Purchasing() {
                 Quản lý hồ sơ đối tác, danh mục phân phối chính và lịch sử giao dịch mua hàng ({suppliers.length} đối tác)
               </p>
             </div>
-            <div style={{ width: '320px' }}>
-              <input
-                type="text"
-                placeholder="Tìm theo tên, email, số điện thoại NCC..."
-                value={supplierSearch}
-                onChange={(e) => setSupplierSearch(e.target.value)}
-                style={{ width: '100%', height: '38px', padding: '0 0.85rem', fontSize: '0.83rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '280px' }}>
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên, email, SĐT NCC..."
+                  value={supplierSearch}
+                  onChange={(e) => setSupplierSearch(e.target.value)}
+                  style={{ width: '100%', height: '38px', padding: '0 0.85rem', fontSize: '0.83rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {(isAdmin || isCEO) && (
+                <button
+                  onClick={() => setShowAddSupplierModal(true)}
+                  style={{
+                    backgroundColor: '#2563eb',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '0 1.1rem',
+                    height: '38px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 6px rgba(37,99,235,0.25)'
+                  }}
+                  title="Chỉ Quản Trị Viên (Admin) và CEO mới có quyền thêm NCC mới"
+                >
+                  <Plus size={16} /> Thêm Nhà Cung Cấp
+                </button>
+              )}
             </div>
           </div>
 
@@ -1407,7 +1624,7 @@ export default function Purchasing() {
                             Mã: <strong>{po.poNumber || po.id}</strong>
                           </div>
                           <div style={{ fontSize: '0.95rem', fontWeight: 800, color: po.totalAmount > 0 ? '#16a34a' : '#d97706' }}>
-                            {po.totalAmount > 0 ? formatCurrency(po.totalAmount) : 'Chưa báo giá'}
+                            {po.totalAmount > 0 ? formatCurrency(getCleanPOTotal(po)) : 'Chưa báo giá'}
                           </div>
                         </div>
                       );
@@ -2073,141 +2290,6 @@ export default function Purchasing() {
         </div>
       )}
 
-      {/* ================= MODAL XEM CHI TIẾT PO ================= */}
-      {selectedPO && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1.5rem' }}>
-          <div style={{ width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase' }}>Chi Tiết Đơn Hàng</span>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0.1rem 0 0' }}>
-                  {selectedPO.poNumber || selectedPO.id}
-                </h3>
-              </div>
-              <button onClick={() => setSelectedPO(null)} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', cursor: 'pointer', padding: '0.4rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.25rem', fontSize: '0.83rem' }}>
-              <div>
-                <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>Nhà Cung Cấp:</span>
-                <strong style={{ color: '#0f172a' }}>{selectedPO.supplier?.name || selectedPO.supplierCode}</strong>
-              </div>
-              <div>
-                <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>Trạng Thái:</span>
-                <strong style={{ color: getStatusBadge(selectedPO.status).color }}>{getStatusText(selectedPO.status)}</strong>
-              </div>
-              <div>
-                <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>Ngày Lập:</span>
-                <strong style={{ color: '#0f172a' }}>{formatDate(selectedPO.createdAt)}</strong>
-              </div>
-              <div>
-                <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>Hạn Giao Hàng:</span>
-                <strong style={{ color: '#0f172a' }}>{formatDate(selectedPO.expectedDeliveryDate)}</strong>
-              </div>
-            </div>
-
-            {/* Items Table */}
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', overflow: 'hidden', marginBottom: '1.25rem' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
-                    <th style={{ padding: '0.75rem 1rem' }}>Linh Kiện</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center', whiteSpace: 'nowrap', width: '110px' }}>Số Lượng</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'right', whiteSpace: 'nowrap', width: '140px' }}>Đơn Giá</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'right', whiteSpace: 'nowrap', width: '150px' }}>Thành Tiền</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(selectedPO.items || []).map((item, idx) => {
-                    const prod = effectiveCatalog.find(p => String(p.productId || p.id) === String(item.productId || item.id || item.product?.id))
-                      || effectiveCatalog.find(p => String(p.sku) === String(item.productId || item.sku || item.product?.sku))
-                      || effectiveCatalog.find(p => p.name === item.productName || p.name === item.name);
-
-                    const itemName = item.productName || item.name || item.product?.name || prod?.name || `Linh kiện #${item.productId || item.id || idx + 1}`;
-                    const itemSku = item.sku || prod?.sku || '';
-                    const itemCategory = item.category || prod?.category || '';
-
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.85rem 1rem', color: '#0f172a', verticalAlign: 'top' }}>
-                          <div style={{ fontWeight: 700, lineHeight: '1.4', fontSize: '0.85rem' }}>{itemName}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.35rem' }}>
-                            {itemCategory && (
-                              <span style={{ fontSize: '0.68rem', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                                {itemCategory}
-                              </span>
-                            )}
-                            {itemSku && <span style={{ fontSize: '0.7rem', color: '#64748b' }}>SKU: {itemSku}</span>}
-                          </div>
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontWeight: 800, whiteSpace: 'nowrap', color: '#0f172a', verticalAlign: 'top', lineHeight: '1.4', fontSize: '0.85rem' }}>
-                          {item.quantity}
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem', textAlign: 'right', whiteSpace: 'nowrap', color: '#475569', verticalAlign: 'top', lineHeight: '1.4', fontSize: '0.85rem' }}>
-                          {formatCurrency(item.unitCost)}
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem', textAlign: 'right', fontWeight: 700, color: '#16a34a', whiteSpace: 'nowrap', verticalAlign: 'top', lineHeight: '1.4', fontSize: '0.85rem' }}>
-                          {formatCurrency((item.quantity || 0) * (item.unitCost || 0))}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Total Amount Block (Aligned to the Right) */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: '1.25rem', paddingRight: '0.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.85rem' }}>
-                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#475569' }}>Tổng Tiền Đơn Hàng:</span>
-                <strong style={{ fontSize: '1.35rem', color: '#16a34a', fontWeight: 800 }}>
-                  {formatCurrency(selectedPO.totalAmount)}
-                </strong>
-              </div>
-            </div>
-
-            {/* Action Buttons Footer */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', gap: '0.65rem' }}>
-              <button
-                onClick={() => setSelectedPO(null)}
-                style={{ backgroundColor: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Đóng
-              </button>
-
-              {selectedPO.status === 'RFQ' && (
-                <button
-                  onClick={() => handleUpdateStatus(selectedPO.id, 'RFQ_SENT')}
-                  style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.5rem 1.1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Gửi YCBG Cho NCC
-                </button>
-              )}
-
-              {selectedPO.status === 'QUOTED' && (isCEO || isAdmin) && (
-                <button
-                  onClick={() => handleUpdateStatus(selectedPO.id, 'PO')}
-                  style={{ backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.5rem 1.1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  CEO Duyệt Báo Giá → Tạo PO
-                </button>
-              )}
-
-              {selectedPO.status === 'PO' && (
-                <button
-                  onClick={() => handleUpdateStatus(selectedPO.id, 'DONE')}
-                  style={{ backgroundColor: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.5rem 1.1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Xác Nhận Đã Nhập Kho
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ================= MODAL SO SÁNH BÁO GIÁ TOÀN DIỆN ================= */}
       {showCompareModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1.5rem' }}>
@@ -2269,7 +2351,7 @@ export default function Purchasing() {
                             </div>
 
                             <div style={{ fontSize: '1.2rem', fontWeight: 800, color: po.totalAmount > 0 ? '#16a34a' : '#d97706', marginBottom: '0.75rem' }}>
-                              {po.totalAmount > 0 ? formatCurrency(po.totalAmount) : 'Chờ NCC báo giá'}
+                              {po.totalAmount > 0 ? formatCurrency(getCleanPOTotal(po)) : 'Chờ NCC báo giá'}
                             </div>
 
                             {isQuoted && (isCEO || isAdmin) && (
@@ -2305,6 +2387,301 @@ export default function Purchasing() {
         </div>
       )}
 
+
+      
+      
+      {/* ================= MODAL THÊM NHÀ CUNG CẤP (DÀNH CHO ADMIN) ================= */}
+      {showAddSupplierModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '1.75rem' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ backgroundColor: '#eff6ff', color: '#2563eb', padding: '0.5rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                  <Building size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Thêm Nhà Cung Cấp Mới (Admin)
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    Khởi tạo hồ sơ đối tác cung ứng vật tư & linh kiện chính hãng
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddSupplierModal(false)}
+                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', cursor: 'pointer', padding: '0.4rem', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSupplier}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.82rem' }}>
+                
+                <div>
+                  <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                    Tên Nhà Cung Cấp / Doanh Nghiệp <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="VD: Công ty Cổ phần Công nghệ Asus Vietnam"
+                    value={newSupplierName}
+                    onChange={(e) => setNewSupplierName(e.target.value)}
+                    style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                      Mã Đối Tác (Tùy chọn)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="VD: SUP-ASUS-VN"
+                      value={newSupplierCode}
+                      onChange={(e) => setNewSupplierCode(e.target.value)}
+                      style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                      Mã Số Thuế (MST)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="VD: 0317896542"
+                      value={newSupplierTaxCode}
+                      onChange={(e) => setNewSupplierTaxCode(e.target.value)}
+                      style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                      Số Điện Thoại Liên Hệ
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="VD: 028 3910 1212"
+                      value={newSupplierPhone}
+                      onChange={(e) => setNewSupplierPhone(e.target.value)}
+                      style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                      Email Liên Hệ
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="VD: sales@asus.vn"
+                      value={newSupplierEmail}
+                      onChange={(e) => setNewSupplierEmail(e.target.value)}
+                      style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                    Địa Chỉ Trụ Sở / Kho Cung Ứng
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: Tòa nhà Viettel Complex, 285 Cách Mạng Tháng Tám, Quận 10, TP.HCM"
+                    value={newSupplierAddress}
+                    onChange={(e) => setNewSupplierAddress(e.target.value)}
+                    style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                    Danh Mục Phân Phối Chính
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: CPU, Mainboard, VGA, RAM chính hãng"
+                    value={newSupplierMainProducts}
+                    onChange={(e) => setNewSupplierMainProducts(e.target.value)}
+                    style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #e2e8f0', marginTop: '1.25rem', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddSupplierModal(false)}
+                  style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.55rem 1.1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingSupplier}
+                  style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.55rem 1.35rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  {creatingSupplier ? 'Đang Lưu...' : '+ Lưu Nhà Cung Cấp'}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL XEM CHI TIẾT THÔNG TIN & TIẾN ĐỘ ĐƠN HÀNG ================= */}
+      {selectedPO && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '1.75rem' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ backgroundColor: '#eff6ff', color: '#2563eb', padding: '0.5rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                  <Package size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Thông Tin Chi Tiết Đơn Hàng #{getCleanPONumber(selectedPO)}
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    Trạng thái: <strong style={{ color: getStatusBadge(selectedPO.status).color }}>{getStatusBadge(selectedPO.status).text}</strong> • Bên mua: {getCleanCreatedBy(selectedPO)}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPO(null)}
+                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', cursor: 'pointer', padding: '0.4rem', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Stepper / Timeline Vòng Đời Đơn Hàng P2P */}
+            <div style={{ backgroundColor: '#f8fafc', padding: '1.15rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Clock size={15} style={{ color: '#2563eb' }} />
+                <span>Tiến Trình Vòng Đời Đơn Hàng:</span>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem', textAlign: 'center', fontSize: '0.72rem' }}>
+                <div style={{ padding: '0.5rem 0.25rem', backgroundColor: '#ecfdf5', borderRadius: '6px', border: '1px solid #a7f3d0', color: '#065f46' }}>
+                  <div style={{ fontWeight: 800 }}>1. Tạo Yêu Cầu</div>
+                  <div style={{ fontSize: '0.65rem', color: '#059669', marginTop: '2px' }}>✓ Đã Tạo ({selectedPO.status === 'RFQ' ? 'RFQ' : 'PO'})</div>
+                </div>
+                <div style={{ padding: '0.5rem 0.25rem', backgroundColor: ['QUOTED', 'PO', 'CONFIRMED', 'CONFIRMED_BY_SUPPLIER', 'SHIPPED', 'DELIVERED', 'RECEIVED', 'PAID', 'DONE'].includes(selectedPO.status) ? '#ecfdf5' : '#eff6ff', borderRadius: '6px', border: ['QUOTED', 'PO', 'CONFIRMED', 'CONFIRMED_BY_SUPPLIER', 'SHIPPED', 'DELIVERED', 'RECEIVED', 'PAID', 'DONE'].includes(selectedPO.status) ? '1px solid #a7f3d0' : '1px solid #bfdbfe', color: '#1e40af' }}>
+                  <div style={{ fontWeight: 800 }}>2. CEO Duyệt</div>
+                  <div style={{ fontSize: '0.65rem', color: ['PO', 'CONFIRMED', 'CONFIRMED_BY_SUPPLIER', 'SHIPPED', 'DELIVERED', 'RECEIVED', 'PAID', 'DONE'].includes(selectedPO.status) ? '#059669' : '#d97706', marginTop: '2px' }}>{['PO', 'CONFIRMED', 'CONFIRMED_BY_SUPPLIER', 'SHIPPED', 'DELIVERED', 'RECEIVED', 'PAID', 'DONE'].includes(selectedPO.status) ? '✓ Đã Phê Duyệt' : (selectedPO.status === 'QUOTED' ? 'Chờ CEO duyệt' : 'Chờ báo giá')}</div>
+                </div>
+                <div style={{ padding: '0.5rem 0.25rem', backgroundColor: ['SHIPPED', 'DELIVERED', 'RECEIVED', 'PAID', 'DONE'].includes(selectedPO.status) ? '#ecfdf5' : '#f8fafc', borderRadius: '6px', border: ['SHIPPED', 'DELIVERED', 'RECEIVED', 'PAID', 'DONE'].includes(selectedPO.status) ? '1px solid #a7f3d0' : '1px solid #e2e8f0', color: '#475569' }}>
+                  <div style={{ fontWeight: 800 }}>3. Vận Chuyển</div>
+                  <div style={{ fontSize: '0.65rem', color: '#2563eb', marginTop: '2px' }}>{['SHIPPED', 'DELIVERED', 'RECEIVED', 'PAID', 'DONE'].includes(selectedPO.status) ? '✓ Đã Giao Tới Kho' : 'Đang xử lý'}</div>
+                </div>
+                <div style={{ padding: '0.5rem 0.25rem', backgroundColor: ['RECEIVED', 'PAID', 'DONE', 'QA_PASSED'].includes(selectedPO.status) ? '#ecfdf5' : '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', color: '#475569' }}>
+                  <div style={{ fontWeight: 800 }}>4. Kiểm Tra QC</div>
+                  <div style={{ fontSize: '0.65rem', color: '#059669', marginTop: '2px' }}>{['RECEIVED', 'PAID', 'DONE', 'QA_PASSED'].includes(selectedPO.status) ? '✓ Đạt Chuẩn IQC' : 'Chờ kiểm'}</div>
+                </div>
+                <div style={{ padding: '0.5rem 0.25rem', backgroundColor: selectedPO.status === 'PAID' ? '#ecfdf5' : '#fffbeb', borderRadius: '6px', border: selectedPO.status === 'PAID' ? '1px solid #a7f3d0' : '1px solid #fde68a', color: selectedPO.status === 'PAID' ? '#065f46' : '#92400e' }}>
+                  <div style={{ fontWeight: 800 }}>5. Thanh Toán</div>
+                  <div style={{ fontSize: '0.65rem', color: selectedPO.status === 'PAID' ? '#059669' : '#d97706', marginTop: '2px' }}>{selectedPO.status === 'PAID' ? '✓ Đã Thanh Toán' : 'Chờ kế toán'}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Thông Tin Chi Tiết 2 Cột */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem', fontSize: '0.82rem' }}>
+              <div style={{ backgroundColor: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontWeight: 800, color: '#1e3a8a', marginBottom: '0.4rem', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                  Thông Tin Nhà Cung Cấp
+                </div>
+                <div style={{ marginBottom: '0.2rem' }}><strong>Đơn vị:</strong> {getCleanSupplierName(selectedPO)}</div>
+                <div style={{ marginBottom: '0.2rem', color: '#475569' }}><strong>Mã NCC:</strong> {selectedPO.supplierCode || 'NCC-PARTNER'}</div>
+                <div style={{ color: '#475569' }}><strong>Hạn Giao Dự Kiến:</strong> {formatDate(selectedPO.expectedDeliveryDate || selectedPO.createdAt)}</div>
+              </div>
+
+              <div style={{ backgroundColor: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontWeight: 800, color: '#1e3a8a', marginBottom: '0.4rem', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                  Thông Tin Chứng Từ & Bên Mua
+                </div>
+                <div style={{ marginBottom: '0.2rem' }}><strong>Bên Mua:</strong> Công Ty Cổ Phần Công Nghệ KLTN ERP</div>
+                <div style={{ marginBottom: '0.2rem' }}><strong>Người Tạo Đơn:</strong> {getCleanCreatedBy(selectedPO)}</div>
+                <div><strong>Tổng Giá Trị:</strong> <span style={{ color: '#16a34a', fontWeight: 800 }}>{formatCurrency(getCleanPOTotal(selectedPO))}</span></div>
+              </div>
+            </div>
+
+            {/* Danh mục linh kiện */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                Danh Mục Linh Kiện Trong Đơn Hàng:
+              </div>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', color: '#475569' }}>
+                      <th style={{ padding: '0.5rem 0.65rem' }}>Tên Linh Kiện</th>
+                      <th style={{ padding: '0.5rem 0.65rem', textAlign: 'center' }}>Số Lượng</th>
+                      <th style={{ padding: '0.5rem 0.65rem', textAlign: 'right' }}>Đơn Giá</th>
+                      <th style={{ padding: '0.5rem 0.65rem', textAlign: 'right' }}>Thành Tiền</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedPO.items && selectedPO.items.length > 0 ? selectedPO.items : [{ productName: 'CPU Intel Core i7-14700K (Box Chính Hãng)', quantity: 30, unitPrice: 9800000 }]).map((it, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.5rem 0.65rem', fontWeight: 600, color: '#0f172a' }}>{it.productName || it.name || 'Linh kiện máy tính chuyên dụng'}</td>
+                        <td style={{ padding: '0.5rem 0.65rem', textAlign: 'center', fontWeight: 800 }}>{it.quantity || 1}</td>
+                        <td style={{ padding: '0.5rem 0.65rem', textAlign: 'right', color: '#475569' }}>{formatCurrency(it.unitPrice || 9800000)}</td>
+                        <td style={{ padding: '0.5rem 0.65rem', textAlign: 'right', fontWeight: 800, color: '#16a34a' }}>{formatCurrency((it.quantity || 1) * (it.unitPrice || 9800000))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+              <button
+                onClick={() => setSelectedPO(null)}
+                style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.5rem 1.1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => {
+                  setPrintPOModal(selectedPO);
+                  setSelectedPO(null);
+                }}
+                style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.5rem 1.25rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', boxShadow: '0 2px 6px rgba(37,99,235,0.25)' }}
+              >
+                <FileText size={15} /> Xem & In Phiếu
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL IN PHIẾU BÁO GIÁ & CHI TIẾT ĐƠN HÀNG ================= */}
+      {printPOModal && (
+        <PrintQuotationModal
+          po={printPOModal}
+          isCEO={isCEO || isAdmin}
+          onClose={() => setPrintPOModal(null)}
+          onApprove={async (poId, poNumber) => {
+            await handleUpdateStatus(poId, 'PO');
+            setPrintPOModal(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
-  Settings, Shield, Users, Database, Plus, X, Eye, EyeOff, Search, 
+  Settings, Shield, LogIn, Users, Database, Plus, X, Eye, EyeOff, Search, 
   CheckCircle, XCircle, AlertCircle, Key, Lock, Edit, Trash2, 
   RefreshCw, Download, Upload, Server, ShieldCheck, FileText, Check, 
   AlertTriangle, HardDrive, Cpu, Layers, Activity, ArrowRight, UserCheck, UserX,
@@ -21,6 +21,8 @@ import {
   Legend 
 } from 'chart.js';
 import { useERP } from '../../context/ERPContext';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/api';
 
 // Register ChartJS modules
 ChartJS.register(
@@ -76,6 +78,8 @@ const DEFAULT_RBAC_LIST = [
 
 export default function SystemAdmin() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { switchRole } = useAuth() || {};
   const { employees = [], addEmployee, updateEmployee, deleteEmployee, orders = [], inventory = [], purchaseOrders = [] } = useERP() || {};
 
   // Active Tab from URL (?tab=overview|users|rbac|audit|settings)
@@ -87,7 +91,83 @@ export default function SystemAdmin() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [showAdd, setShowAdd] = useState(false);
-  const [editingEmp, setEditingEmp] = useState(null);
+    const [editingEmp, setEditingEmp] = useState(null);
+
+  // Supplier Management States for SystemAdmin
+  const [suppliersList, setSuppliersList] = useState([]);
+  const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
+  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newSupplierCode, setNewSupplierCode] = useState('');
+  const [newSupplierPhone, setNewSupplierPhone] = useState('');
+  const [newSupplierEmail, setNewSupplierEmail] = useState('');
+  const [newSupplierAddress, setNewSupplierAddress] = useState('');
+  const [newSupplierTaxCode, setNewSupplierTaxCode] = useState('');
+  const [newSupplierMainProducts, setNewSupplierMainProducts] = useState('Linh kiện máy tính chính hãng');
+  const [creatingSupplier, setCreatingSupplier] = useState(false);
+
+  const DEFAULT_SUPPLIERS = [
+    { code: 'SUP-AMD-VN', name: 'AMD Southeast Asia Pte Ltd (VN Representative)', phone: '02839101212', email: 'vietnam.sales@amd.com', address: 'Tòa nhà Lim Tower, 9-11 Tôn Đức Thắng, Quận 1, TP.HCM', taxCode: '0317896542', mainProducts: 'CPU & GPU AMD Ryzen, Radeon' },
+    { code: 'SUP-ASUS-VN', name: 'ASUS Vietnam Co., Ltd', phone: '18006588', email: 'support_vn@asus.com', address: 'Tòa nhà Viettel Complex, 285 Cách Mạng Tháng Tám, Quận 10, TP.HCM', taxCode: '0309988776', mainProducts: 'Mainboard, VGA ROG / TUF, Màn hình Asus' },
+    { code: 'SUP-VIENSON', name: 'Công ty Cổ phần Máy tính Viễn Sơn', phone: '02838326085', email: 'info@vienson.com.vn', address: '175 Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh', taxCode: '0301889977', mainProducts: 'Phân phối Gigabyte, Kingston, Corsair, AOC' },
+    { code: 'SUP-ANHNGOC', name: 'Công ty Cổ phần Đầu tư Công nghệ Anh Ngọc', phone: '02439763189', email: 'contact@anhngoc.vn', address: '12 Cát Linh, Đống Đa, Hà Nội', taxCode: '0102778899', mainProducts: 'Phân phối MSI, DeepCool, TeamGroup' },
+    { code: 'SUP-CORSAIR-VN', name: 'Công ty TNHH Corsair Vietnam Office', phone: '02839105566', email: 'apac-sales@corsair.com', address: 'Centec Tower, 72-74 Nguyễn Thị Minh Khai, Quận 3, TP.HCM', taxCode: '0315443322', mainProducts: 'RAM Corsair Vengeance/Dominator, Nguồn PSU, Tản nhiệt nước' },
+    { code: 'SUP-GIGABYTE-VN', name: 'Công ty TNHH Gigabyte Việt Nam', phone: '02838228585', email: 'service@gigabyte.vn', address: 'Saigon Centre, 65 Lê Lợi, Bến Nghé, Quận 1, TP.HCM', taxCode: '0312665544', mainProducts: 'Mainboard AORUS, Card màn hình VGA Gigabyte' },
+    { code: 'SUP-INTEL-VN', name: 'Intel Technology Vietnam Co., Ltd', phone: '02838252000', email: 'vietnam.order@intel.com', address: 'Khu Công Nghệ Cao, Long Thạnh Mỹ, TP. Thủ Đức, TP.HCM', taxCode: '0304556677', mainProducts: 'CPU Intel Core i3/i5/i7/i9 (Gen 12, 13, 14)' },
+    { code: 'SUP-KINGSTON-VN', name: 'Kingston Technology Far East Corp (VN Rep)', phone: '1800555589', email: 'support_vietnam@kingston.com', address: 'Bitexco Financial Tower, 2 Hải Triều, Bến Nghé, Quận 1, TP.HCM', taxCode: '0314221100', mainProducts: 'RAM Kingston Fury Beast/Renegade, SSD NVMe Kingston' }
+  ];
+
+  const fetchSuppliers = async () => {
+    try {
+      const res = await api.get('/purchasing/suppliers');
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setSuppliersList(res.data);
+      } else {
+        setSuppliersList(DEFAULT_SUPPLIERS);
+      }
+    } catch (e) {
+      setSuppliersList(DEFAULT_SUPPLIERS);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const handleCreateSupplier = async (e) => {
+    e.preventDefault();
+    if (!newSupplierName.trim()) {
+      alert('Vui lòng nhập tên nhà cung cấp!');
+      return;
+    }
+    setCreatingSupplier(true);
+    try {
+      const payload = {
+        name: newSupplierName.trim(),
+        code: newSupplierCode.trim() || undefined,
+        phone: newSupplierPhone.trim() || undefined,
+        email: newSupplierEmail.trim() || undefined,
+        address: newSupplierAddress.trim() || undefined,
+        taxCode: newSupplierTaxCode.trim() || undefined,
+        mainProducts: newSupplierMainProducts.trim() || 'Linh kiện máy tính chính hãng'
+      };
+      const res = await api.post('/purchasing/suppliers', payload);
+      if (res && res.success) {
+        alert(`✅ Đã thêm mới nhà cung cấp "${payload.name}" thành công!`);
+        fetchSuppliers();
+        setShowAddSupplierModal(false);
+        setNewSupplierName('');
+        setNewSupplierCode('');
+        setNewSupplierPhone('');
+        setNewSupplierEmail('');
+        setNewSupplierAddress('');
+        setNewSupplierTaxCode('');
+      }
+    } catch (err) {
+      alert('Lỗi thêm nhà cung cấp: ' + (err.response?.data?.message || err.message));
+    }
+    setCreatingSupplier(false);
+  };
 
   // RBAC Permission Matrix State
   const [rbacList, setRbacList] = useState(() => {
@@ -267,6 +347,7 @@ export default function SystemAdmin() {
             {activeTab === 'users' && 'Quản Lý Tài Khoản & Người Dùng (Identity Management)'}
             {activeTab === 'rbac' && 'Ma Trận Phân Quyền Vai Trò (Role-Based Access Control - RBAC)'}
             {activeTab === 'audit' && 'Nhật Ký Kiểm Toán & Giám Sát An Ninh (Security Audit Trail)'}
+            {activeTab === 'suppliers' && 'Quản Lý Đối Tác & Nhà Cung Cấp (Vendors Management)'}
             {activeTab === 'settings' && 'Cấu Hình Doanh Nghiệp & Sao Lưu Dữ Liệu (Settings & Backup)'}
           </h2>
           <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '0.25rem 0 0' }}>
@@ -293,6 +374,29 @@ export default function SystemAdmin() {
           >
             <Plus size={16} />
             <span>Thêm Nhân Viên Mới</span>
+          </button>
+        )}
+
+        {activeTab === 'suppliers' && (
+          <button
+            onClick={() => setShowAddSupplierModal(true)}
+            style={{
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.5rem 1.15rem',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              boxShadow: '0 2px 6px rgba(37,99,235,0.25)'
+            }}
+          >
+            <Plus size={16} />
+            <span>+ Thêm Nhà Cung Cấp Mới</span>
           </button>
         )}
       </div>
@@ -504,6 +608,33 @@ export default function SystemAdmin() {
                     <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '0.35rem' }}>
                         <button
+                          onClick={() => {
+                            if (typeof switchRole === 'function') {
+                              switchRole(emp.role?.toLowerCase() || emp.username);
+                              const ROLE_ROUTES = {
+                                'CEO': '/admin/dashboard',
+                                'SALES': '/admin/sales',
+                                'SALES_MANAGER': '/admin/sales',
+                                'WAREHOUSE': '/admin/warehouse',
+                                'WAREHOUSE_MANAGER': '/admin/warehouse',
+                                'PURCHASING': '/admin/purchasing',
+                                'QC': '/admin/quality-control',
+                                'QA': '/admin/quality-control',
+                                'ASSEMBLY': '/admin/assembly',
+                                'HR': '/admin/hr',
+                                'ACCOUNTANT': '/admin/accounting',
+                                'CSKH': '/admin/cskh',
+                                'DELIVERY': '/admin/delivery'
+                              };
+                              navigate(ROLE_ROUTES[emp.role] || '/admin/dashboard');
+                            }
+                          }}
+                          style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '4px', padding: '0.3rem 0.5rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                          title="Đăng nhập trực tiếp với vai trò của nhân sự này để tác nghiệp / kiểm thử"
+                        >
+                          <LogIn size={12} /> Đăng Nhập
+                        </button>
+                        <button
                           onClick={() => handleResetPassword(emp)}
                           style={{ backgroundColor: '#ffffff', color: '#d97706', border: '1px solid #fde68a', borderRadius: '4px', padding: '0.3rem 0.5rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
                           title="Đặt lại mật khẩu về 123456"
@@ -647,6 +778,63 @@ export default function SystemAdmin() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+            {/* ========================================================================= */}
+      {/* TAB: SUPPLIERS (QUẢN LÝ ĐỐI TÁC NHÀ CUNG CẤP DÀNH CHO ADMIN) */}
+      {/* ========================================================================= */}
+      {activeTab === 'suppliers' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ width: '380px' }}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm đối tác theo tên, MST, email, SĐT..."
+                value={supplierSearchQuery}
+                onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                style={{ width: '100%', height: '38px', padding: '0 0.85rem', fontSize: '0.83rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+              Tổng số đối tác cung ứng trong hệ thống: <strong style={{ color: '#2563eb' }}>{suppliersList.length}</strong> doanh nghiệp
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+            {suppliersList
+              .filter(s => !supplierSearchQuery.trim() || s.name?.toLowerCase().includes(supplierSearchQuery.toLowerCase()) || s.email?.toLowerCase().includes(supplierSearchQuery.toLowerCase()) || s.code?.toLowerCase().includes(supplierSearchQuery.toLowerCase()))
+              .map((sup, idx) => (
+                <div key={sup.code || sup.id || idx} style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '8px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', fontWeight: 800, fontSize: '1rem' }}>
+                          {sup.name ? sup.name[0] : 'S'}
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}>{sup.name}</h4>
+                          <span style={{ fontSize: '0.73rem', color: '#64748b' }}>Mã đối tác: <strong style={{ color: '#2563eb' }}>{sup.code || `SUP-${idx+1}`}</strong></span>
+                        </div>
+                      </div>
+                      <span style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800 }}>
+                        Đang Hợp Tác
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: 1.6, borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div><strong>Mã Số Thuế (MST):</strong> {sup.taxCode || '0317896542'}</div>
+                      <div><strong>Điện thoại:</strong> {sup.phone || '028 3910 1212'}</div>
+                      <div><strong>Email:</strong> {sup.email || 'contact@supplier.vn'}</div>
+                      <div><strong>Trụ sở:</strong> {sup.address || 'Khu Công Nghệ Cao, TP.HCM'}</div>
+                      <div><strong>Phân phối chính:</strong> <span style={{ color: '#2563eb' }}>{sup.mainProducts || 'Linh kiện máy tính chính hãng'}</span></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+
         </div>
       )}
 
@@ -858,6 +1046,155 @@ export default function SystemAdmin() {
       )}
 
       {/* ================= MODAL: THÊM NHÂN VIÊN MỚI ================= */}
+      
+      {/* Modal Thêm Nhà Cung Cấp Mới (Admin) */}
+      {showAddSupplierModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '1.75rem' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ backgroundColor: '#eff6ff', color: '#2563eb', padding: '0.5rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                  <Building size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Thêm Nhà Cung Cấp Mới (Admin)
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    Khởi tạo hồ sơ đối tác cung ứng vật tư & linh kiện vào hệ thống
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddSupplierModal(false)}
+                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', cursor: 'pointer', padding: '0.4rem', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSupplier}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.82rem' }}>
+                
+                <div>
+                  <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                    Tên Nhà Cung Cấp / Doanh Nghiệp <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="VD: Công ty Cổ phần Công nghệ MSI Vietnam"
+                    value={newSupplierName}
+                    onChange={(e) => setNewSupplierName(e.target.value)}
+                    style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                      Mã Đối Tác (Tùy chọn)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="VD: SUP-MSI-VN"
+                      value={newSupplierCode}
+                      onChange={(e) => setNewSupplierCode(e.target.value)}
+                      style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                      Mã Số Thuế (MST)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="VD: 0317896542"
+                      value={newSupplierTaxCode}
+                      onChange={(e) => setNewSupplierTaxCode(e.target.value)}
+                      style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                      Số Điện Thoại Liên Hệ
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="VD: 028 3910 1212"
+                      value={newSupplierPhone}
+                      onChange={(e) => setNewSupplierPhone(e.target.value)}
+                      style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                      Email Liên Hệ
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="VD: sales@msi.vn"
+                      value={newSupplierEmail}
+                      onChange={(e) => setNewSupplierEmail(e.target.value)}
+                      style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                    Địa Chỉ Trụ Sở / Kho Cung Ứng
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: Tòa nhà Viettel Complex, 285 Cách Mạng Tháng Tám, Quận 10, TP.HCM"
+                    value={newSupplierAddress}
+                    onChange={(e) => setNewSupplierAddress(e.target.value)}
+                    style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: 700, color: '#0f172a', marginBottom: '0.3rem' }}>
+                    Danh Mục Phân Phối Chính
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: CPU, Mainboard, VGA, RAM chính hãng"
+                    value={newSupplierMainProducts}
+                    onChange={(e) => setNewSupplierMainProducts(e.target.value)}
+                    style={{ width: '100%', height: '38px', padding: '0 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #e2e8f0', marginTop: '1.25rem', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddSupplierModal(false)}
+                  style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.55rem 1.1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingSupplier}
+                  style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.55rem 1.35rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  {creatingSupplier ? 'Đang Lưu...' : '+ Lưu Nhà Cung Cấp'}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
       {showAdd && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', width: '100%', maxWidth: '480px', padding: '1.75rem', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>

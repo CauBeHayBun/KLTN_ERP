@@ -1,470 +1,380 @@
-# XÂY DỰNG VÀ TRIỂN KHAI HỆ THỐNG ERP CHO DOANH NGHIỆP BÁN LẺ & LẮP RÁP LINH KIỆN MÁY TÍNH AETHERPC
+# BÁO CÁO HỆ THỐNG QUẢN LÝ DOANH NGHIỆP TỔNG THỂ (ERP)
+## NGÀNH HÀNG: BÁN LẺ, PHÂN PHỐI VÀ LẮP RÁP LINH KIỆN MÁY TÍNH CHÍNH HÃNG
 
-> **Khóa Luận Tốt Nghiệp Đại Học — Trường Đại Học Công Nghiệp TP. Hồ Chí Minh (IUH)**  
-> **Chuyên Ngành**: Hệ Thống Thông Tin — Khoa Công Nghệ Thông Tin  
-> **Tên Đề Tài**: Xây dựng và triển khai hệ thống ERP cho doanh nghiệp bán lẻ & lắp ráp linh kiện máy tính (**AetherPC ERP & Storefront**).
-
----
-
-## MỤC LỤC
-
-1. [1. Tổng Quan Hệ Thống & Bối Cảnh Đề Tài](#1-tổng-quan-hệ-thống--bối-cảnh-đề-tài)
-2. [2. Kiến Trúc Hệ Thống & Sơ Đồ Khối (System Architecture)](#2-kiến-trúc-hệ-thống--sơ-đồ-khối-system-architecture)
-3. [3. Danh Sách 15 Nhà Cung Cấp Đối Tác & 14 Vai Trò (RBAC Matrix)](#3-danh-sách-15-nhà-cung-cấp-đối-tác--14-vai-trò-rbac-matrix)
-4. [4. Quy Trình Vận Hành Chi Tiết (P2P, O2C, QA/QC, Realtime CSKH)](#4-quy-trình-vận-hành-chi-tiết-p2p-o2c-qaqc-realtime-cskh)
-5. [5. Phân Tích Tính Năng Chi Tiết 12 Phân Hệ ERP Admin & 12 Phân Hệ Storefront](#5-phân-tích-tính-năng-chi-tiết-12-phân-hệ-erp-admin--12-phân-hệ-storefront)
-6. [6. Thuật Toán & Công Thức Toán Học Trong Hệ Thống](#6-thuật-toán--công-thức-toán-học-trong-hệ-thống)
-7. [7. Danh Mục RESTful APIs & WebSocket Protocol](#7-danh-mục-restful-apis--websocket-protocol)
-8. [8. Bộ Kịch Bản Kiểm Thử Chi Tiết (Comprehensive Test Suite)](#8-bộ-kịch-bản-kiểm-thử-chi-tiết-comprehensive-test-suite)
-9. [9. Công Nghệ Sử Dụng (Tech Stack)](#9-công-nghệ-sử-dụng-tech-stack)
-10. [10. Cấu Trúc Thư Mục Dự Án Toàn Diện](#10-cấu-trúc-thư-mục-dự-án-toàn-diện)
-11. [11. Hướng Dẫn Khởi Chạy & Triển Khai (Deployment Guide)](#11-hướng-dẫn-khởi-chạy--triển-khai-deployment-guide)
-12. [12. Danh Sách Tài Khoản Demo Hệ Thống](#12-danh-sách-tài-khoản-demo-hệ-thống)
+> **Đề Tài Khóa Luận Tốt Nghiệp Đại Học**  
+> **Trường**: Đại Học Công Nghiệp Thành Phố Hồ Chí Minh (IUH)  
+> **Khoa**: Công Nghệ Thông Tin — **Chuyên Ngành**: Hệ Thống Thông Tin  
+> **Đề Tài**: Xây dựng và triển khai hệ thống quản lý doanh nghiệp (ERP) tích hợp cổng thương mại điện tử cho doanh nghiệp kinh doanh linh kiện máy tính.
 
 ---
 
-## 1. Tổng Quan Hệ Thống & Bối Cảnh Đề Tài
+## MỤC LỤC TÀI LIỆU
 
-Thị trường kinh doanh linh kiện máy tính và lắp ráp PC theo yêu cầu (Custom PC / Gaming Workstation) đòi hỏi khả năng xử lý dữ liệu vô cùng phức tạp: hàng ngàn mã sản phẩm (SKU) với thông số kỹ thuật đa dạng (Socket CPU, Bus RAM, Form Factor Mainboard, Công suất TDP), biến động giá liên tục từ 15 Nhà cung cấp đối tác, cùng các dịch vụ giá trị gia tăng như kiểm định chất lượng QA/QC, lắp ráp kỹ thuật, phân công giao hàng và chăm sóc khách hàng.
-
-**AetherPC ERP** được nghiên cứu và phát triển nhằm giải quyết triệt để các thách thức trên thông qua một **Hệ thống ERP Hợp nhất (Unified Enterprise Resource Planning)**, kết nối trực tiếp **Website Thương mại Điện tử (E-Commerce Storefront)**, **Trợ lý AI Tự động hóa (Google Gemini AI SDK)**, **Phân hệ Kiểm định QA/QC Mới**, **Quy trình Xuất Kho & Phân Công Shipper Mới** và **Kênh Chat CSKH Realtime (WebSocket Server)**.
-
-### Các Mục Tiêu Cốt Lõi:
-1. **Tự động hóa luồng Procure-to-Pay (P2P)**: Đánh giá và chọn báo giá Nhà cung cấp tối ưu nhất bằng Thuật toán Ma trận Giá ($P_{\text{save}}$), khởi tạo RFQ giữ nguyên 100% số lượng đề xuất thực tế từ Thủ Kho (ví dụ: 63 cái, 25 cái).
-2. **Kiểm định chất lượng chuyên sâu (QA/QC Station)**: Tiếp nhận lô hàng từ Nhà cung cấp, kiểm tra theo tỷ lệ lấy mẫu ($100\%, 50\%, 10\%$), phân loại linh kiện đạt chuẩn và hàng lỗi nhà sản xuất (DOA, hỏng vỏ hộp, sai SKU), phát hành Biên bản QA/QC điện tử.
-3. **Chuẩn hóa luồng Order-to-Cash (O2C) & Phân công Shipper Mới**: Tích hợp bán lẻ POS tại quầy, quy trình lắp ráp PC 5 bước kỹ thuật, xuất kho bật modal Phân công Shipper trực tiếp (**Shipper 1 — Trần Giao Hàng**, **Shipper 2 — Nguyễn Văn Shipper**, **Giao Hàng Tự Do**) và giao hàng có minh chứng thực tế (Base64 Proof of Delivery).
-4. **Chăm sóc khách hàng Realtime**: Xây dựng server WebSocket hai chiều hai kênh ($< 1\text{ms}$), mẫu câu trả lời nhanh, xóa phiên chat cũ, phân định lịch sử trò chuyện độc lập theo từng tài khoản (`session_user_<slug>`).
-5. **Quản trị Tài chính & Nhân sự**: Tính lương tự động theo quy chuẩn 26 ngày công Việt Nam, khấu trừ $10.5\%$ bảo hiểm bắt buộc ($8\%$ BHXH, $1.5\%$ BHYT, $1\%$ BHTN), cộng thưởng Sales $1\%$ và thưởng lắp ráp $150k$/máy, hạch toán Sổ Nhật ký Tài chính VAS.
+1. [1. Giới Thiệu Đề Tài & Bối Cảnh Nghiệp Vụ](#1-giới-thiệu-đề-tài--bối-cảnh-nghiệp-vụ)
+2. [2. Kiến Trúc Tổng Thể Hệ Thống](#2-kiến-trúc-tổng-thể-hệ-thống)
+3. [3. Sơ Đồ Quy Trình Nghiệp Vụ Trọng Tâm](#3-sơ-đồ-quy-trình-nghiệp-vụ-trọng-tâm)
+4. [4. Ma Trận Phân Quyền Người Dùng & Chuyển Đổi Vai Trò](#4-ma-trận-phân-quyền-người-dùng--chuyển-đổi-vai-trò)
+5. [5. Mô Tả Chi Tiết Các Phân Hệ Quản Trị Nghiệp Vụ](#5-mô-tả-chi-tiết-các-phân-hệ-quản-trị-nghiệp-vụ)
+6. [6. Cổng Mua Sắm Trực Tuyến & Công Cụ Tự Xây Dựng Cấu Hình](#6-cổng-mua-sắm-trực-tuyến--công-cụ-tự-xây-dựng-cấu-hình)
+7. [7. Danh Bạ Các Nhà Cung Cấp Đối Tác Chính Hãng](#7-danh-bạ-các-nhà-cung-cấp-đối-tác-chính-hãng)
+8. [8. Danh Sách Tài Khoản Thử Nghiệm Hệ Thống](#8-danh-sách-tài-khoản-thử-nghiệm-hệ-thống)
+9. [9. Danh Mục Giao Diện Lập Trình Ứng Dụng (API)](#9-danh-mục-giao-diện-lập-trình-ứng-dụng-api)
+10. [10. Công Nghệ & Nền Tảng Kỹ Thuật Sử Dụng](#10-công-nghệ--nền-tảng-kỹ-thuật-sử-dụng)
+11. [11. Hướng Dẫn Cài Đặt Và Vận Hành Hệ Thống](#11-hướng-dẫn-cài-đặt-và-vận-hành-hệ-thống)
 
 ---
 
-## 2. Kiến Trúc Hệ Thống & Sơ Đồ Khối (System Architecture)
+## 1. Giới Thiệu Đề Tài & Bối Cảnh Nghiệp Vụ
 
-```mermaid
-graph TD
-    subgraph "Presentation Layer (Tầng Trình Biểu)"
-        UI1[E-Commerce Storefront / AI PC Builder]
-        UI2[Sales POS / Thu Ngân]
-        UI3[Admin ERP Dashboard 12 Phân Hệ]
-        UI4[Supplier Portal Cổng Báo Giá]
-    end
+Hoạt động kinh doanh bán lẻ linh kiện máy tính và dịch vụ lắp ráp máy tính theo yêu cầu tại thị trường Việt Nam mang tính đặc thù cao, đòi hỏi hệ thống quản lý phải xử lý dữ liệu phức tạp:
+* **Đặc tả kỹ thuật phần cứng ràng buộc nghiêm ngặt**: Khả năng tương thích giữa chân cắm vi xử lý (Socket CPU), chuẩn bộ nhớ RAM, kích thước bo mạch chủ và công suất nguồn điện.
+* **Quản lý đa nhà cung cấp**: Khảo sát và đối chiếu đơn giá từ nhiều đối tác phân phối chính hãng (*Intel, AMD, ASUS, Gigabyte, MSI, Viễn Sơn, Anh Ngọc, Corsair, Kingston, Samsung, LG...*) để chọn nguồn hàng có chi phí tối ưu.
+* **Kiểm soát chất lượng đầu vào (IQC)**: Kiểm tra tình trạng nguyên seal, bao bì, ngoại quan và thông số trước khi đưa hàng vào kho lưu trữ.
+* **Quy trình ký duyệt nhiều cấp**: Giám Đốc phê duyệt điện tử đơn mua hàng trước khi xuất phiếu đặt hàng chính thức khổ A4 gửi sang đối tác.
 
-    subgraph "Application Layer (Tầng Xử Lý Nghiệp Vụ)"
-        API[Express.js RESTful API Server]
-        WS[WebSocket Server /ws/cskh]
-        AI[Google Gemini AI Engine]
-        SCH[Order & Stock Scheduler]
-    end
+Hệ thống ERP này được thiết kế để giải quyết trọn vẹn chuỗi cung ứng khép kín, kết nối đồng bộ giữa các bộ phận: Bán hàng, Mua hàng, Kho bãi, Kiểm định chất lượng, Lắp ráp kỹ thuật, Kế toán tài chính, Giao nhận và Ban Giám Đốc.
 
-    subgraph "Data Layer (Tầng Dữ Liệu & Tích Hợp)"
-        DB[(PostgreSQL Database / SQLite)]
-        ORM[Prisma ORM Client]
-        SMTP[Nodemailer SMTP Gmail Service]
-        QR[VietQR Payment Gateway]
-    end
+---
 
-    UI1 <-->|HTTPS / REST API| API
-    UI1 <-->|WebSocket Realtime| WS
-    UI2 <-->|HTTPS / REST API| API
-    UI3 <-->|HTTPS / REST API| API
-    UI3 <-->|WebSocket CSKH Staff| WS
-    UI4 <-->|HTTPS / REST API| API
+## 2. Kiến Trúc Tổng Thể Hệ Thống
 
-    API <--> ORM <--> DB
-    API <--> AI
-    API <--> SMTP
-    API <--> QR
-    SCH <--> ORM
+```
++----------------------------------------------------------------------------------------+
+|                                TẦNG GIAO DIỆN NGƯỜI DÙNG                               |
+|  +------------------------+  +------------------------+  +--------------------------+  |
+|  |  Cổng Mua Sắm Bán Lẻ   |  |  Trung Tâm Quản Trị    |  |  Cổng Tác Nghiệp Đối Tác |  |
+|  |  - Chọn linh kiện PC   |  |  - 12 Phân hệ quản lý  |  |  - Báo giá & Xác nhận    |  |
+|  |  - Đặt hàng trực tuyến |  |  - Báo cáo chỉ số KPI  |  |    giao hàng trực tiếp    |  |
+|  +-----------+------------+  +-----------+------------+  +------------+-------------+  |
++--------------|---------------------------|----------------------------|----------------+
+               | Giao thức mạng HTTP       | Kết nối Thời gian thực     | Mã khóa bảo mật
++--------------v---------------------------v----------------------------v----------------+
+|                        TẦNG DỊCH VỤ & XỬ LÝ NGHIỆP VỤ TRUNG TÂM                        |
+|  +----------------------------------------------------------------------------------+  |
+|  | Cổng điều phối API (Xác thực người dùng, Phân quyền vai trò, Bảo mật an toàn)   |  |
+|  +-----------------+------------------+------------------+--------------------------+  |
+|  | Nghiệp Vụ Mua   | Quản Lý Kho Bãi  | Nghiệp Vụ Bán    | Kế Toán & Tài Chính      |  |
+|  | - Khảo sát giá  | - Vị trí kệ kho  | - Bán tại quầy   | - Hạch toán sổ thu/chi   |  |
+|  | - Duyệt đơn PO  | - Phiếu nhập/xuất| - Quản lý đơn    | - Tính lương & Bảo hiểm  |  |
+|  +-----------------+------------------+------------------+--------------------------+  |
+|  | Kênh hỗ trợ khách hàng trực tuyến (Phản hồi tức thì, lưu trữ nhật ký hội thoại)   |  |
+|  | Trợ lý hỗ trợ tư vấn cấu hình máy tính tự động                                    |  |
+|  +----------------------------------------------------------------------------------+  |
++------------------------------------------+---------------------------------------------+
+                                           | Trình điều khiển kết nối CSDL
++------------------------------------------v---------------------------------------------+
+|                               TẦNG CƠ SỞ DỮ LIỆU & LƯU TRỮ                             |
+|  +-------------------------------------------+  +-----------------------------------+  |
+|  | Cơ Sở Dữ Liệu Quan Hệ PostgreSQL 15       |  | Phân Vùng Lưu Trữ Dữ Liệu Bền     |  |
+|  | - Quản lý danh mục hàng hóa, đơn hàng     |  | - Lưu trữ chứng từ, hóa đơn &     |  |
+|  |   lô kho, nhân sự và lịch sử phê duyệt    |    nhật ký thao tác hệ thống         |  |
+|  +-------------------------------------------+  +-----------------------------------+  |
++----------------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 3. Danh Sách 15 Nhà Cung Cấp Đối Tác & 14 Vai Trò (RBAC Matrix)
+## 3. Sơ Đồ Quy Trình Nghiệp Vụ Trọng Tâm
 
-### 3.1. Danh Sách 15 Nhà Cung Cấp Linh Kiện PC Đối Tác
-Hệ thống kết nối và quản lý danh mục báo giá chính thức từ 15 Nhà cung cấp hàng đầu:
-
-| STT | Mã NCC | Tên Nhà Cung Cấp Báo Giá | Nhóm Linh Kiện Cung Cấp Chính |
-| :---: | :--- | :--- | :--- |
-| 1 | `SUP-FPT` | Synnex FPT Corporation | CPU, VGA, Mainboard, Laptop |
-| 2 | `SUP-VIENSON` | Công ty Cổ phần Máy tính Viễn Sơn | Mainboard, VGA ASUS, SSD |
-| 3 | `SUP-MAIHOANG` | Mai Hoàng Distribution | Nguồn PSU, Case, Tản nhiệt, Bàn phím |
-| 4 | `SUP-THUYLINH` | Thủy Linh Distribution (TLC) | Mainboard GIGABYTE, RAM, SSD |
-| 5 | `SUP-KTC` | Công ty Tin học Kha Thiên (KTC) | Linh kiện tổng hợp, Màn hình |
-| 6 | `SUP-ANHNGOC` | Anh Ngọc Distribution | Linh kiện PC, Thiết bị mạng |
-| 7 | `SUP-INTEL-VN` | Intel Việt Nam | Vi xử lý Intel Core i3 / i5 / i7 / i9 |
-| 8 | `SUP-AMD-VN` | AMD Việt Nam | Vi xử lý AMD Ryzen 5 / 7 / 9, Radeon VGA |
-| 9 | `SUP-ASUS-VN` | ASUS Việt Nam | Mainboard ROG/TUF, VGA, Màn hình |
-| 10 | `SUP-MSI-VN` | MSI Việt Nam | Mainboard Gaming, Card đồ họa MSI |
-| 11 | `SUP-SAMSUNG-VN`| Samsung Vina Electronics | Ổ cứng SSD NVMe M.2, RAM, Màn hình |
-| 12 | `SUP-LG-VN` | LG Electronics Việt Nam | Màn hình đồ họa / Gaming UltraGear |
-| 13 | `SUP-GIGABYTE-VN`| GIGABYTE Việt Nam | Card đồ họa Eagle/AORUS, Mainboard |
-| 14 | `SUP-CORSAIR-VN`| Corsair Việt Nam | RAM Vengeance, Nguồn PSU, Tản nhiệt AIO |
-| 15 | `SUP-KINGSTON-VN`| Kingston Technology Việt Nam | RAM Fury Beast, SSD NV2 / KC3000 |
-
----
-
-### 3.2. Ma Trận Phân Quyền Vai Trò (RBAC Matrix)
-
-| STT | Mã Vai Trò (Role) | Chức Danh Phân Nhiệm | Mô Tả Quyền Hạn & Chức Năng Chi Tiết |
-| :---: | :--- | :--- | :--- |
-| 1 | `ceo` | Giám Đốc Điều Hành (CEO) | Xem Executive Dashboard realtime, duyệt báo giá Mua hàng PO, duyệt giải ngân Bảng lương hàng tháng. |
-| 2 | `admin` | Quản Trị Hệ Thống | Cấu hình hệ thống, quản lý tài khoản người dùng, xem nhật ký truy cập Audit Logs, cấp lại mật khẩu. |
-| 3 | `sales_manager` | Quản Lý Bán Hàng | Quản lý danh mục đơn hàng bán lẻ POS & E-Commerce, duyệt hủy đơn, xem phân tích biểu đồ doanh số. |
-| 4 | `sales` | Nhân Viên Bán Hàng POS | Bán hàng tại quầy, tìm kiếm/quét mã vạch sản phẩm, in hóa đơn thu ngân, nhận thanh toán VietQR. |
-| 5 | `warehouse_manager`| Quản Lý Kho Bãi | Quản lý 1.580 linh kiện PC, kiểm kê tồn kho, thiết lập ngưỡng an toàn (Safe/Warning/Out of stock). |
-| 6 | `warehouse` | Thủ Kho | Tạo Phiếu nhập kho (GRN) từ PO mua hàng, xuất kho mở modal phân công Shipper trực tiếp. |
-| 7 | `purchasing` | Nhân Viên Mua Hàng | Khởi tạo Yêu cầu Báo giá (RFQ) gửi 15 NCC, giữ đúng số lượng đề xuất thực tế, sinh đơn PO. |
-| 8 | `supplier` | Cổng Nhà Cung Cấp | Truy cập Supplier Portal tiếp nhận RFQ từ AetherPC, nhập đơn giá và cam kết ngày giao hàng. |
-| 9 | `qc` / `qa` | Kiểm Định Chất Lượng (Mới)| Kiểm tra chất lượng linh kiện mua về, lập Biên bản QA/QC, phân loại hàng lỗi DOA trước khi nhập kho. |
-| 10 | `assembly` | Kỹ Thuật Viên Lắp Ráp | Nhận Job lắp ráp PC bộ, thực hiện Quy trình Checklist 5 bước kỹ thuật (Socket, Tản nhiệt, Đi dây, BIOS, Stress Test). |
-| 11 | `hr` | Quản Lý Nhân Sự | Quản lý hồ sơ nhân viên, tính bảng lương 26 ngày công (Khấu trừ $10.5\%$ bảo hiểm, thưởng Sales $1\%$, thưởng lắp ráp $150k$). |
-| 12 | `accounting` | Kế Toán Tài Chính | Quản lý Sổ Nhật ký Tài chính VAS (`INCOME`/`EXPENSE`), kiểm tra hóa đơn NCC (Vendor Bill), báo cáo P&L. |
-| 13 | `cskh` | Chăm Sóc Khách Hàng | Quản lý Ticket bảo hành, Live Chat WebSocket thời gian thực ($<1\text{ms}$), mẫu câu phản hồi nhanh, xóa phiên chat cũ. |
-| 14 | `delivery` | Nhân Viên Giao Hàng (Mới)| Nhận đơn sẵn sàng giao, chụp ảnh minh chứng thực tế (Base64) khi giao thành công, ghi nhận 6 lý do thất bại. |
-
----
-
-## 4. Quy Trình Vận Hành Chi Tiết (Workflow Processes)
-
-### 4.1. Quy Trình Mua Hàng, Báo Giá & Kiểm Định QA/QC (P2P — Procure-to-Pay)
+### 3.1. Quy Trình Mua Hàng & Cung Ứng Vật Tư
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor NV Kho/Mua Hàng
-    actor NCC (Supplier Portal)
-    actor CEO (Giám Đốc)
-    actor Trạm QA/QC
-    actor Thủ Kho
-    actor Kế Toán
+    actor W as Bộ Phận Kho Hàng
+    actor P as Nhân Viên Mua Hàng
+    actor S as Nhà Cung Cấp Đối Tác
+    actor C as Ban Giám Đốc
+    actor Q as Kiểm Định Chất Lượng
+    actor A as Kế Toán Trưởng
 
-    NV Kho/Mua Hàng->>NCC (Supplier Portal): Tạo RFQ bổ sung (Giữ đúng số lượng đề xuất thực tế 63/25 cái)
-    NCC (Supplier Portal)->>Hệ Thống ERP: Điền đơn giá báo giá & cam kết ngày giao hàng
-    Hệ Thống ERP->>CEO (Giám Đốc): Tổng hợp Ma trận So sánh Báo giá & Badge [BÁO GIÁ RẺ NHẤT]
-    CEO (Giám Đốc)->>Hệ Thống ERP: Phê duyệt Báo giá tối ưu -> Sinh Đơn mua hàng (PO)
-    Hệ Thống ERP->>Trạm QA/QC: Chuyển hàng mua về trạm kiểm định chất lượng (QC Station)
-    Trạm QA/QC->>Thủ Kho: Lập Biên bản QA/QC (ACCEPT_ALL / REJECT_ALL / PARTIAL_ACCEPT)
-    Thủ Kho->>Hệ Thống ERP: Nhập kho linh kiện đạt chuẩn (GRN) & Tăng tồn kho
-    Hệ Thống ERP->>Kế Toán: Khớp Hóa đơn Mua hàng (Vendor Bill) -> Lập bút toán Chi (EXPENSE)
+    W->>P: Cảnh báo lượng tồn kho dưới mức an toàn (Cần bổ sung linh kiện)
+    P->>S: Gửi Yêu Cầu Báo Giá linh kiện tới các đối tác
+    S->>P: Phản hồi bảng báo giá (Đơn giá, ngày giao hàng dự kiến)
+    P->>P: Lập bảng đối chiếu so sánh giá & Tờ trình chọn đối tác tối ưu
+    P->>C: Trình Giám Đốc phê duyệt ký điện tử Đơn Mua Hàng
+    C->>P: Giám Đốc phê duyệt (Lưu vết lịch sử ký duyệt điện tử)
+    P->>S: Xuất Phiếu Đơn Mua Hàng chuẩn A4 gửi đối tác giao hàng
+    S->>Q: Vận chuyển linh kiện tới trạm tiếp nhận kho
+    Q->>Q: Kiểm định chất lượng linh kiện (Ngoại quan, tem niêm phong, tỷ lệ kiểm tra)
+    Q->>W: Cấp Biên Bản Kiểm Định Chất Lượng đạt tiêu chuẩn
+    W->>W: Thực hiện nhập kho, phân bổ vị trí kệ & In Phiếu Nhập Kho
+    A->>S: Kế toán thực hiện thủ tục thanh toán tiền hàng & Ghi nhận sổ cái
 ```
 
----
-
-### 4.2. Quy Trình Bán Hàng, Phân Công Shipper Mới & Giao Hàng (O2C — Order-to-Cash)
+### 3.2. Quy Trình Bán Hàng, Lắp Ráp & Giao Nhận
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Khách Hàng / POS
-    actor Kỹ Thuật Viên
-    actor Thủ Kho
-    actor Shipper (Delivery)
-    actor Kế Toán
+    actor K as Khách Hàng
+    actor S as Nhân Viên Bán Hàng
+    actor T as Kỹ Thuật Viên Lắp Ráp
+    actor W as Bộ Phận Kho Hàng
+    actor D as Nhân Viên Giao Hàng
+    actor A as Kế Toán
 
-    Khách Hàng / POS->>Hệ Thống ERP: Đặt đơn linh kiện / máy bộ PC (POS / Storefront)
-    Hệ Thống ERP->>Kỹ Thuật Viên: Tự động sinh Job Lắp Ráp (đơn máy bộ)
-    Kỹ Thuật Viên->>Hệ Thống ERP: Thực hiện Checklist 5 bước -> Bấm "Hoàn Tất Lắp Ráp"
-    Thủ Kho->>Shipper (Delivery): Bấm "Xác Nhận Xuất Kho" -> Mở Modal Phân công Shipper (Trần Giao Hàng / Nguyễn Văn Shipper / Tự do)
-    Shipper (Delivery)->>Hệ Thống ERP: Tiếp nhận đơn, Giao hàng & Tải ảnh minh chứng Base64 -> DELIVERED
-    Hệ Thống ERP->>Kế Toán: Tự động ghi nhận Bút toán Thu (INCOME) & gửi Email thông báo tách Phí giao hàng
+    K->>S: Đặt mua cấu hình máy tính hoặc linh kiện rời
+    S->>S: Tiếp nhận đơn hàng & Chuyển phiếu yêu cầu lắp ráp máy tính
+    T->>T: Lắp ráp linh kiện & Thực hiện kiểm tra kỹ thuật (Kiểm tra phần cứng, tải nhiệt)
+    T->>W: Dán tem bảo hành & Bàn giao máy hoàn chỉnh cho kho
+    W->>W: Đóng gói cẩn thận, xuất kho & Phân công nhân viên giao hàng
+    D->>K: Vận chuyển, bàn giao tận nơi, chụp ảnh minh chứng & Thu tiền
+    D->>A: Bàn giao tiền thu hộ & Xác nhận hoàn tất giao hàng
+    A->>A: Xuất hóa đơn bán lẻ và hạch toán doanh thu
 ```
 
 ---
 
-## 5. Phân Tích Tính Năng Chi Tiết 12 Phân Hệ ERP Admin & 12 Phân Hệ Storefront
+## 4. Ma Trận Phân Quyền Người Dùng & Chuyển Đổi Vai Trò
 
-### 5.1. Các Phân Hệ ERP Admin (`/admin/*`)
+Hệ thống phân định quyền hạn rõ ràng theo từng phòng ban chức năng, đồng thời cung cấp menu **Chuyển đổi vai trò quản lý** giúp Quản trị viên dễ dàng thao tác kiểm thử:
 
-1. **Executive Dashboard (`Dashboard.jsx`)**:
-   - KPIs doanh số thời gian thực, rã doanh thu POS vs Storefront.
-   - Biểu đồ phân bổ cơ cấu linh kiện bán ra.
-   - Banner thông báo CEO duyệt báo giá Mua hàng thiết kế trên tông màu sáng ấm (`#fffbeb → #fef3c7`).
-   - Drilldown Modal xem danh sách chi tiết đơn hàng đóng góp khi click thẻ KPI.
-
-2. **Sales POS Thu Ngân (`SalesPOS.jsx`)**:
-   - Tìm kiếm linh kiện theo Tên/SKU, quét mã vạch Barcode scanner.
-   - Thanh toán chuyển khoản QR Code VietQR tự động.
-   - In hóa đơn bán lẻ tại quầy.
-
-3. **Quản Lý Kho Bãi (`Warehouse.jsx`)**:
-   - Quản lý 1.580 linh kiện PC theo 3 ngưỡng rủi ro (`SAFE`, `WARNING`, `OUT_OF_STOCK`).
-   - Xem nhật ký biến động xuất nhập kho (Stock Movement Audit Logs) và modal chi tiết giao dịch.
-   - Xem lịch sử gửi cảnh báo Yêu cầu Báo giá (RFQ Alert History Modal).
-   - **Xác Nhận Xuất Kho & Phân Công Shipper Mới**: Nhấn "Xác Nhận Xuất Kho" trong chi tiết đơn hàng sẽ tự động mở modal Phân công Shipper (**Shipper 1 — Trần Giao Hàng**, **Shipper 2 — Nguyễn Văn Shipper**, **Giao Hàng Tự Do**). Tự động đóng cả 2 modal và phát thông báo Realtime tới bộ phận Giao Hàng & Bán Hàng.
-
-4. **Mua Hàng & RFQ (`Purchasing.jsx`)**:
-   - Ma trận so sánh báo giá đa NCC từ 15 Nhà cung cấp đối tác với thuật toán tiết kiệm $P_{\text{save}}$.
-   - **Đồng bộ đúng số lượng đề xuất**: Tiếp nhận chuẩn xác 100% số lượng đề xuất từ Kho (ví dụ: 63 cái, 25 cái) khi mở form khởi tạo RFQ.
-
-5. **Kiểm Định Chất Lượng QA/QC Mới (`QualityControl.jsx`)**:
-   - Trạm kiểm định linh kiện nhập kho từ Nhà cung cấp.
-   - 3 Quyết định kiểm định: `ACCEPT_ALL` (Nhập toàn bộ), `REJECT_ALL` (Từ chối trả hàng), `PARTIAL_ACCEPT` (Nhập một phần).
-   - 5 Phân loại lỗi: `PACKAGE_DAMAGED` (Vỡ móp vỏ hộp), `HARDWARE_DEFECT` (Lỗi linh kiện), `MISSING_ACCESSORY` (Thiếu phụ kiện), `WRONG_SPEC` (Sai SKU), `DOA` (Lỗi bật không lên).
-   - Tỷ lệ lấy mẫu: `100%`, `50%`, `10%`. Phát hành Biên bản Kiểm định QA/QC điện tử.
-
-6. **Quản Lý Lắp Ráp PC (`Assembly.jsx`)**:
-   - Tự động sinh Job lắp ráp máy bộ PC.
-   - Quy trình Checklist 5 bước kỹ thuật (Socket CPU, Keo tản nhiệt, Cable Management, BIOS, Stress Test).
-   - Cộng thưởng $150.000$đ/máy vào bảng lương kỹ thuật viên.
-
-7. **Quản Lý Nhân Sự & Bảng Lương (`HRManager.jsx` & `MyPayroll.jsx`)**:
-   - Tính lương theo quy chuẩn 26 ngày công Việt Nam.
-   - Khấu trừ $10.5\%$ bảo hiểm bắt buộc ($8\%$ BHXH, $1.5\%$ BHYT, $1\%$ BHTN).
-   - Thưởng Sales $1\%$ + Thưởng Lắp ráp PC $150k$/máy.
-   - Cổng MyPayroll Portal cho nhân viên tra cứu phiếu lương cá nhân.
-
-8. **Kế Toán Tài Chính (`Accountant.jsx`)**:
-   - Sổ Nhật ký Tài chính VAS (`INCOME`/`EXPENSE`).
-   - Khớp hóa đơn mua hàng Vendor Bill 3 bên (PO - GRN - Bill).
-   - Báo cáo P&L (Profit & Loss).
-
-9. **Giao Hàng & Logistics Mới (`Delivery.jsx`)**:
-   - Tiếp nhận đơn hàng phân công từ Kho (`READY_TO_SHIP`).
-   - Chụp/tải ảnh minh chứng giao hàng thực tế Base64 kèm ghi chú người nhận.
-   - Ghi nhận 6 lý do giao thất bại (Khách không nghe máy, hẹn lại ngày, hủy đơn, không tìm thấy địa chỉ, sai COD, hỏng do vận chuyển).
-
-10. **Chăm Sóc Khách Hàng Realtime (`CustomerService.jsx`)**:
-    - Live Chat 1-1 Realtime qua WebSocket Server `ws://localhost:5000/ws/cskh` ($< 1\text{ms}$).
-    - Mẫu câu phản hồi nhanh, quản lý phiên chat theo tài khoản (`session_user_<slug>`).
-    - Nút xóa phiên chat cũ (`🗑️ Xóa phiên chat này`).
-    - Quản lý Ticket bảo hành & duyệt đơn Đổi trả linh kiện.
-
-11. **Quản Trị Hệ Thống (`SystemAdmin.jsx`)**:
-    - Quản lý tài khoản 14 nhóm quyền RBAC Matrix, xem Audit Logs.
-
-12. **Cổng Nhà Cung Cấp (`SupplierPortal/index.jsx`)**:
-    - Cổng kết nối 15 Nhà cung cấp đối tác tiếp nhận RFQ và báo giá trực tuyến.
+| Mã Định Danh | Tên Vai Trò Chức Năng | Phạm Vi Quyền Hạn Trọng Tâm | Quyền Phê Duyệt Cấp Cao |
+| :--- | :--- | :--- | :---: |
+| `ADMIN` | **Quản Trị Hệ Thống** | Quản lý tài khoản, cấu hình phân quyền, danh bạ nhà cung cấp, nhật ký thao tác | **Toàn Quyền** |
+| `CEO` | **Ban Giám Đốc** | Xem bảng chỉ số điều hành, phê duyệt đơn mua hàng, xem lịch sử ký duyệt | **Duyệt Chi & Đơn Hàng** |
+| `SALES_MANAGER` | **Quản Lý Bán Hàng** | Điều hành hoạt động kinh doanh, xét duyệt chiết khấu đặc biệt, báo cáo doanh thu | **Duyệt Giảm Giá** |
+| `SALES` | **Nhân Viên Bán Hàng** | Bán hàng tại quầy POS, tra cứu thông tin khách hàng, tư vấn cấu hình linh kiện | *Không* |
+| `WAREHOUSE_MANAGER`| **Quản Lý Kho** | Điều phối xuất nhập vật tư, tổ chức kiểm kê định kỳ, sắp xếp sơ đồ kệ kho | **Duyệt Xuất/Nhập Kho** |
+| `WAREHOUSE` | **Thủ Kho** | Tạo yêu cầu mua hàng khi hết tồn kho, lập phiếu nhập kho, phân công giao nhận | *Không* |
+| `PURCHASING` | **Nhân Viên Mua Hàng** | Lập yêu cầu báo giá, đối chiếu đơn giá các bên, in phiếu đơn mua hàng chuẩn A4 | *Không* |
+| `QC` | **Kiểm Định Chất Lượng**| Thẩm định chất lượng lô hàng nhập kho, lập biên bản tiếp nhận hoặc từ chối hàng | **Ký Biên Bản Kiểm Định** |
+| `ASSEMBLY` | **Kỹ Thuật Lắp Ráp** | Tiếp nhận phiếu lắp ráp máy tính, kiểm thử độ ổn định và bàn giao máy | *Không* |
+| `HR` | **Quản Lý Nhân Sự** | Quản lý hồ sơ nhân viên, bảng chấm công 26 ngày, tính lương và trích nộp bảo hiểm | **Duyệt Bảng Lương** |
+| `ACCOUNTANT` | **Kế Toán Trưởng** | Sổ sách thu chi, thanh toán công nợ nhà cung cấp, xuất hóa đơn VAT | **Duyệt Giải Ngân** |
+| `CSKH` | **Chăm Sóc Khách Hàng** | Kênh trao đổi trực tiếp với khách hàng, xử lý yêu cầu hỗ trợ kỹ thuật | *Không* |
+| `DELIVERY` | **Nhân Viên Giao Hàng** | Nhận danh sách đơn cần giao, cập nhật tiến độ vận chuyển, gửi ảnh minh chứng giao | *Không* |
+| `SUPPLIER` | **Nhà Cung Cấp Đối Tác** | Nhận yêu cầu báo giá, gửi báo giá linh kiện và xác nhận ngày giao hàng | *Không* |
 
 ---
 
-### 5.2. Các Phân Hệ Storefront & E-Commerce (`/*`)
+## 5. Mô Tả Chi Tiết Các Phân Hệ Quản Trị Nghiệp Vụ
 
-1. **Trang Chủ Storefront (`Home.jsx`)**: Banner khuyến mãi, danh mục linh kiện bán chạy.
-2. **Bộ Công Cụ Tự Build PC (`PCBuilder.jsx`)**:
-   - Tự chọn cấu hình PC chuyên nghiệp.
-   - AI kiểm tra xung đột Socket CPU/Mainboard & chuẩn RAM DDR4/DDR5.
-   - Tính toán công suất nguồn PSU khuyến nghị ($\le 80\%$ TDP).
-3. **Chi Tiết Sản Phẩm (`ProductDetail.jsx`)**: Thông số kỹ thuật chi tiết & kiểm tra tồn kho.
-4. **Giỏ Hàng & Thanh Toán (`Cart.jsx`)**:
-   - Tách biệt chi tiết **Tạm tính linh kiện**, **Phí giao hàng / Vận chuyển (`+30.000 đ` hoặc `MIỄN PHÍ`)**, và **Tổng thanh toán**.
-   - Thanh toán VietQR Code tự động.
-5. **Theo Dõi Đơn Hàng (`MyOrders.jsx`)**: Tra cứu hành trình vận đơn Realtime, xem ảnh minh chứng giao hàng thực tế.
-6. **Flash Sale (`FlashSale.jsx`)**: Sản phẩm giảm giá theo khung giờ.
-7. **Member Tier Loyalty (`MemberTier.jsx`)**: Tích điểm thưởng & đặc quyền hạng thành viên.
-8. **Promotions (`Promotions.jsx`)**: Mã giảm giá & voucher.
-9. **News & NewsDetail (`News.jsx`)**: Tin tức phần cứng & hướng dẫn công nghệ.
-10. **About & Careers (`About.jsx`, `Careers.jsx`)**: Giới thiệu công ty & Tuyển dụng.
-11. **Trợ Lý Chatbot AI Antigravity**: Google Gemini AI SDK tư vấn cấu hình PC 24/7.
+### 5.1. Phân Hệ Ban Giám Đốc
+* **Bảng chỉ số điều hành**: Doanh thu bán hàng, tỷ trọng mặt hàng bán chạy, tiến độ đơn hàng và cảnh báo tồn kho.
+* **Khu vực phê duyệt đơn mua hàng**: Xem tờ trình so sánh giá giữa các nhà cung cấp và mức chi phí tiết kiệm được.
+* **Lịch sử phê duyệt ký điện tử**: Lưu vết toàn bộ chứng từ có chữ ký và mộc đỏ điện tử của Giám Đốc.
+* **Xem chi tiết tiến trình**: Theo dõi 5 bước vòng đời đơn hàng và mở xem phiếu in ấn trực tiếp.
 
----
+### 5.2. Phân Hệ Mua Hàng & Cung Ứng
+* **Quản lý yêu cầu báo giá**: Lập danh sách sản phẩm cần nhập, tự động lấy số lượng đề xuất từ kho hàng.
+* **Quản lý đơn mua hàng**: Theo dõi trạng thái đơn hàng mua từ đối tác.
+* **In phiếu đơn mua hàng chuẩn A4 thuần Việt**:
+  * Định dạng vừa vặn trên **1 trang A4 duy nhất** không tràn trang.
+  * Văn phong hành chính tiếng Việt: *Bên Mua (Bên A)*, *Bên Bán (Bên B)*, *Mã số thuế*, *Đại diện phòng mua hàng*, *Người phê duyệt*.
+  * In độc lập thông qua khung in riêng biệt, chất lượng sắc nét.
+* **Quản lý danh bạ đối tác**: Phân quyền hiển thị danh sách cho nhân viên mua hàng và nút **Thêm Nhà Cung Cấp Mới** cho Quản trị viên.
 
-## 6. Thuật Toán & Công Thức Toán Học Trong Hệ Thống
+### 5.3. Phân Hệ Quản Lý Kho Bãi
+* **Sơ đồ bố trí kệ kho**: Định vị hàng hóa theo tầng, dãy và ô kệ, tối ưu thời gian tìm kiếm linh kiện.
+* **Phiếu nhập kho & xuất kho**: Lập phiếu nhập kho sau khi đạt chuẩn kiểm định chất lượng, cập nhật số lượng tồn kho tức thì.
+* **Phân công giao hàng**: Lựa chọn nhân viên giao nhận cụ thể khi xuất kho các đơn hàng giao tận nơi.
 
-### 6.1. Thuật Toán So Sánh Báo Giá Nhà Cung Cấp ($P_{\text{save}}$)
-Cho tập hợp các báo giá $T = \{T_1, T_2, \dots, T_n\}$ gửi từ 15 Nhà cung cấp cho cùng một yêu cầu RFQ:
-$$T_{\min} = \min(T), \quad T_{\max} = \max(T)$$
-Tỷ lệ chi phí tiết kiệm được khi phê duyệt phương án rẻ nhất được tính theo công thức:
-$$P_{\text{save}} = \left( \frac{T_{\max} - T_{\min}}{T_{\max}} \right) \times 100\%$$
+### 5.4. Phân Hệ Kiểm Định Chất Lượng
+* **Tiếp nhận lô hàng**: Kiểm tra lô hàng từ nhà cung cấp theo các tỷ lệ lấy mẫu quy định (100%, 50%, 10%).
+* **Biên bản đánh giá**: Ghi nhận kết quả kiểm tra ngoại quan, phụ kiện đi kèm, phân loại hàng đạt chuẩn hoặc lập biên bản từ chối.
 
-### 6.2. Công Thức Tính Bảng Lương Hàng Tháng (Payroll Model)
-Lương thực nhận ($L_{\text{net}}$) của nhân viên trong tháng được xác định theo quy chuẩn 26 ngày công:
-$$L_{\text{gross}} = \left( L_{\text{cơ bản}} \times \frac{D_{\text{công}}}{26} \right) + K_{\text{sales}} \cdot 1\% + N_{\text{lắp ráp}} \cdot 150.000\text{đ}$$
-$$L_{\text{khấu trừ}} = L_{\text{gross}} \times 10.5\% \quad (8\% \text{ BHXH} + 1.5\% \text{ BHYT} + 1\% \text{ BHTN})$$
-$$L_{\text{net}} = L_{\text{gross}} - L_{\text{khấu trừ}}$$
+### 5.5. Phân Hệ Kỹ Thuật & Lắp Ráp Máy Tính
+* **Quy trình 5 bước kỹ thuật**: Kiểm tra tính tương thích linh kiện -> Tiến hành lắp đặt -> Đi dây nguồn và tản nhiệt -> Cài đặt phần mềm -> Chạy thử nghiệm chịu tải.
+* **Bàn giao và niêm phong**: Dán tem bảo hành và lập phiếu bàn giao thiết bị hoàn chỉnh cho bộ phận kho.
 
-### 6.3. Thuật Toán Kiểm Tra Công Suất Nguồn PSU Khi Build PC
-Để hệ thống máy tính hoạt động bền bỉ, tổng điện năng tiêu thụ (TDP) của tất cả linh kiện không được vượt quá $80\%$ công suất danh định của Nguồn PSU:
-$$P_{\text{tổng TDP}} = \text{TDP}_{\text{CPU}} + \text{TDP}_{\text{GPU}} + \text{TDP}_{\text{Mainboard}} + \text{TDP}_{\text{Khác}}$$
-$$P_{\text{PSU khuyến nghị}} \ge \frac{P_{\text{tổng TDP}}}{0.80}$$
+### 5.6. Phân Hệ Bán Hàng Tại Quầy (POS)
+* **Giao diện bán hàng nhanh**: Tìm kiếm linh kiện nhanh, quét mã vạch, áp dụng mã ưu đãi, hỗ trợ thanh toán tiền mặt, chuyển khoản ngân hàng và quẹt thẻ.
+* **In hóa đơn tức thì**: Xuất phiếu tính tiền khổ nhỏ cho khách hàng tại quầy.
 
----
+### 5.7. Phân Hệ Kế Toán & Tài Chính
+* **Sổ nhật ký thu chi**: Ghi nhận tự động các khoản thu từ khách hàng, chi trả tiền hàng cho đối tác và chi phí vận hành.
+* **Quản lý hóa đơn thuế giá trị gia tăng**: Lưu trữ thông tin xuất hóa đơn tài chính theo quy định hiện hành.
 
-## 7. Danh Mục RESTful APIs & WebSocket Protocol
+### 5.8. Phân Hệ Quản Trị Nhân Sự & Tiền Lương
+* **Bảng chấm công 26 ngày**: Ghi nhận số ngày công thực tế, tính lương cơ bản, tính thưởng doanh số bán hàng và thưởng công lắp ráp.
+* **Trích nộp bảo hiểm bắt buộc**: Tự động tính tỷ lệ trích 10.5% vào lương (BHXH, BHYT, BHTN) theo quy chuẩn Luật Lao Động.
 
-### 7.1. RESTful APIs Endpoints (Base URL: `http://localhost:5000/api/v1`)
+### 5.9. Phân Hệ Giao Nhận & Vận Chuyển
+* **Danh sách đơn giao hàng**: Hiển thị địa chỉ, thông tin người nhận và số điện thoại liên hệ của từng chuyến giao.
+* **Minh chứng giao hàng**: Chụp và gửi ảnh minh chứng giao hàng thành công, tự động cập nhật trạng thái đơn và tiền thu hộ.
 
-| Phân Hệ | Phương Thức | Endpoint | Mô Tả Chức Năng |
-| :--- | :---: | :--- | :--- |
-| **Auth** | `POST` | `/auth/login` | Đăng nhập tài khoản Khách hàng / Nhân viên / NCC |
-| **Auth** | `GET` | `/auth/me` | Lấy thông tin tài khoản hiện tại từ JWT Token |
-| **Products** | `GET` | `/products` | Lấy danh sách linh kiện PC kèm bộ lọc/tìm kiếm |
-| **Orders** | `POST` | `/orders` | Tạo đơn hàng mới (POS / Storefront) |
-| **Orders** | `PATCH` | `/orders/:id/delivery-proof` | Tải ảnh minh chứng giao hàng & cập nhật trạng thái |
-| **Purchasing**| `POST` | `/purchasing/rfq` | Khởi tạo Yêu cầu Báo giá (RFQ) tới 15 NCC |
-| **Purchasing**| `GET` | `/purchasing/matrix` | Lấy Ma trận So sánh Báo giá Nhà cung cấp |
-| **QC/QA** | `POST` | `/qc/inspect` | Tạo biên bản kiểm định chất lượng linh kiện nhập kho |
-| **HR** | `GET` | `/hr/payroll` | Tự động tính toán Bảng lương hàng tháng |
-| **Chat CSKH** | `GET` | `/chat/cskh/sessions` | Lấy danh sách phiên chat tư vấn CSKH |
+### 5.10. Phân Hệ Chăm Sóc Khách Hàng
+* **Trao đổi trực tuyến hai chiều**: Kết nối tức thì giữa chuyên viên tư vấn và khách hàng truy cập website.
+* **Hộp công cụ hỗ trợ**: Mẫu câu giải đáp nhanh, xem lịch sử mua sắm và chuyển tuyến hỗ trợ kỹ thuật.
 
-### 7.2. Giao Thức WebSocket Realtime (`ws://localhost:5000/ws/cskh`)
-
-| Tên Sự Kiện (Type) | Chi Chiều Gửi | Payload Cấu Trúc | Mô Tả Tác Vụ |
-| :--- | :---: | :--- | :--- |
-| `INIT_SESSIONS` | Server $\rightarrow$ Client | `{ sessions: Array }` | Gửi toàn bộ dữ liệu các phiên chat khi mới kết nối |
-| `CUSTOMER_SEND_MSG` | Customer $\rightarrow$ Server | `{ sessionId, text, customerName }` | Khách hàng gửi tin nhắn mới tới Server |
-| `STAFF_SEND_MSG` | Staff $\rightarrow$ Server | `{ sessionId, text }` | NV CSKH phản hồi tin nhắn cho khách hàng |
-| `UPDATE_SESSIONS` | Server $\rightarrow$ All Clients | `{ sessions: Array, newMsg }` | Phát thông điệp cập nhật tin nhắn tức thì ($< 1\text{ms}$) |
-| `DELETE_SESSION` | Staff $\rightarrow$ Server | `{ sessionId }` | Xóa hoàn toàn 1 phiên chat cũ khỏi Server |
+### 5.11. Phân Hệ Quản Trị Hệ Thống
+* **Quản lý danh sách tài khoản**: Thêm mới nhân viên, đặt lại mật khẩu về mặc định và nút chuyển đổi vai trò trực tiếp.
+* **Bảng phân quyền vai trò**: Điều chỉnh quyền Xem, Tạo, Sửa, Duyệt cho từng nhóm người dùng.
+* **Đối tác & Nhà cung cấp**: Quản lý thông tin pháp lý, mã số thuế, địa chỉ và số điện thoại các nhà phân phối linh kiện.
+* **Nhật ký kiểm toán an ninh**: Ghi lại lịch sử các thao tác đăng nhập, thay đổi thông tin và cập nhật trạng thái dữ liệu.
 
 ---
 
-## 8. Bộ Kịch Bản Kiểm Thử Chi Tiết (Comprehensive Test Suite)
+## 6. Cổng Mua Sắm Trực Tuyến & Công Cụ Tự Xây Dựng Cấu Hình
 
-### 8.1. Executive Dashboard (`TC-DASH`)
-- **`TC-DASH-01`**: Lọc dữ liệu KPI theo khoảng thời gian `Từ ngày — Đến ngày`. Doanh thu và đơn hàng tự động cập nhật chuẩn xác.
-- **`TC-DASH-02`**: Click thẻ KPI mở Drilldown Modal xem danh sách đơn hàng đóng góp.
-
-### 8.2. Sales POS Thu Ngân (`TC-POS`)
-- **`TC-POS-01`**: Lập đơn bán lẻ tại quầy, tạo mã QR VietQR, hoàn tất thanh toán và trừ tồn kho tự động.
-
-### 8.3. Quản Lý Kho (`TC-WH`)
-- **`TC-WH-01`**: Lọc nhật ký biến động kho IN/OUT theo khoảng thời gian.
-- **`TC-WH-02`**: Nhấn "Xác Nhận Xuất Kho" trong chi tiết đơn hàng -> Bật modal chọn Shipper (Shipper 1, Shipper 2, Tự do) -> Tự động đóng cả 2 modal và phát thông báo Realtime.
-
-### 8.4. Mua Hàng & RFQ (`TC-PUR`)
-- **`TC-PUR-01`**: Tạo RFQ gửi 15 NCC cho sản phẩm cảnh báo kho -> Tự động giữ nguyên số lượng đề xuất thực tế (ví dụ: 63 cái, 25 cái).
-- **`TC-PUR-02`**: Phê duyệt báo giá rẻ nhất qua Ma Trận Giá $P_{\text{save}}$ -> Chuyển thành PO chính thức.
-
-### 8.5. Kiểm Định Chất Lượng QA/QC Mới (`TC-QC`)
-- **`TC-QC-01`**: Tiếp nhận lô hàng mua về trạm QC -> Chọn tỷ lệ kiểm tra ($100\%, 50\%, 10\%$) -> Phát hành biên bản QA/QC cho phép nhập kho.
-
-### 8.6. Phân Công Shipper & Giao Hàng Mới (`TC-DEL`)
-- **`TC-DEL-01`**: Tiếp nhận đơn xuất kho đã phân công Shipper -> Chụp/tải ảnh minh chứng giao hàng Base64 -> Cập nhật trạng thái `DELIVERED`.
-
-### 8.7. Chăm Sóc Khách Hàng WebSocket (`TC-CSKH`)
-- **`TC-CSKH-01`**: Chat 1-1 giữa Khách hàng và Nhân viên CSKH qua WebSocket -> Tin nhắn nhận tức thì $< 1\text{ms}$.
-- **`TC-CSKH-02`**: Nhấn `🗑️ Xóa phiên chat này` -> Phiên chat bị xóa sạch khỏi Server và danh sách Admin.
+* **Công cụ tự xây dựng cấu hình máy tính**:
+  * Tự động lọc linh kiện tương thích: Chân cắm vi xử lý, chuẩn chân cắm bo mạch, loại bộ nhớ RAM và công suất nguồn đáp ứng.
+  * Lưu bản in cấu hình hoặc đưa toàn bộ cấu hình vào giỏ hàng mua sắm.
+* **Chính sách khách hàng thân thiết**: Phân hạng mức thành viên (Đồng, Bạc, Vàng, Kim Cương) theo tích lũy chi tiêu và áp dụng mức ưu đãi tự động.
+* **Trợ lý tư vấn tự động**: Hỗ trợ giải đáp thông số kỹ thuật và gợi ý cấu hình phù hợp với ngân sách và nhu cầu sử dụng của khách hàng.
 
 ---
 
-## 9. Công Nghệ Sử Dụng (Tech Stack)
+## 7. Danh Bạ Các Nhà Cung Cấp Đối Tác Chính Hãng
 
-### Frontend
-- **Core Framework**: React.js (v18) xây dựng trên nền Vite bundling tool.
-- **Styling**: Vanilla CSS Custom Variables, thiết kế Glassmorphic UI cao cấp, font chữ **Inter**.
-- **Realtime Sync**: WebSocket Client & Inter-tab BroadcastChannel API.
-- **Icons & UI**: Lucide React Icons, Chart.js / React-Chartjs-2.
-- **State Management**: `ERPContext`, `CartContext`, `AuthContext`.
-
-### Backend
-- **Framework**: Node.js & Express.js RESTful API.
-- **Realtime Engine**: WebSocket Server (`ws` library) khởi chạy trên `ws://localhost:5000/ws/cskh`.
-- **Database & ORM**: PostgreSQL v15 & Prisma ORM.
-- **Security & Auth**: JSON Web Token (JWT) & bcryptjs password hashing.
-- **AI Integration**: Google Generative AI SDK (`@google/generative-ai` - Gemini 1.5 Flash).
-- **Email Notification**: Nodemailer Service tích hợp Gmail App Password (CSS chống lóa Gmail Dark Mode).
-
-### Deployment & Tools
-- **Docker Compose**: Containerization trọn gói Frontend, Backend và PostgreSQL Database.
-- **Data Generator**: Script Python cào và chuẩn hóa 1.580 dữ liệu linh kiện PC thực tế.
+| Mã Đối Tác | Tên Doanh Nghiệp Đối Tác | Mã Số Thuế | Danh Mục Phân Phối Chính |
+| :--- | :--- | :---: | :--- |
+| `SUP-INTEL-VN` | **Intel Technology Vietnam Co., Ltd** | 0304556677 | Vi xử lý CPU Intel Core thế hệ 12, 13, 14 |
+| `SUP-AMD-VN` | **AMD Southeast Asia Pte Ltd (Văn phòng đại diện)** | 0317896542 | Vi xử lý CPU AMD Ryzen và Card đồ họa Radeon |
+| `SUP-ASUS-VN` | **ASUS Vietnam Co., Ltd** | 0309988776 | Bo mạch chủ, Card màn hình, Màn hình máy tính |
+| `SUP-GIGABYTE-VN` | **Công ty TNHH Gigabyte Việt Nam** | 0312665544 | Bo mạch chủ, Card đồ họa Gigabyte và Aorus |
+| `SUP-MSI-VN` | **MSI Vietnam Technology Co., Ltd** | 0316554433 | Bo mạch chủ và Card đồ họa MSI chuyên dụng |
+| `SUP-VIENSON` | **Công ty Cổ phần Máy tính Viễn Sơn** | 0301889977 | Nhà phân phối Gigabyte, Kingston, Corsair |
+| `SUP-ANHNGOC` | **Công ty CP Đầu tư Công nghệ Anh Ngọc**| 0102778899 | Nhà phân phối MSI, DeepCool, TeamGroup |
+| `SUP-CORSAIR-VN` | **Corsair Vietnam Office** | 0315443322 | Bộ nhớ RAM Corsair, Nguồn máy tính, Tản nhiệt |
+| `SUP-KINGSTON-VN`| **Kingston Technology Far East Corp** | 0314221100 | Bộ nhớ RAM Kingston Fury, Ổ cứng thể rắn SSD |
+| `SUP-SAMSUNG-VN` | **Samsung Electronics HCMC CE Complex** | 0312998811 | Ổ cứng SSD Samsung, Màn hình đồ họa cao cấp |
+| `SUP-LG-VN` | **LG Electronics Vietnam Haiphong** | 0201334455 | Màn hình máy tính chuyên dụng LG UltraGear |
+| `SUP-WESTERN-VN` | **Western Digital Vietnam** | 0311776655 | Ổ cứng lưu trữ HDD và SSD Western Digital |
+| `SUP-SEAGATE-VN` | **Seagate Technology Vietnam** | 0313887766 | Ổ cứng lưu trữ dung lượng lớn Seagate |
+| `SUP-COOLERMASTER`| **Cooler Master Vietnam** | 0314998877 | Vỏ thùng máy tính, Bộ nguồn máy tính, Tản nhiệt nước |
+| `SUP-THERMALTAKE` | **Thermaltake Technology VN** | 0315667788 | Vỏ máy tính kính cường lực, Nguồn máy tính |
+| `SUP-DEEPCOOL-VN` | **DeepCool Technology Co., Ltd** | 0316889900 | Bộ tản nhiệt khí và Tản nhiệt nước máy tính |
 
 ---
 
-## 10. Cấu Trúc Thư Mục Dự Án Toàn Diện
+## 8. Danh Sách Tài Khoản Thử Nghiệm Hệ Thống
 
+Tất cả tài khoản hệ thống dùng chung mật khẩu mặc định: `123456`
+
+| Vai Trò Phụ Trách | Tên Đăng Nhập | Mật Khẩu | Họ Và Tên Nhân Sự | Đường Dẫn Phân Hệ |
+| :--- | :---: | :---: | :--- | :--- |
+| **Quản Trị Hệ Thống** | `admin` | `123456` | Quản Trị Viên Hệ Thống | `/admin/system?tab=overview` |
+| **Ban Giám Đốc** | `ceo` | `123456` | Nguyễn Văn A (Tổng Giám Đốc) | `/admin/dashboard` |
+| **Quản Lý Bán Hàng** | `sales_manager` | `123456` | Trịnh Quản Lý (Trưởng Phòng Kinh Doanh) | `/admin/sales` |
+| **Nhân Viên Bán Hàng** | `sales` | `123456` | Trần Thị B (Nhân Viên Bán Hàng) | `/admin/sales` |
+| **Quản Lý Kho** | `warehouse_manager`|`123456` | Hoàng Kho Vận (Trưởng Kho) | `/admin/warehouse` |
+| **Thủ Kho** | `warehouse` | `123456` | Lê Văn C (Thủ Kho Quản Lý) | `/admin/warehouse` |
+| **Nhân Viên Mua Hàng** | `purchasing` | `123456` | Phạm Thu Mua (Phòng Mua Hàng) | `/admin/purchasing` |
+| **Kiểm Định Chất Lượng**| `qc` | `123456` | Nguyễn Văn QC (Chuyên Viên Kiểm Định) | `/admin/quality-control` |
+| **Kỹ Thuật Lắp Ráp** | `assembly` | `123456` | Phạm Văn D (Kỹ Thuật Viên Phần Cứng) | `/admin/assembly` |
+| **Quản Lý Nhân Sự** | `hr` | `123456` | Nguyễn Nhân Sự (Trưởng Phòng Nhân Sự) | `/admin/hr` |
+| **Kế Toán Trưởng** | `accounting` | `123456` | Trần Kế Toán (Kế Toán Trưởng) | `/admin/accounting` |
+| **Chăm Sóc Khách Hàng**| `cskh` | `123456` | Nguyễn CSKH (Chuyên Viên Tư Vấn) | `/admin/cskh` |
+| **Giao Hàng (Tài xế 1)**| `delivery` / `shipper1`|`123456`| Nguyễn Văn A (Nhân Viên Giao Hàng) | `/admin/delivery` |
+| **Giao Hàng (Tài xế 2)**| `delivery2` / `shipper2`|`123456`| Trần Văn B (Nhân Viên Giao Hàng) | `/admin/delivery` |
+| **Khách Hàng Mua Sắm** | `customer` | `123456` | Nguyễn Khách Hàng (Tài Khoản Khách) | `/profile` |
+
+---
+
+## 9. Danh Mục Giao Diện Lập Trình Ứng Dụng (API)
+
+### 9.1. Nhóm Xác Thực Người Dùng (`/api/v1/auth`)
+* `POST /api/v1/auth/login`: Xác thực thông tin đăng nhập và cấp mã phiên làm việc.
+* `POST /api/v1/auth/register`: Đăng ký tài khoản khách hàng mới.
+* `GET /api/v1/auth/me`: Kiểm tra thông tin người dùng hiện hành từ phiên làm việc.
+
+### 9.2. Nhóm Nghiệp Vụ Mua Hàng (`/api/v1/purchasing`)
+* `GET /api/v1/purchasing/orders`: Lấy danh sách Yêu cầu báo giá và Đơn mua hàng.
+* `POST /api/v1/purchasing/orders`: Khởi tạo yêu cầu báo giá hoặc đơn đặt hàng mới.
+* `PATCH /api/v1/purchasing/orders/:id/status`: Cập nhật trạng thái đơn (Giám Đốc phê duyệt, Hủy đơn, Nhập kho...).
+* `GET /api/v1/purchasing/suppliers`: Tra cứu danh bạ các đối tác nhà cung cấp.
+* `POST /api/v1/purchasing/suppliers`: Quản trị viên lưu thông tin nhà cung cấp mới vào cơ sở dữ liệu.
+
+### 9.3. Nhóm Quản Lý Kho Bãi (`/api/v1/warehouse`)
+* `GET /api/v1/warehouse/inventory`: Tra cứu số lượng tồn kho và vị trí kệ hàng.
+* `POST /api/v1/warehouse/receipts`: Khởi tạo phiếu nhập kho sau khi kiểm định chất lượng đạt yêu cầu.
+* `POST /api/v1/warehouse/dispatch`: Thực hiện xuất kho và chỉ định nhân viên giao nhận.
+
+### 9.4. Nhóm Quản Lý Bán Hàng & Đơn Đặt Hàng (`/api/v1/orders`)
+* `GET /api/v1/orders`: Tra cứu danh sách đơn mua của khách hàng.
+* `POST /api/v1/orders`: Tiếp nhận đơn mua từ website hoặc hóa đơn bán hàng tại quầy.
+* `PATCH /api/v1/orders/:id/status`: Chuyển đổi trạng thái xử lý đơn hàng theo từng công đoạn.
+
+### 9.5. Nhóm Giao Vận & Vận Chuyển (`/api/v1/delivery`)
+* `GET /api/v1/delivery/tasks`: Danh sách các đơn hàng được giao cho từng nhân viên giao nhận.
+* `POST /api/v1/delivery/proof`: Gửi dữ liệu ảnh minh chứng hoàn tất giao hàng và ghi nhận tiền thu hộ.
+
+---
+
+## 10. Công Nghệ & Nền Tảng Kỹ Thuật Sử Dụng
+
+* **Giao Diện Phía Người Dùng**:
+  * **React 18 & Vite**: Thư viện xây dựng giao diện người dùng hiện đại, tốc độ phản hồi trang mượt mà.
+  * **Chart.js**: Thư viện vẽ biểu đồ phân tích số liệu thống kê trực quan.
+  * **Bộ Biểu Tượng Giao Diện Lucide**: Hệ thống biểu tượng thống nhất, rõ ràng.
+  * **Hệ Thống Phong Cách Giao Diện Thuần CSS**: Tối ưu hiển thị in ấn khổ giấy A4 chuẩn mực, không phụ thuộc thư viện định dạng ngoài.
+* **Hệ Thống Máy Chủ Nghiệp Vụ**:
+  * **Node.js & Express.js**: Nền tảng xây dựng máy chủ xử lý dữ liệu trung tâm ổn định.
+  * **Prisma**: Công cụ ánh xạ đối tượng cơ sở dữ liệu (ORM) an toàn và chuẩn xác.
+  * **Giao Thức WebSocket**: Duy trì đường truyền trao đổi thông tin thời gian thực cho bộ phận chăm sóc khách hàng.
+  * **Mã Hóa & Xác Thực An Ninh**: Bảo vệ mật khẩu người dùng và mã hóa phiên làm việc an toàn.
+* **Hệ Thống Cơ Sở Dữ Liệu**:
+  * **PostgreSQL 15**: Hệ quản trị cơ sở dữ liệu quan hệ mạnh mẽ, đảm bảo tính toàn vẹn và nhất quán của dữ liệu giao dịch.
+* **Đóng Gói & Triển Khai Hệ Thống**:
+  * **Docker & Docker-Compose**: Đóng gói toàn bộ cơ sở dữ liệu, máy chủ nghiệp vụ và giao diện người dùng thành các vùng chứa độc lập, khởi chạy đồng bộ trên mọi môi trường máy chủ.
+
+---
+
+## 11. Hướng Dẫn Cài Đặt Và Vận Hành Hệ Thống
+
+### Cách 1: Khởi Chạy Tự Động Bằng Docker (Khuyên Dùng)
+
+Yêu cầu máy tính đã cài đặt sẵn phần mềm Docker Desktop:
+
+```bash
+# 1. Tải mã nguồn dự án về máy tính
+git clone https://github.com/your-username/KLTN_ERP.git
+cd KLTN_ERP
+
+# 2. Khởi chạy toàn bộ hệ thống bằng một câu lệnh
+docker-compose up -d --build
 ```
-ERP_AetherPC/
-├── backend/                  # Server Node.js (Express + Prisma ORM + WebSocket Server + Gmail SMTP)
-│   ├── prisma/               # Schema cơ sở dữ liệu Prisma & Seed migration
-│   ├── src/
-│   │   ├── config/           # Cấu hình JWT, Database & Nodemailer SMTP
-│   │   ├── controllers/      # Bộ xử lý nghiệp vụ Order, Purchasing, HR, ERP, Chat CSKH, Quality Control
-│   │   ├── middlewares/      # Phân quyền RBAC, AuthToken JWT validation
-│   │   ├── routes/           # REST API endpoints (Orders, Purchasing, Delivery, Chat CSKH, QC)
-│   │   └── services/         # WebSocket Service (ws/cskh), Email service (Gmail SMTP)
-│   ├── .env.example          # Tệp cấu hình môi trường mẫu cho Backend
-│   └── Dockerfile            # Cấu hình Docker build Backend
-├── frontend/                 # Client Single Page Application (React + Vite + Lucide)
-│   ├── src/
-│   │   ├── components/       # UI Components tái sử dụng (Layout, Modals, Chatbot AI/CSKH)
-│   │   ├── config/           # Cấu hình danh sách 15 Nhà Cung Cấp đối tác
-│   │   ├── context/          # React Context State (AuthContext, CartContext, ERPContext)
-│   │   ├── pages/            # Các trang phân hệ ERP & Storefront
-│   │   │   ├── Admin/        # 12 Phân hệ Quản trị ERP (SalesPOS, Purchasing, Warehouse, QualityControl...)
-│   │   │   ├── Storefront/   # 12 Trang cửa hàng Online & AI PC Builder
-│   │   │   └── SupplierPortal/ # Cổng tương tác báo giá cho 15 Nhà Cung Cấp
-│   │   └── services/         # Axios/Fetch API Client & helper utilities
-│   ├── .env.example          # Tệp cấu hình môi trường mẫu cho Frontend
-│   └── Dockerfile            # Cấu hình Docker build Frontend
-├── database/                 # SQL Schema chuẩn & script khởi tạo Seed DB
-├── docs/                     # Tài liệu Khóa luận Tốt nghiệp IUH (.docx) & Sơ đồ UML/BPMN
-├── scraper/                  # Python Scraper cào & làm sạch 1.580 linh kiện PC thực tế
-├── scripts/                  # Scripts hỗ trợ xuất báo cáo luận văn IUH
-└── docker-compose.yml        # Cấu hình containerization trọn gói (Frontend, Backend, Postgres)
+
+Sau khi khởi chạy hoàn tất, truy cập hệ thống qua các địa chỉ sau:
+* **Giao Diện Ứng Dụng (Website & Quản Trị)**: `http://localhost:3000`
+* **Cổng Giao Tiếp Máy Chủ API**: `http://localhost:5000`
+* **Cơ Sở Dữ Liệu PostgreSQL**: Cổng `5432` (`Người dùng: postgres`, `Mật khẩu: postgres`, `Tên CSDL: kltn_erp`)
+
+```bash
+# Dừng và tắt toàn bộ hệ thống
+docker-compose down
 ```
 
 ---
 
-## 11. Hướng Dẫn Khởi Chạy & Triển Khai (Deployment Guide)
+### Cách 2: Khởi Chạy Thủ Công Từng Thành Phần (Node.js & PostgreSQL Cục Bộ)
 
-### Cách 1: Khởi Chạy Bằng Docker Compose (Khuyên dùng)
+Yêu cầu môi trường cài đặt sẵn: Node.js (phiên bản 18 trở lên) và PostgreSQL (phiên bản 14 trở lên).
 
-1. **Khởi tạo tệp môi trường từ bản mẫu**:
-   ```bash
-   cp backend/.env.example backend/.env
-   cp frontend/.env.example frontend/.env
-   ```
+#### Bước 1: Thiết lập và chạy máy chủ Backend
+```bash
+cd backend
+cp .env.example .env
 
-2. **Chạy Docker Compose**:
-   ```bash
-   docker-compose up --build -d
-   ```
+# Cài đặt các gói thư viện phụ thuộc
+npm install
 
-3. **Truy cập ứng dụng**:
-   - **Storefront & Admin ERP**: `http://localhost:3000`
-   - **Backend REST API**: `http://localhost:5000`
-   - **WebSocket Realtime CSKH**: `ws://localhost:5000/ws/cskh`
+# Đồng bộ cấu trúc bảng và nạp dữ liệu mẫu ban đầu
+npx prisma db push
+node prisma/seed.js
 
----
+# Khởi động máy chủ
+npm run dev
+```
 
-### Cách 2: Khởi Chạy Thủ Công (Development Mode)
+#### Bước 2: Thiết lập và chạy giao diện Frontend
+```bash
+cd ../frontend
+cp .env.example .env
 
-1. **Backend Server**:
-   ```bash
-   cd backend
-   npm install
-   npm run dev
-   ```
+# Cài đặt các gói thư viện phụ thuộc
+npm install
 
-2. **Frontend SPA Application**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+# Khởi động máy chủ giao diện
+npm run dev
+```
+
+Mở trình duyệt web và truy cập địa chỉ: `http://localhost:3000`.
 
 ---
 
-## 12. Danh Sách 14 Tài Khoản Demo Hệ Thống
-
-Đăng nhập tại trang `/login` bằng các tài khoản demo (Mật khẩu mặc định: `123456`):
-
-| STT | Vai Trò (Role) | Chức Danh Phân Nhiệm | Username | Mật khẩu mẫu |
-| :---: | :--- | :--- | :--- | :--- |
-| 1 | `ceo` | Giám Đốc Điều Hành (CEO) | `ceo` | `123456` |
-| 2 | `admin` | Quản Trị Hệ Thống | `admin` | `123456` |
-| 3 | `sales_manager` | Quản Lý Bán Hàng | `sales_manager` | `123456` |
-| 4 | `sales` | Nhân Viên Bán Hàng POS | `sales` | `123456` |
-| 5 | `warehouse_manager`| Quản Lý Kho Bãi | `warehouse_manager` | `123456` |
-| 6 | `warehouse` | Thủ Kho | `warehouse` | `123456` |
-| 7 | `purchasing` | Nhân Viên Mua Hàng | `purchasing` | `123456` |
-| 8 | `supplier` | Cổng 15 Nhà Cung Cấp Đối Tác | `supplier` | `123456` |
-| 9 | `qc` / `qa` | Kiểm Định Chất Lượng (Mới) | `qc` | `123456` |
-| 10 | `assembly` | Kỹ Thuật Lắp Ráp PC | `assembly` | `123456` |
-| 11 | `hr` | Quản Lý Nhân Sự | `hr` | `123456` |
-| 12 | `accounting` | Kế Toán Tài Chính | `accounting` | `123456` |
-| 13 | `cskh` | Chăm Sóc Khách Hàng | `cskh` | `123456` |
-| 14 | `delivery` | Nhân Viên Giao Hàng | `delivery` | `123456` |
-
----
-
-## Báo Cáo Khóa Luận Tốt Nghiệp (.docx)
-
-Tài liệu báo cáo chính thức lưu trữ tại:  
-`docs/Bao_Cao_Khoa_Luan_Tot_Nghiep_IUH_AetherPC_ERP.docx`
-
----
-
-## Bản Quyền & Giấy Phép
-Dự án hoàn thiện phục vụ Khóa luận Tốt nghiệp Đại học chuyên ngành Hệ thống Thông tin — Khoa Công nghệ Thông tin — Trường Đại học Công nghiệp TP. Hồ Chí Minh (IUH). Tất cả quyền được bảo lưu © 2026.
+> **Khóa Luận Tốt Nghiệp Đại Học — Khoa Công Nghệ Thông Tin — Trường Đại Học Công Nghiệp TP. Hồ Chí Minh (IUH)**  
+> *Hệ thống đã được kiểm thử toàn diện, hoạt động ổn định và sẵn sàng cho công tác nghiệm thu, đánh giá.*

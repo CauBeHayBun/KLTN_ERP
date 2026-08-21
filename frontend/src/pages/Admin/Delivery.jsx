@@ -216,7 +216,7 @@ export default function Delivery() {
       const shipperNameStr = user?.fullname || user?.name || 'Shipper';
 
       // 1. Vẽ khung thông tin nền tối tại GÓC DƯỚI BÊN TRÁI ảnh
-      const stampText = `⏱ ${timeStr} | ${dateStr} | Đơn: #${ordIdStr} | NV: ${shipperNameStr}`;
+      const stampText = `${timeStr} | ${dateStr} | Đơn: #${ordIdStr} | NV: ${shipperNameStr}`;
       ctx.font = 'bold 13px sans-serif';
       const textWidth = ctx.measureText(stampText).width;
 
@@ -431,10 +431,10 @@ export default function Delivery() {
   const handleClaimOrder = (orderId) => {
     if (typeof claimOrderForDelivery === 'function') {
       claimOrderForDelivery(orderId, user);
-      addNotification(`🚚 Đã nhận đơn hàng #${orderId}! Đơn đã chuyển sang tab "Đang Giao & Minh Chứng".`, 'success', '/admin/delivery?tab=active');
+      addNotification(`Đã nhận đơn hàng #${orderId}. Đơn đã chuyển sang tab "Đang Giao & Minh Chứng".`, 'success', '/admin/delivery?tab=active');
     } else {
       updateOrderStatus(orderId, 'SHIPPED');
-      addNotification(`🚚 Đã nhận đơn hàng #${orderId}!`, 'success', '/admin/delivery?tab=active');
+      addNotification(`Đã nhận đơn hàng #${orderId}.`, 'success', '/admin/delivery?tab=active');
     }
   };
 
@@ -448,7 +448,7 @@ export default function Delivery() {
     });
     setDeliverModal(null);
     setReceiverNote('');
-    addNotification(`✅ Đơn hàng #${ordId} giao thành công! Đã lưu ảnh minh chứng POD và kích hoạt Bảo Hành.`, 'success', '/admin/delivery?tab=history');
+    addNotification(`Đơn hàng #${ordId} giao thành công. Đã lưu ảnh minh chứng POD và kích hoạt bảo hành.`, 'success', '/admin/delivery?tab=history');
   };
 
   const handleFailDelivery = () => {
@@ -474,9 +474,9 @@ export default function Delivery() {
     setFailNote('');
 
     if (isNoContact) {
-      addNotification(`⏳ Đã đưa đơn #${ordId} vào danh sách "Chờ khách gọi lại (24h)". Sau 24h hệ thống sẽ tự động hoàn kho.`, 'warning', '/admin/delivery?tab=active');
+      addNotification(`Đã đưa đơn #${ordId} vào danh sách "Chờ khách gọi lại (24h)". Sau 24h hệ thống sẽ tự động hoàn kho.`, 'warning', '/admin/delivery?tab=active');
     } else {
-      addNotification(`⚠️ Đã cập nhật trạng thái đơn #${ordId}: Giao Thất Bại / Hẹn Lại.`, 'warning', '/admin/delivery?tab=history');
+      addNotification(`Đã cập nhật trạng thái đơn #${ordId}: Giao thất bại / Hẹn lại.`, 'warning', '/admin/delivery?tab=history');
     }
   };
 
@@ -489,12 +489,12 @@ export default function Delivery() {
       resumedAt: new Date().toISOString()
     });
     setIncidentFilter('ALL');
-    addNotification(`🚚 Đơn #${orderId} đã được kích hoạt lại! Bạn có thể tiếp tục đi giao và chụp ảnh POD.`, 'success', '/admin/delivery?tab=active');
+    addNotification(`Đơn #${orderId} đã được kích hoạt lại. Bạn có thể tiếp tục đi giao và chụp ảnh POD.`, 'success', '/admin/delivery?tab=active');
   };
 
   // Báo CSKH liên hệ khách cứu đơn hàng
   const handleEscalateToCSKH = (orderId) => {
-    addNotification(`📞 Đã gửi thông báo khẩn đến bộ phận CSKH để liên hệ hỗ trợ cứu đơn hàng #${orderId}!`, 'info', '/admin/delivery?tab=active');
+    addNotification(`Đã gửi thông báo đến bộ phận CSKH để liên hệ hỗ trợ xử lý đơn hàng #${orderId}.`, 'info', '/admin/delivery?tab=active');
   };
 
   // Quá 24h không liên lạc được hoặc Khách hủy -> Chuyển hoàn về kho
@@ -507,7 +507,7 @@ export default function Delivery() {
       returnedAt: new Date().toISOString()
     });
     setIncidentFilter('ALL');
-    addNotification(`↩️ Đơn hàng #${orderId} đã được chuyển sang trạng thái "Đang Chuyển Hoàn Về Kho". Vui lòng bàn giao kiện hàng cho Thủ kho.`, 'warning', '/admin/delivery?tab=active');
+    addNotification(`Đơn hàng #${orderId} đã chuyển sang trạng thái "Đang chuyển hoàn về kho". Vui lòng bàn giao kiện hàng cho Thủ kho.`, 'warning', '/admin/delivery?tab=active');
   };
 
   return (
@@ -629,7 +629,10 @@ export default function Delivery() {
                   <div key={o.id || oIdx} style={{ padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>#{o.orderId || o.id} — {o.customerName}</strong>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>📍 {o.shippingAddress || 'Quận 1, TP. Hồ Chí Minh'}</span>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
+                        <MapPin size={12} style={{ flexShrink: 0 }} />
+                        <span>{o.shippingAddress || 'Quận 1, TP. Hồ Chí Minh'}</span>
+                      </span>
                     </div>
                     <button
                       onClick={() => handleClaimOrder(o.orderId || o.id)}
@@ -651,7 +654,10 @@ export default function Delivery() {
                   <div key={r.id || rIdx} style={{ padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>#RMA-{r.id} — {r.customerName}</strong>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>📞 {r.phone}</span>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
+                        <Phone size={12} style={{ flexShrink: 0 }} />
+                        <span>{r.phone}</span>
+                      </span>
                     </div>
                     <button
                       onClick={() => setTab('returns')}
@@ -743,7 +749,12 @@ export default function Delivery() {
                         <strong style={{ color: '#0f172a', display: 'block' }}>{ord.customerName}</strong>
                         <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{ord.phone}</span>
                       </td>
-                      <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>📍 {ord.shippingAddress || 'Quận 1, TP. Hồ Chí Minh'}</td>
+                      <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <MapPin size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                          <span>{ord.shippingAddress || 'Quận 1, TP. Hồ Chí Minh'}</span>
+                        </div>
+                      </td>
                       <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>
                         {fmt(ord.totalAmount || ord.total)}
                       </td>
@@ -789,11 +800,11 @@ export default function Delivery() {
           <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             {[
               { id: 'ALL', label: 'Tất Cả Đơn', count: activeCount + countReturning, color: '#2563eb' },
-              { id: 'SHIPPING', label: '🟢 Đang Đi Giao', count: countShipping, color: '#16a34a' },
-              { id: 'AWAITING_CALLBACK', label: '⏳ Chờ Gọi Lại 24h', count: countAwaiting, color: '#d97706' },
-              { id: 'RESCHEDULED', label: '📅 Khách Hẹn Lại', count: countRescheduled, color: '#7c3aed' },
-              { id: 'REJECTED', label: '🚫 Khách Từ Chối / Hủy', count: countRejected, color: '#dc2626' },
-              { id: 'RETURNING', label: '↩️ Đang Chuyển Hoàn Kho', count: countReturning, color: '#475569' }
+              { id: 'SHIPPING', label: 'Đang Đi Giao', count: countShipping, color: '#16a34a' },
+              { id: 'AWAITING_CALLBACK', label: 'Chờ Gọi Lại 24h', count: countAwaiting, color: '#d97706' },
+              { id: 'RESCHEDULED', label: 'Khách Hẹn Lại', count: countRescheduled, color: '#7c3aed' },
+              { id: 'REJECTED', label: 'Khách Từ Chối / Hủy', count: countRejected, color: '#dc2626' },
+              { id: 'RETURNING', label: 'Đang Chuyển Hoàn Kho', count: countReturning, color: '#475569' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -810,10 +821,13 @@ export default function Delivery() {
                   color: incidentFilter === tab.id ? tab.color : '#475569',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.35rem',
+                  gap: '0.45rem',
                   transition: 'all 0.15s ease'
                 }}
               >
+                {tab.id !== 'ALL' && (
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: tab.color, display: 'inline-block' }} />
+                )}
                 <span>{tab.label}</span>
                 <span style={{
                   padding: '1px 6px',
@@ -859,12 +873,12 @@ export default function Delivery() {
                 onChange={e => setIncidentFilter(e.target.value)}
                 style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1.5px solid #2563eb', fontSize: '0.8rem', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: 700, boxSizing: 'border-box' }}
               >
-                <option value="ALL">🔍 Tất Cả Tiến Độ</option>
-                <option value="SHIPPING">🟢 Đang Đi Giao Bình Thường</option>
-                <option value="AWAITING_CALLBACK">⏳ Chờ Khách Gọi Lại 24h</option>
-                <option value="RESCHEDULED">📅 Khách Hẹn Giao Ngày Khác</option>
-                <option value="REJECTED">🚫 Khách Từ Chối Nhận / Hủy</option>
-                <option value="RETURNING">↩️ Đang Chuyển Hoàn Về Kho</option>
+                <option value="ALL">Tất Cả Tiến Độ</option>
+                <option value="SHIPPING">Đang Đi Giao</option>
+                <option value="AWAITING_CALLBACK">Chờ Khách Gọi Lại (24h)</option>
+                <option value="RESCHEDULED">Khách Hẹn Giao Ngày Khác</option>
+                <option value="REJECTED">Khách Từ Chối Nhận / Hủy</option>
+                <option value="RETURNING">Đang Chuyển Hoàn Về Kho</option>
               </select>
             </div>
 
@@ -875,9 +889,9 @@ export default function Delivery() {
                 onChange={e => setRegionFilter(e.target.value)}
                 style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: 600, boxSizing: 'border-box' }}
               >
-                <option value="ALL">📍 Tất Cả Khu Vực</option>
-                <option value="HCM">🏙️ Nội Thành TP.HCM</option>
-                <option value="PROVINCE">🚚 Ngoại Tỉnh (3PL Giao)</option>
+                <option value="ALL">Tất Cả Khu Vực</option>
+                <option value="HCM">Nội Thành TP.HCM</option>
+                <option value="PROVINCE">Ngoại Tỉnh (3PL Giao)</option>
               </select>
             </div>
 
@@ -888,9 +902,9 @@ export default function Delivery() {
                 onChange={e => setPaymentFilter(e.target.value)}
                 style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: 600, boxSizing: 'border-box' }}
               >
-                <option value="ALL">💵 Tất Cả Hình Thức</option>
-                <option value="COD">💰 Thu Tiền Mặt COD</option>
-                <option value="PREPAID">💳 Đã Trả Online (0đ COD)</option>
+                <option value="ALL">Tất Cả Hình Thức</option>
+                <option value="COD">Thu Tiền Mặt COD</option>
+                <option value="PREPAID">Đã Trả Online (0đ COD)</option>
               </select>
             </div>
 
@@ -901,10 +915,10 @@ export default function Delivery() {
                 onChange={e => setSortOrder(e.target.value)}
                 style={{ width: '100%', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: 600, boxSizing: 'border-box' }}
               >
-                <option value="NEWEST">⏱️ Mới Xuất Kho Nhất</option>
-                <option value="OLDEST">⏳ Cũ Nhất Trước</option>
-                <option value="COD_DESC">📈 Tiền COD Cao Nhất</option>
-                <option value="COD_ASC">📉 Tiền COD Thấp Nhất</option>
+                <option value="NEWEST">Mới Xuất Kho Nhất</option>
+                <option value="OLDEST">Cũ Nhất Trước</option>
+                <option value="COD_DESC">Tiền COD Cao Nhất</option>
+                <option value="COD_ASC">Tiền COD Thấp Nhất</option>
               </select>
             </div>
 
@@ -985,20 +999,20 @@ export default function Delivery() {
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           {isAwaiting ? (
-                            <span style={{ backgroundColor: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800 }}>
-                              ⏳ CHỜ GỌI LẠI (24H)
+                            <span style={{ backgroundColor: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Clock size={11} /> CHỜ GỌI LẠI (24H)
                             </span>
                           ) : isRescheduled ? (
-                            <span style={{ backgroundColor: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800 }}>
-                              📅 KHÁCH HẸN LẠI
+                            <span style={{ backgroundColor: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Calendar size={11} /> KHÁCH HẸN LẠI
                             </span>
                           ) : isRejected ? (
-                            <span style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800 }}>
-                              🚫 KHÁCH TỪ CHỐI
+                            <span style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <XCircle size={11} /> KHÁCH TỪ CHỐI
                             </span>
                           ) : isReturning ? (
-                            <span style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800 }}>
-                              ↩️ ĐANG HOÀN KHO
+                            <span style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <RefreshCw size={11} /> ĐANG HOÀN KHO
                             </span>
                           ) : (
                             <>
@@ -1010,12 +1024,9 @@ export default function Delivery() {
                                   padding: '2px 7px',
                                   borderRadius: '4px',
                                   fontSize: '0.68rem',
-                                  fontWeight: 800,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.2rem'
+                                  fontWeight: 800
                                 }}>
-                                  🔥 MỚI BÀN GIAO
+                                  MỚI BÀN GIAO
                                 </span>
                               )}
 
@@ -1053,19 +1064,19 @@ export default function Delivery() {
                       {/* Incident Notice Box */}
                       {isAwaiting ? (
                         <div style={{ padding: '0.6rem 0.75rem', backgroundColor: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a', fontSize: '0.74rem', color: '#92400e', marginBottom: '0.75rem' }}>
-                          <strong>⚠️ Chính sách 24H:</strong> Không gọi được cho khách. Đang tạm giữ chờ phản hồi. Nếu khách gọi lại, bấm <strong>[Khách Đã Gọi Lại]</strong> để tiếp tục giao. Quá 24h sẽ tự động chuyển hoàn về kho.
+                          <strong>Chính sách 24H:</strong> Không gọi được cho khách. Đang tạm giữ chờ phản hồi. Nếu khách gọi lại, bấm <strong>[Khách Đã Gọi Lại]</strong> để tiếp tục giao. Quá 24h sẽ tự động chuyển hoàn về kho.
                         </div>
                       ) : isRescheduled ? (
                         <div style={{ padding: '0.6rem 0.75rem', backgroundColor: '#faf5ff', borderRadius: '6px', border: '1px solid #e9d5ff', fontSize: '0.74rem', color: '#6b21a8', marginBottom: '0.75rem' }}>
-                          <strong>📅 Khách Hẹn Lại:</strong> {ord.failReason}. {ord.failNote ? `Ghi chú: "${ord.failNote}"` : ''}
+                          <strong>Khách Hẹn Lại:</strong> {ord.failReason}. {ord.failNote ? `Ghi chú: "${ord.failNote}"` : ''}
                         </div>
                       ) : isRejected ? (
                         <div style={{ padding: '0.6rem 0.75rem', backgroundColor: '#fef2f2', borderRadius: '6px', border: '1px solid #fca5a5', fontSize: '0.74rem', color: '#991b1b', marginBottom: '0.75rem' }}>
-                          <strong>🚫 Khách Từ Chối Nhận Hàng (Bom / Hủy Đơn):</strong> {ord.failReason || 'Khách đổi ý không mua'}. {ord.failNote ? `Ghi chú: "${ord.failNote}"` : ''}
+                          <strong>Khách Từ Chối Nhận Hàng:</strong> {ord.failReason || 'Khách đổi ý không mua'}. {ord.failNote ? `Ghi chú: "${ord.failNote}"` : ''}
                         </div>
                       ) : isReturning ? (
                         <div style={{ padding: '0.6rem 0.75rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.74rem', color: '#334155', marginBottom: '0.75rem' }}>
-                          <strong>↩️ Chuyển Hoàn Kho:</strong> Đơn hàng đang được Shipper giữ để bàn giao lại cho Thủ kho kiểm tra.
+                          <strong>Chuyển Hoàn Kho:</strong> Đơn hàng đang được Shipper giữ để bàn giao lại cho Thủ kho kiểm tra.
                         </div>
                       ) : null}
 
@@ -1078,15 +1089,16 @@ export default function Delivery() {
                           <strong>Số điện thoại:</strong>{' '}
                           <a
                             href={`tel:${ord.phone}`}
-                            style={{ color: '#2563eb', fontWeight: 800, textDecoration: 'none', backgroundColor: '#eff6ff', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bfdbfe' }}
+                            style={{ color: '#2563eb', fontWeight: 800, textDecoration: 'none', backgroundColor: '#eff6ff', padding: '2px 7px', borderRadius: '4px', border: '1px solid #bfdbfe', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                           >
-                            📞 {ord.phone}
+                            <Phone size={12} />
+                            <span>{ord.phone}</span>
                           </a>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.25rem' }}>
-                          <span style={{ minWidth: '55px' }}><strong>Địa chỉ:</strong></span>
-                          <span>
-                            📍 {ord.shippingAddress || 'TP. Hồ Chí Minh'}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem' }}>
+                          <MapPin size={14} style={{ color: '#64748b', marginTop: '2px', flexShrink: 0 }} />
+                          <div>
+                            <span>{ord.shippingAddress || 'TP. Hồ Chí Minh'}</span>
                             <span style={{
                               display: 'inline-block',
                               marginLeft: '0.4rem',
@@ -1100,7 +1112,7 @@ export default function Delivery() {
                             }}>
                               {isHCM ? 'Nội thành HCM' : 'Tỉnh / 3PL'}
                             </span>
-                          </span>
+                          </div>
                         </div>
 
                         {/* COD Amount Box */}
@@ -1137,13 +1149,13 @@ export default function Delivery() {
                             onClick={() => handleResumeDelivery(ord.orderId || ord.id)}
                             style={{ flex: 1.2, backgroundColor: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.55rem', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', boxShadow: '0 2px 4px rgba(22,163,74,0.2)' }}
                           >
-                            📞 Khách Đã Gọi Lại → Giao Tiếp
+                            <Phone size={14} /> Khách Đã Gọi Lại — Giao Tiếp
                           </button>
                           <button
                             onClick={() => handleForceReturnToWarehouse(ord.orderId || ord.id)}
-                            style={{ flex: 0.8, backgroundColor: '#ffffff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.55rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                            style={{ flex: 0.8, backgroundColor: '#ffffff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.55rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
                           >
-                            ↩️ Hoàn Về Kho
+                            <RefreshCw size={13} /> Hoàn Về Kho
                           </button>
                         </>
                       ) : isRescheduled ? (
@@ -1152,13 +1164,13 @@ export default function Delivery() {
                             onClick={() => handleResumeDelivery(ord.orderId || ord.id)}
                             style={{ flex: 1.2, backgroundColor: '#7c3aed', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.55rem', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', boxShadow: '0 2px 4px rgba(124,58,237,0.25)' }}
                           >
-                            🚚 Giao Tiếp Theo Hẹn
+                            <Truck size={14} /> Giao Tiếp Theo Hẹn
                           </button>
                           <button
                             onClick={() => handleForceReturnToWarehouse(ord.orderId || ord.id)}
-                            style={{ flex: 0.8, backgroundColor: '#ffffff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.55rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                            style={{ flex: 0.8, backgroundColor: '#ffffff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.55rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
                           >
-                            ↩️ Hoàn Về Kho
+                            <RefreshCw size={13} /> Hoàn Về Kho
                           </button>
                         </>
                       ) : isRejected ? (
@@ -1167,28 +1179,28 @@ export default function Delivery() {
                             onClick={() => handleForceReturnToWarehouse(ord.orderId || ord.id)}
                             style={{ flex: 1.2, backgroundColor: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.55rem', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', boxShadow: '0 2px 4px rgba(220,38,38,0.25)' }}
                           >
-                            ↩️ Xác Nhận Hoàn Kho
+                            <RefreshCw size={13} /> Xác Nhận Hoàn Kho
                           </button>
                           <button
                             onClick={() => handleEscalateToCSKH(ord.orderId || ord.id)}
-                            style={{ flex: 0.9, backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '0.55rem', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                            style={{ flex: 0.9, backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '0.55rem', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
                           >
-                            📞 Báo CSKH
+                            <Phone size={13} /> Báo CSKH
                           </button>
                           <button
                             onClick={() => handleResumeDelivery(ord.orderId || ord.id)}
                             title="Nếu khách đổi ý muốn nhận lại"
-                            style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '0.55rem 0.65rem', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                            style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '0.55rem 0.65rem', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
                           >
-                            🔄 Giao Lại
+                            <RefreshCw size={13} /> Giao Lại
                           </button>
                         </>
                       ) : isReturning ? (
                         <button
                           onClick={() => handleResumeDelivery(ord.orderId || ord.id)}
-                          style={{ flex: 1, backgroundColor: '#ffffff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '0.55rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                          style={{ flex: 1, backgroundColor: '#ffffff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '0.55rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
                         >
-                          🔄 Khách Đổi Ý → Tiếp Tục Giao
+                          <RefreshCw size={13} /> Khách Đổi Ý — Tiếp Tục Giao
                         </button>
                       ) : (
                         <>
@@ -1225,8 +1237,8 @@ export default function Delivery() {
             <RefreshCw size={18} style={{ color: '#8b5cf6' }} />
             <span>Thu Hồi Hàng Đổi Trả Tại Nhà Khách (RMA Pickup)</span>
           </h3>
-          <p style={{ color: '#64748b', fontSize: '0.78rem', marginBottom: '1.25rem' }}>
-            Shipper đến tận địa chỉ khách hàng lấy lại sản phẩm lỗi và bàn giao về kho để QC kiểm định
+          <p style={{ color: '#64748b', fontSize: '0.78rem', marginBottom: '1rem' }}>
+            Danh sách đơn yêu cầu thu hồi hàng đổi trả RMA từ phía khách hàng cần nhân viên giao hàng tiếp nhận và mang về kho.
           </p>
 
           <div style={{ overflowX: 'auto' }}>
@@ -1234,31 +1246,33 @@ export default function Delivery() {
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
                   <th style={{ padding: '0.65rem 0.85rem' }}>Mã RMA</th>
-                  <th style={{ padding: '0.65rem 0.85rem' }}>Khách Hàng & SĐT</th>
-                  <th style={{ padding: '0.65rem 0.85rem' }}>Địa Chỉ Lấy Hàng</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Khách Hàng</th>
+                  <th style={{ padding: '0.65rem 0.85rem' }}>Địa Chỉ Thu Hồi</th>
                   <th style={{ padding: '0.65rem 0.85rem' }}>Lý Do Đổi Trả</th>
-                  <th style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>Thao Tác Shipper</th>
+                  <th style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>Thao Tác</th>
                 </tr>
               </thead>
               <tbody>
                 {pendingReturns.map((ret, rIdx) => (
                   <tr key={ret.id || rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '0.65rem 0.85rem', fontWeight: 700, color: '#8b5cf6' }}>#RMA-{ret.id}</td>
-                    <td style={{ padding: '0.65rem 0.85rem' }}>
-                      <strong style={{ color: '#0f172a', display: 'block' }}>{ret.customerName}</strong>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{ret.phone}</span>
+                    <td style={{ padding: '0.65rem 0.85rem', fontWeight: 600, color: '#0f172a' }}>{ret.customerName}</td>
+                    <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <MapPin size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                        <span>{ret.address || 'Quận 7, TP. Hồ Chí Minh'}</span>
+                      </div>
                     </td>
-                    <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>📍 {ret.address || 'Quận 7, TP. Hồ Chí Minh'}</td>
                     <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>{ret.reason || 'Lỗi không nhận RAM'}</td>
                     <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
                       <button
                         onClick={() => {
                           updateReturnStatus(ret.id, 'RETURNING_TO_WAREHOUSE', `Shipper ${user?.fullname || user?.username} đã lấy hàng`);
-                          addNotification('✅ Đã xác nhận nhận hàng thu hồi RMA từ khách! Đang vận chuyển về kho.', 'success');
+                          addNotification('Đã xác nhận nhận hàng thu hồi RMA từ khách. Đang vận chuyển về kho.', 'success');
                         }}
-                        style={{ backgroundColor: '#8b5cf6', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.35rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+                        style={{ backgroundColor: '#8b5cf6', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.35rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                       >
-                        ✓ Đã Lấy Hàng Về Kho
+                        <Check size={13} /> Đã Lấy Hàng Về Kho
                       </button>
                     </td>
                   </tr>
@@ -1284,7 +1298,7 @@ export default function Delivery() {
               </p>
             </div>
             <button
-              onClick={() => addNotification('📤 Đã xuất bảng kê nộp tiền COD cho Phòng Kế Toán!', 'info', '/admin/accountant')}
+              onClick={() => addNotification('Đã xuất bảng kê nộp tiền COD cho Phòng Kế Toán.', 'info', '/admin/accountant')}
               style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.45rem 1rem', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
             >
               Nộp Tiền & Đối Soát COD
@@ -1411,7 +1425,7 @@ export default function Delivery() {
                       <span>Chụp Ảnh Minh Chứng Trực Tiếp Từ Máy Shipper (POD) *</span>
                     </label>
                     <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 700 }}>
-                      {proofPhoto ? '✓ Đã chụp ảnh' : '🔴 Camera đang bật'}
+                      {proofPhoto ? 'Đã chụp ảnh' : 'Camera đang bật'}
                     </span>
                   </div>
 
@@ -1427,8 +1441,8 @@ export default function Delivery() {
                           style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }}
                         />
                         <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
-                          <span style={{ backgroundColor: 'rgba(22,163,74,0.9)', color: '#ffffff', padding: '4px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 800, backdropFilter: 'blur(4px)' }}>
-                            ✓ ẢNH HỢP LỆ (POD)
+                          <span style={{ backgroundColor: 'rgba(22,163,74,0.9)', color: '#ffffff', padding: '4px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 850, backdropFilter: 'blur(4px)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Check size={12} /> ẢNH HỢP LỆ (POD)
                           </span>
                         </div>
                       </div>
@@ -1506,7 +1520,7 @@ export default function Delivery() {
                         }}
                         style={{ width: '100%', padding: '0.55rem', fontSize: '0.82rem', fontWeight: 700, backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
                       >
-                        <RefreshCw size={15} /> 📸 Chụp Lại Ảnh Khác
+                        <RefreshCw size={15} /> Chụp Lại Ảnh Khác
                       </button>
                     ) : (
                       <button
@@ -1551,11 +1565,20 @@ export default function Delivery() {
                 </div>
 
                 {/* System Auto Actions Info */}
-                <div style={{ padding: '0.75rem 0.9rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.75rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <div style={{ fontWeight: 700, color: '#0f172a' }}>⚡ Quy trình ERP tự động kích hoạt sau khi bấm Hoàn Tất:</div>
-                  <div>✓ Kích hoạt thời hạn <strong>Bảo Hành Điện Tử (Serial Warranty)</strong> bắt đầu từ ngày hôm nay.</div>
-                  <div>✓ Ghi nhận dòng tiền thu hộ COD vào <strong>Sổ Quỹ Kế Toán (Ledger)</strong> để đối soát nộp tiền.</div>
-                  <div>✓ Bắn thông báo xác nhận giao hàng thành công đến <strong>CSKH & Khách hàng</strong>.</div>
+                <div style={{ padding: '0.75rem 0.9rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.75rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <div style={{ fontWeight: 700, color: '#0f172a' }}>Quy trình ERP tự động kích hoạt sau khi xác nhận:</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Check size={13} style={{ color: '#16a34a', flexShrink: 0 }} />
+                    <span>Kích hoạt thời hạn <strong>Bảo Hành Điện Tử (Serial Warranty)</strong> bắt đầu từ ngày hôm nay.</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Check size={13} style={{ color: '#16a34a', flexShrink: 0 }} />
+                    <span>Ghi nhận dòng tiền thu hộ COD vào <strong>Sổ Quỹ Kế Toán (Ledger)</strong> để đối soát nộp tiền.</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Check size={13} style={{ color: '#16a34a', flexShrink: 0 }} />
+                    <span>Bắn thông báo xác nhận giao hàng thành công đến <strong>CSKH & Khách hàng</strong>.</span>
+                  </div>
                 </div>
 
               </div>
@@ -1572,9 +1595,9 @@ export default function Delivery() {
                 <button
                   type="button"
                   onClick={handleConfirmDelivered}
-                  style={{ backgroundColor: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.55rem 1.4rem', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 4px rgba(22,163,74,0.25)' }}
+                  style={{ backgroundColor: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.55rem 1.4rem', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', boxShadow: '0 2px 4px rgba(22,163,74,0.25)' }}
                 >
-                  ✓ Xác Nhận Hoàn Tất Giao Hàng & Thu COD
+                  <Check size={15} /> Xác Nhận Hoàn Tất Giao Hàng & Thu COD
                 </button>
               </div>
 
@@ -1628,7 +1651,7 @@ export default function Delivery() {
                   </div>
                   <div style={{ fontSize: '0.75rem', color: isMaxAttempt ? '#b91c1c' : '#92400e', marginTop: '0.15rem' }}>
                     {isMaxAttempt
-                      ? '⚠️ Đơn hàng đã giao thất bại 3 lần. Quy định hệ thống sẽ tự động CHUYỂN HOÀN VỀ KHO.'
+                      ? 'Đơn hàng đã giao thất bại 3 lần. Quy định hệ thống sẽ tự động chuyển hoàn về kho.'
                       : 'Quy chuẩn logistics cho phép giao tối đa 3 lần trước khi hoàn kho.'}
                   </div>
                 </div>
@@ -1658,11 +1681,11 @@ export default function Delivery() {
                     style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '0.82rem', fontWeight: 600, color: '#0f172a', boxSizing: 'border-box' }}
                   >
                     <option value="">-- Chọn lý do cụ thể --</option>
-                    <option value="Khách hẹn giao lại ngày khác (Bận việc / Đi vắng)">📅 Khách hẹn giao lại ngày khác (Bận việc / Đi vắng)</option>
-                    <option value="Không liên lạc được (Gọi 3 cuộc không nghe máy / Thuê bao)">📞 Không liên lạc được (Đã gọi 3 cuộc không nghe / Thuê bao)</option>
-                    <option value="Khách từ chối nhận hàng (Bom hàng / Không còn nhu cầu)">🚫 Khách từ chối nhận hàng (Bom hàng / Đổi ý không mua)</option>
-                    <option value="Sai địa chỉ nhận hàng / Không tìm thấy số nhà">📍 Sai địa chỉ nhận hàng / Không tìm thấy số nhà</option>
-                    <option value="Kiện hàng bị móp méo / Hư hỏng do vận chuyển">📦 Kiện hàng bị móp méo / Hư hỏng do vận chuyển</option>
+                    <option value="Khách hẹn giao lại ngày khác (Bận việc / Đi vắng)">Khách hẹn giao lại ngày khác (Bận việc / Đi vắng)</option>
+                    <option value="Không liên lạc được (Gọi 3 cuộc không nghe máy / Thuê bao)">Không liên lạc được (Đã gọi 3 cuộc không nghe / Thuê bao)</option>
+                    <option value="Khách từ chối nhận hàng (Bom hàng / Không còn nhu cầu)">Khách từ chối nhận hàng (Đổi ý không mua)</option>
+                    <option value="Sai địa chỉ nhận hàng / Không tìm thấy số nhà">Sai địa chỉ nhận hàng / Không tìm thấy số nhà</option>
+                    <option value="Kiện hàng bị móp méo / Hư hỏng do vận chuyển">Kiện hàng bị móp méo / Hư hỏng do vận chuyển</option>
                   </select>
                 </div>
 
@@ -1675,7 +1698,7 @@ export default function Delivery() {
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', cursor: 'pointer' }}>
                       <input type="radio" name="resAction" defaultChecked />
                       <div>
-                        <strong>📅 Hẹn giao lại vào chuyến tiếp theo (Ngày mai)</strong>
+                        <strong>Hẹn giao lại vào chuyến tiếp theo (Ngày mai)</strong>
                         <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Đơn hàng giữ lại trên hệ thống và nhắc nhở Shipper đi giao lại.</div>
                       </div>
                     </label>
@@ -1683,7 +1706,7 @@ export default function Delivery() {
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', cursor: 'pointer' }}>
                       <input type="radio" name="resAction" />
                       <div>
-                        <strong style={{ color: '#dc2626' }}>↩️ Chuyển Hoàn Về Kho (Khách hủy / Trả hàng)</strong>
+                        <strong style={{ color: '#dc2626' }}>Chuyển Hoàn Về Kho (Khách hủy / Trả hàng)</strong>
                         <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Bàn giao kiện hàng về kho để Thủ kho kiểm tra niêm phong & nhập lại kho.</div>
                       </div>
                     </label>
@@ -1691,7 +1714,7 @@ export default function Delivery() {
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', cursor: 'pointer' }}>
                       <input type="radio" name="resAction" />
                       <div>
-                        <strong style={{ color: '#2563eb' }}>📞 Chuyển CSKH gọi điện hỗ trợ xử lý</strong>
+                        <strong style={{ color: '#2563eb' }}>Chuyển CSKH gọi điện hỗ trợ xử lý</strong>
                         <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Gửi cảnh báo cho bộ phận CSKH liên hệ với khách để cứu đơn hàng.</div>
                       </div>
                     </label>
@@ -1714,7 +1737,7 @@ export default function Delivery() {
 
                 {/* Auto ERP Action Notice */}
                 <div style={{ padding: '0.75rem 0.9rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.74rem', color: '#475569' }}>
-                  <strong style={{ color: '#0f172a' }}>⚡ Hệ thống tự động:</strong> Ghi nhận nhật ký sự cố, đếm số lần giao thất bại ({attemptCount}/3) và cập nhật thông báo cho CSKH và Quản lý giao vận.
+                  <strong style={{ color: '#0f172a' }}>Hệ thống tự động:</strong> Ghi nhận nhật ký sự cố, đếm số lần giao thất bại ({attemptCount}/3) và cập nhật thông báo cho CSKH và Quản lý giao vận.
                 </div>
 
                 {/* Footer Buttons */}

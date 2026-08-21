@@ -520,7 +520,45 @@ const validateReceipt = async (req, res, next) => {
   }
 };
 
+
+// POST /api/v1/purchasing/suppliers (Admin / CEO)
+const createSupplier = async (req, res, next) => {
+  try {
+    const { name, code, phone, email, address, taxCode, mainProducts, rating } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Tên nhà cung cấp là bắt buộc' });
+    }
+
+    const supplierCode = (code && code.trim()) ? code.trim() : `SUP-${Date.now().toString().slice(-4)}`;
+
+    const existing = await prisma.supplier.findUnique({
+      where: { code: supplierCode }
+    });
+    if (existing) {
+      return res.status(400).json({ success: false, message: `Mã nhà cung cấp ${supplierCode} đã tồn tại` });
+    }
+
+    const newSupplier = await prisma.supplier.create({
+      data: {
+        code: supplierCode,
+        name: name.trim(),
+        phone: phone ? phone.trim() : null,
+        email: email ? email.trim() : null,
+        address: address ? address.trim() : null,
+        taxCode: taxCode ? taxCode.trim() : null,
+        mainProducts: mainProducts ? mainProducts.trim() : 'Linh kiện máy tính chính hãng',
+        rating: parseFloat(rating || 5.0)
+      }
+    });
+
+    res.json({ success: true, data: newSupplier });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  createSupplier,
   getSuppliers,
   getPurchasingProducts,
   getPurchaseOrders,
