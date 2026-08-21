@@ -241,16 +241,50 @@ const createOrder = async (req, res, next) => {
   }
 };
 
-/**
- * 2. LẤY DANH SÁCH ĐƠN HÀNG CỦA KHÁCH HÀNG
- */
 const getCustomerOrders = async (req, res, next) => {
   try {
-    const customerId = req.user.id;
+    const role = (req.user?.role || '').toUpperCase();
+    const isCustomer = role === 'CUSTOMER';
+    const isDelivery = role === 'DELIVERY';
+
+    let whereClause = {};
+
+    if (isCustomer) {
+      whereClause = { customerId: req.user.id };
+    } else if (isDelivery) {
+      // Shipper xem các đơn từ trạng thái đóng gói sẵn sàng trở đi
+      whereClause = {
+        status: {
+          in: ['CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED', 'SHIPPING_FAILED']
+        }
+      };
+    }
+
     const orders = await prisma.order.findMany({
-      where: { customerId },
+      where: whereClause,
       include: {
-        items: true,
+        customer: {
+          select: {
+            customerId: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+            city: true
+          }
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                productId: true,
+                name: true,
+                images: true,
+                price: true
+              }
+            }
+          }
+        },
         statusHistory: {
           orderBy: { timestamp: 'desc' }
         }
@@ -258,9 +292,20 @@ const getCustomerOrders = async (req, res, next) => {
       orderBy: { createdAt: 'desc' }
     });
 
+    // Format dữ liệu đồng bộ với frontend
+    const formattedOrders = orders.map(ord => ({
+      ...ord,
+      id: ord.orderId,
+      customerName: ord.customer?.name || 'Khách Hàng',
+      phone: ord.customer?.phone || '',
+      email: ord.customer?.email || '',
+      address: ord.shippingAddress,
+      total: parseFloat(ord.totalAmount)
+    }));
+
     res.json({
       success: true,
-      data: orders
+      data: formattedOrders
     });
   } catch (err) {
     next(err);
@@ -289,14 +334,17 @@ const updateOrderStatus = async (req, res, next) => {
       'COMPLETED',
       'CANCELLED',
       'FAILED_DELIVERY',
+      'SHIPPING_FAILED',
+      'RETURNING_TO_WAREHOUSE',
       'RETURN_REQUESTED',
+      'RETURN_APPROVED',
       'RETURNING',
       'RETURNED',
       'REFUNDED'
     ];
 
     if (!VALID_STATUSES.includes(status)) {
-      return res.status(400).json({ success: false, message: 'Trạng thái đơn hàng không hợp lệ' });
+      return res.status(400).json({ success: false, message: `Trạng thái đơn hàng không hợp lệ: ${status}` });
     }
 
     const order = await prisma.$transaction(async (tx) => {
@@ -437,7 +485,7 @@ const updateOrderStatus = async (req, res, next) => {
         where: { orderId: id },
         data: {
           status,
-          ...(status === 'DELIVERED' ? { deliveredAt: new Date() } : {}),
+          ...(status === 'DELIVERED' ? { deliveredAt: new Date(), paymentStatus: 'PAID' } : {}),
           ...(status === 'SHIPPED' ? { shippedAt: new Date() } : {}),
           ...(status === 'CONFIRMED' ? { confirmedAt: new Date() } : {}),
           ...(status === 'CANCELLED' ? { cancelledAt: new Date() } : {})
@@ -445,11 +493,24 @@ const updateOrderStatus = async (req, res, next) => {
       });
 
       // Ghi nhật ký lịch sử trạng thái
+      let historyLogNote = note;
+      if (!historyLogNote) {
+        if (status === 'DELIVERED') {
+          historyLogNote = `Giao hàng thành công (Ký nhận: ${req.body.receiverNote || 'Nguyên vẹn'}) bởi Shipper ${changedBy}`;
+        } else if (status === 'SHIPPING_FAILED') {
+          historyLogNote = `Giao thất bại: ${req.body.failReason || 'Không liên lạc được'} (${req.body.isAwaitingCallback ? 'Chờ gọi lại 24h' : 'Hẹn lại'}) bởi ${changedBy}`;
+        } else if (status === 'RETURNING_TO_WAREHOUSE') {
+          historyLogNote = `Đơn hàng chuyển hoàn về kho (Lý do: ${req.body.returnReason || req.body.failReason || 'Khách không nhận'}) bởi ${changedBy}`;
+        } else {
+          historyLogNote = `Cập nhật trạng thái sang ${status} bởi ${changedBy}`;
+        }
+      }
+
       await tx.orderStatusHistory.create({
         data: {
           orderId: id,
           status,
-          note: note || `Cập nhật trạng thái sang ${status} bởi ${changedBy}`,
+          note: historyLogNote,
           changedBy
         }
       });
@@ -468,7 +529,7 @@ const updateOrderStatus = async (req, res, next) => {
         customerName: updatedOrderFull.customer.name,
         orderId: id,
         status,
-        note: note || null,
+        note: note || req.body.receiverNote || req.body.failReason || null,
         items: updatedOrderFull.items,
         totalAmount: updatedOrderFull.totalAmount,
         proofPhoto: req.body.proofPhoto || req.body.proofUrl || null,

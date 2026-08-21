@@ -16,15 +16,25 @@ export const NotificationProvider = ({ children }) => {
     localStorage.setItem('aether_notifications', JSON.stringify(notifications));
   }, [notifications]);
 
-  const addNotification = (message, type = 'success', link = null) => {
+  const addNotification = (messageOrObj, type = 'success', link = null) => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     
+    let textMessage = messageOrObj;
+    let notifType = type;
+    let notifLink = link;
+
+    if (typeof messageOrObj === 'object' && messageOrObj !== null) {
+      textMessage = messageOrObj.message || messageOrObj.title || messageOrObj.text || JSON.stringify(messageOrObj);
+      notifType = messageOrObj.type || type || 'success';
+      notifLink = messageOrObj.link || link || null;
+    }
+
     // Add to history (bell dropdown)
     const newNotification = {
       id,
-      message,
-      type,
-      link,
+      message: String(textMessage || ''),
+      type: notifType,
+      link: notifLink,
       read: false,
       createdAt: new Date().toISOString()
     };
@@ -98,7 +108,7 @@ export const NotificationProvider = ({ children }) => {
               {toast.type === 'info' && <Info size={20} color="#3b82f6" />}
             </div>
             <div style={{ flex: 1, fontSize: '0.875rem', color: '#1e293b', fontWeight: 500, lineHeight: 1.4 }}>
-              {toast.message}
+              {typeof toast.message === 'object' ? (toast.message?.message || toast.message?.title || JSON.stringify(toast.message)) : String(toast.message || '')}
             </div>
             <button 
               onClick={() => removeToast(toast.id)}

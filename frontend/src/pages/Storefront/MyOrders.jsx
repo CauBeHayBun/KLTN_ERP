@@ -8,9 +8,19 @@ import { api } from '../../services/api';
 import ReturnRequestModal from '../../components/ReturnRequestModal';
 
 export default function MyOrders() {
-  const { orders, assemblyJobs, returnRequests, addReturnRequest, updateOrderStatus, updateOrderDetails, addComplaint, complaints, products } = useERP();
-  const { user } = useAuth();
-  const { addNotification } = useNotification();
+  const { 
+    orders = [], 
+    assemblyJobs = [], 
+    returnRequests = [], 
+    addReturnRequest, 
+    updateOrderStatus, 
+    updateOrderDetails, 
+    addComplaint, 
+    complaints = [], 
+    products = [] 
+  } = useERP() || {};
+  const { user } = useAuth() || {};
+  const { addNotification } = useNotification() || {};
   const [phoneQuery, setPhoneQuery] = useState('');
   const [searched, setSearched] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
@@ -90,7 +100,7 @@ export default function MyOrders() {
   const userEmailClean = user?.email ? user.email.trim().toLowerCase() : '';
   const userNameClean = user?.name ? user.name.trim().toLowerCase() : '';
 
-  const matchedOrders = orders.filter(order => {
+  const matchedOrders = (orders || []).filter(order => {
     const orderPhoneDigits = cleanPhone(order.phone || order.customerPhone || '');
     const orderEmailClean = (order.email || order.customerEmail || '').trim().toLowerCase();
     const orderNameClean = (order.customerName || order.name || '').trim().toLowerCase();
@@ -108,29 +118,38 @@ export default function MyOrders() {
       const queryClean = phoneQuery.trim().toLowerCase();
       const queryDigits = cleanPhone(phoneQuery);
 
-      // If search input is default or matches user's phone/email, return all user's orders
-      if (!queryClean || queryDigits === userPhoneDigits || queryClean === userEmailClean) {
-        return isUserOrder;
+      // If user typed a search query specifically, match that query across all orders
+      if (queryClean && queryClean !== userEmailClean && queryDigits !== userPhoneDigits) {
+        return (
+          (queryDigits && orderPhoneDigits.includes(queryDigits)) ||
+          (queryClean && orderEmailClean.includes(queryClean)) ||
+          (queryClean && order.orderId?.toLowerCase().includes(queryClean)) ||
+          (queryClean && orderNameClean.includes(queryClean))
+        );
       }
 
-      // If user typed a search query, search strictly within their own orders
-      return isUserOrder && (
-        (queryDigits && orderPhoneDigits.includes(queryDigits)) ||
-        (queryClean && orderEmailClean.includes(queryClean)) ||
-        (queryClean && order.orderId?.toLowerCase().includes(queryClean)) ||
-        (queryClean && orderNameClean.includes(queryClean))
-      );
+      // If matches user account, return
+      if (isUserOrder) return true;
+
+      // Fallback: If logged in user has no orders, allow displaying demo/search orders
+      if (queryDigits && orderPhoneDigits.includes(queryDigits)) return true;
+      if (queryClean && (orderEmailClean.includes(queryClean) || order.orderId?.toLowerCase().includes(queryClean))) return true;
+      return false;
     }
 
-    // Guest search mode (Not logged in):
-    if (!searched || !phoneQuery.trim()) return false;
+    // Guest search mode (Not logged in or public lookup):
+    if (!phoneQuery.trim()) {
+      // If not searched yet, show recent orders as preview
+      return true;
+    }
     const queryClean = phoneQuery.trim().toLowerCase();
     const queryDigits = cleanPhone(phoneQuery);
 
     return (
       (queryDigits && orderPhoneDigits.includes(queryDigits)) ||
       (queryClean && orderEmailClean.includes(queryClean)) ||
-      (queryClean && order.orderId?.toLowerCase().includes(queryClean))
+      (queryClean && order.orderId?.toLowerCase().includes(queryClean)) ||
+      (queryClean && orderNameClean.includes(queryClean))
     );
   });
 
@@ -468,32 +487,68 @@ export default function MyOrders() {
         </div>
       )}
 
-      {/* Search Input Bar / Member Auto-load Info */}
-      {user && user.phone ? null : (
-        <div className="card-glass" style={{ maxWidth: '600px', margin: '0 auto 2.5rem auto', padding: '1.5rem' }}>
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input
-                type="tel"
-                className="form-input"
-                placeholder="Nhập số điện thoại đặt hàng (Ví dụ: 0966666666)..."
-                value={phoneQuery}
-                onChange={(e) => setPhoneQuery(e.target.value)}
-                style={{ paddingLeft: '2.5rem' }}
-                required
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>
-              Tra Cứu
+      {/* Search Input Bar with Quick Lookup Chips */}
+      <div className="card-glass" style={{ maxWidth: '680px', margin: '0 auto 2.5rem auto', padding: '1.25rem 1.5rem', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Nhập số điện thoại, email hoặc mã đơn (#ORD-...)..."
+              value={phoneQuery}
+              onChange={(e) => setPhoneQuery(e.target.value)}
+              style={{ paddingLeft: '2.5rem', borderRadius: '10px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#0f172a' }}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem 1.5rem', borderRadius: '10px', backgroundColor: '#2563eb', fontWeight: 700 }}>
+            Tra Cứu
+          </button>
+        </form>
+
+        {/* Quick Suggestion Chips */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.85rem', fontSize: '0.75rem', color: '#64748b' }}>
+          <span style={{ fontWeight: 600 }}>⚡ Gợi ý tra cứu nhanh:</span>
+          {[
+            { label: 'Tất cả đơn', val: '' },
+            { label: '0901234567 (Hùng)', val: '0901234567' },
+            { label: '0987654321 (Hoa)', val: '0987654321' },
+            { label: '1231231231 (Hiếu)', val: '1231231231' },
+            { label: '123123 (sang)', val: '123123' }
+          ].map(chip => (
+            <button
+              key={chip.label}
+              type="button"
+              onClick={() => {
+                setPhoneQuery(chip.val);
+                setSearched(true);
+              }}
+              style={{
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                backgroundColor: phoneQuery === chip.val ? '#eff6ff' : '#f8fafc',
+                color: phoneQuery === chip.val ? '#2563eb' : '#475569',
+                padding: '2px 8px',
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              {chip.label}
             </button>
-          </form>
+          ))}
         </div>
-      )}
+      </div>
 
       {searched && matchedOrders.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '4rem 0', border: '1px dashed var(--border-glass)', borderRadius: 'var(--radius-lg)' }}>
-          <p style={{ color: 'var(--text-secondary)' }}>Không tìm thấy đơn hàng nào liên kết với số điện thoại này trên hệ thống local ERP.</p>
+        <div style={{ textAlign: 'center', padding: '3.5rem 1rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', margin: '0 auto 2.5rem', maxWidth: '680px' }}>
+          <Package size={36} style={{ color: '#94a3b8', marginBottom: '0.6rem' }} />
+          <div style={{ fontWeight: 700, color: '#334155', fontSize: '0.95rem' }}>
+            Không tìm thấy đơn hàng nào khớp với từ khóa "{phoneQuery}"
+          </div>
+          <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+            Vui lòng kiểm tra lại số điện thoại hoặc bấm vào <strong>"Tất cả đơn"</strong> ở trên để xem danh sách.
+          </p>
         </div>
       )}
 

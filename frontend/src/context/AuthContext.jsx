@@ -21,8 +21,12 @@ const MOCK_USERS = {
   'purchasing': { token: 'mock-token-purchasing', user: { username: 'purchasing', role: 'PURCHASING', fullname: 'Nhân Viên Mua Hàng', id: 11 } },
   'supplier': { token: 'mock-token-supplier', user: { username: 'supplier', role: 'SUPPLIER', fullname: 'Nhà Cung Cấp ABC', code: 'supplier', id: 12 } },
   'cskh': { token: 'mock-token-cskh', user: { username: 'cskh', role: 'CSKH', fullname: 'Nguyễn CSKH (Chăm Sóc KH)', id: 14 } },
-  'delivery': { token: 'mock-token-delivery', user: { username: 'delivery', role: 'DELIVERY', fullname: 'Trần Giao Hàng (Shipper 1)', id: 15 } },
-  'delivery2': { token: 'mock-token-delivery2', user: { username: 'delivery2', role: 'DELIVERY', fullname: 'Nguyễn Văn Shipper (Shipper 2)', id: 17 } },
+  'delivery': { token: 'mock-token-delivery', user: { username: 'delivery', role: 'DELIVERY', fullname: 'Nguyễn Văn A', name: 'Nguyễn Văn A', phone: '0912.345.678', email: 'delivery@kltn-erp.vn', id: 15 } },
+  'shipper1': { token: 'mock-token-delivery', user: { username: 'shipper1', role: 'DELIVERY', fullname: 'Nguyễn Văn A', name: 'Nguyễn Văn A', phone: '0912.345.678', email: 'delivery@kltn-erp.vn', id: 15 } },
+  'delivery2': { token: 'mock-token-delivery2', user: { username: 'delivery2', role: 'DELIVERY', fullname: 'Trần Văn B', name: 'Trần Văn B', phone: '0988.765.432', email: 'delivery2@kltn-erp.vn', id: 17 } },
+  'shipper2': { token: 'mock-token-delivery2', user: { username: 'shipper2', role: 'DELIVERY', fullname: 'Trần Văn B', name: 'Trần Văn B', phone: '0988.765.432', email: 'delivery2@kltn-erp.vn', id: 17 } },
+  'delivery3': { token: 'mock-token-delivery3', user: { username: 'delivery3', role: 'DELIVERY', fullname: 'Lê Hoàng Long', name: 'Lê Hoàng Long', phone: '0909.112.233', email: 'delivery3@kltn-erp.vn', id: 18 } },
+  'shipper3': { token: 'mock-token-delivery3', user: { username: 'shipper3', role: 'DELIVERY', fullname: 'Lê Hoàng Long', name: 'Lê Hoàng Long', phone: '0909.112.233', email: 'delivery3@kltn-erp.vn', id: 18 } },
   'qc': { token: 'mock-token-qc', user: { username: 'qc', role: 'QC', fullname: 'Nguyễn Văn QC (Kiểm Soát Chất Lượng)', id: 16 } }
 };
 
@@ -77,36 +81,37 @@ const calculateCustomerLoyaltyInfo = (userObj) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Load auth info from local storage
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      try {
+  const [user, setUser] = useState(() => {
+    try {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      if (storedToken && storedUser) {
         const parsed = JSON.parse(storedUser);
         if (parsed && !parsed.role) {
           parsed.role = 'CUSTOMER';
         }
         const enriched = calculateCustomerLoyaltyInfo(parsed);
         localStorage.setItem('user', JSON.stringify(enriched));
-        setUser(enriched);
-      } catch (e) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        return enriched;
       }
+    } catch (e) {
+      console.warn('Error reading stored auth info:', e);
     }
-    setLoading(false);
+    return null;
+  });
+  const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
     // Sync state if localStorage changes in other tabs or through api interceptor
     const handleAuthChange = () => {
       const u = localStorage.getItem('user');
       if (u) {
-        const parsed = JSON.parse(u);
-        setUser(calculateCustomerLoyaltyInfo(parsed));
+        try {
+          const parsed = JSON.parse(u);
+          setUser(calculateCustomerLoyaltyInfo(parsed));
+        } catch (e) {
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
@@ -122,7 +127,7 @@ export const AuthProvider = ({ children }) => {
       // 1. First attempt to sign in using backend API
       const lowerUser = username.toLowerCase();
       const isEmployee = 
-        ['ceo', 'admin', 'sales_manager', 'sales', 'warehouse_manager', 'warehouse', 'purchasing', 'supplier', 'assembly', 'hr', 'accounting', 'cskh', 'delivery'].includes(lowerUser) ||
+        ['ceo', 'admin', 'sales_manager', 'sales', 'warehouse_manager', 'warehouse', 'purchasing', 'supplier', 'assembly', 'hr', 'accounting', 'cskh', 'delivery', 'delivery2', 'qc', 'qa'].includes(lowerUser) ||
         lowerUser.startsWith('sup-') ||
         lowerUser.endsWith('@kltn-erp.vn') || 
         lowerUser.startsWith('emp-');

@@ -20,8 +20,8 @@ const { getEmailLogs } = require('../services/emailService');
 router.post('/', authMiddleware(['CUSTOMER']), createOrder);
 
 // @route   GET /api/v1/orders
-// @desc    Xem lịch sử đơn hàng của Khách hàng
-router.get('/', authMiddleware(['CUSTOMER']), getCustomerOrders);
+// @desc    Lấy danh sách đơn hàng (Khách hàng xem đơn của mình, Nhân viên/Shipper xem danh sách phân công)
+router.get('/', authMiddleware(['CUSTOMER', 'DELIVERY', 'SALES', 'SALES_MANAGER', 'WAREHOUSE', 'WAREHOUSE_MANAGER', 'CEO', 'ADMIN', 'CSKH', 'ACCOUNTANT']), getCustomerOrders);
 
 // @route   PATCH /api/v1/orders/:id/status
 // @desc    Cập nhật trạng thái đơn hàng (Nhân viên Sale / Kho / Delivery / Admin)

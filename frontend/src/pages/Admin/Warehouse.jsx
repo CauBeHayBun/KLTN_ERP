@@ -4,8 +4,10 @@ import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import { api } from '../../services/api';
+import { Package, CheckCircle, X, AlertCircle, Truck, RotateCcw, Sparkles, RefreshCw, Box } from 'lucide-react';
 import ActorNotificationBar from '../../components/ActorNotificationBar';
 import PackAndScanModal from '../../components/PackAndScanModal';
+import OrderDetailModal from '../../components/OrderDetailModal';
 
 const STANDARD_SUPPLIERS = [
   'Intel Vietnam',
@@ -30,6 +32,11 @@ const PREDEFINED_LOCATIONS = [
   'ZONE-C/SHELF-02/BIN-01',
   'ZONE-D/SHELF-03/BIN-01'
 ];
+
+const safeFormatPrice = (amount) => {
+  const n = parseFloat(amount) || 0;
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
+};
 
 const DEFAULT_SAMPLE_MOVEMENTS = [
   {
@@ -1081,12 +1088,19 @@ export default function Warehouse() {
     products = [],
     orders = [], setOrders,
     purchaseOrders = [], setPurchaseOrders,
-    receipts = [], setReceipts,
-    stockMovements = [], setStockMovements,
     returnRequests = [], setReturnRequests,
-    formatPrice, formatDateTime, sendSystemNotification
+    updateOrderStatus,
+    formatDateTime, sendSystemNotification
   } = useERP();
   const { addNotification } = useNotification();
+
+  // receipts & stockMovements quản lý local (không có trong ERPContext)
+  const [receipts, setReceipts] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('erp_receipts') || '[]'); } catch { return []; }
+  });
+  const [stockMovements, setStockMovements] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('erp_stock_movements') || '[]'); } catch { return []; }
+  });
 
   const isManager = isCEO || isWarehouseManager;
 
@@ -1104,6 +1118,11 @@ export default function Warehouse() {
   // RFQ Alert Logs
   const [rfqAlertLogs, setRfqAlertLogs] = useState([]);
   const [showRfqHistoryModal, setShowRfqHistoryModal] = useState(false);
+
+  // Return Request Processing Modal
+  const [selectedReturnProcessing, setSelectedReturnProcessing] = useState(null);
+  const [returnShelfLocation, setReturnShelfLocation] = useState('SHELF_A1_RESTOCK');
+  const [returnProcessNote, setReturnProcessNote] = useState('');
 
   // Stock Movement Details Modal
   const [selectedMovementLog, setSelectedMovementLog] = useState(null);
@@ -1150,6 +1169,10 @@ export default function Warehouse() {
 
   // RFQ Modal State
   const [rfqModalData, setRfqModalData] = useState(null);
+
+  // Backorders & Order Detail Modal State
+  const [backorderSearch, setBackorderSearch] = useState('');
+  const [selectedOrderForDetail, setSelectedOrderForDetail] = useState(null);
 
   const getMergedRfqLogs = () => {
     let explicitLogs = [];
@@ -1394,6 +1417,152 @@ export default function Warehouse() {
     }
   };
 
+  // Handle Open Backorder RFQ Proposal Modal
+  const handleOpenBackorderRfqModal = (order, missingItem) => {
+    if (!order) return;
+    const targetItem = missingItem || (order.items && order.items[0]) || { name: 'Linh kiện máy tính', quantity: 1 };
+    const pName = targetItem.name || targetItem.productName || 'Linh kiện máy tính';
+    const pId = String(targetItem.productId || targetItem.id || Date.now());
+    const neededQty = Number(targetItem.neededQty || targetItem.quantity || 1);
+    const matchInv = (inventory || []).find(inv => String(inv.id) === pId || (inv.name && inv.name.toLowerCase() === pName.toLowerCase()));
+    const currentStock = matchInv ? Number(matchInv.stock) : 0;
+    const suppName = matchInv?.supplier || (pName.toLowerCase().includes('asus') ? 'ASUS Vietnam' : pName.toLowerCase().includes('msi') ? 'MSI Vietnam' : pName.toLowerCase().includes('samsung') ? 'Samsung Vina' : pName.toLowerCase().includes('intel') ? 'Intel Vietnam' : 'Mai Hoàng Distribution');
+    const estUnitPrice = matchInv?.price ? Math.round(Number(matchInv.price) * 0.8) : (targetItem.unitPrice || targetItem.price ? Math.round(Number(targetItem.unitPrice || targetItem.price) * 0.8) : 1500000);
+
+    setRfqModalData({
+      order,
+      orderId: order.orderId || order.id || 'N/A',
+      customerName: order.customerName || 'Khách hàng',
+      productId: pId,
+      productName: pName,
+      neededQty,
+      currentStock,
+      suggestedQty: Math.max(neededQty * 2, 5),
+      supplier: suppName,
+      unitPrice: estUnitPrice,
+      reason: `Nợ khách hàng đơn #${order.orderId || order.id || 'N/A'} (${order.customerName || 'Khách hàng'}) - Khách cần ${neededQty} SP`
+    });
+  };
+
+  // Handle Confirm and Send RFQ to Purchasing
+  const handleConfirmSendBackorderRfq = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!rfqModalData) return;
+
+    const { order, orderId, productId, productName, suggestedQty, supplier, unitPrice, reason, neededQty } = rfqModalData;
+    const finalQty = Number(suggestedQty) || 5;
+    const totalAmount = finalQty * Number(unitPrice || 1500000);
+    const poNumber = `RFQ-BO-${Date.now().toString().slice(-6)}`;
+    const suppCode = supplier.includes('Samsung') ? 's1' : supplier.includes('Mai Hoàng') ? 's2' : supplier.includes('Intel') ? 's3' : supplier.includes('ASUS') ? 's4' : 's5';
+
+    const newPO = {
+      id: poNumber,
+      poNumber: poNumber,
+      supplierCode: suppCode,
+      supplier: { code: suppCode, name: supplier },
+      supplierName: supplier,
+      createdBy: user?.fullname || user?.email || 'Thủ Kho (Warehouse)',
+      orderDate: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
+      expectedDeliveryDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
+      totalAmount: totalAmount,
+      status: 'RFQ_SENT',
+      type: 'BACKORDER_RFQ',
+      relatedOrderId: orderId,
+      items: [
+        {
+          productId,
+          productName,
+          name: productName,
+          quantity: finalQty,
+          unitCost: unitPrice,
+          totalCost: totalAmount
+        }
+      ],
+      supplierNote: `[ĐỀ XUẤT TỪ KHO - NỢ KHÁCH #${orderId}]: Khách hàng ${order.customerName || 'đặt mua'} đang chờ linh kiện "${productName}". Yêu cầu phòng Mua Hàng gửi RFQ mua gấp tối thiểu ${neededQty || 1} SP (Đề xuất đặt ${finalQty} SP để bổ sung tồn kho).`
+    };
+
+    // 1. Save to state & localStorage for POs
+    const updatedPOs = [newPO, ...(purchaseOrders || [])];
+    setPurchaseOrders(updatedPOs);
+    try {
+      const curLocalPos = JSON.parse(localStorage.getItem('erp_pos') || '[]');
+      localStorage.setItem('erp_pos', JSON.stringify([newPO, ...curLocalPos.filter(p => p.id !== poNumber)]));
+    } catch (_) {}
+
+    // 2. Save RFQ Alert Log
+    const newLog = {
+      id: 'RFQ-ALT-' + Date.now(),
+      sentAt: new Date().toISOString(),
+      sender: 'Thủ kho (Warehouse)',
+      productId,
+      productName,
+      category: 'COMP',
+      supplier,
+      currentStock: rfqModalData.currentStock,
+      threshold: 5,
+      requestedQty: finalQty,
+      reason
+    };
+    try {
+      const existingLogs = JSON.parse(localStorage.getItem('erp_rfq_alert_logs') || '[]');
+      localStorage.setItem('erp_rfq_alert_logs', JSON.stringify([newLog, ...existingLogs]));
+      if (setRfqAlertLogs) setRfqAlertLogs([newLog, ...existingLogs]);
+    } catch (_) {}
+
+    // 3. Send system notification to Purchasing & Admin
+    if (typeof sendSystemNotification === 'function') {
+      sendSystemNotification({
+        targetRoles: ['PURCHASING', 'CEO', 'ADMIN'],
+        title: `[ĐỀ XUẤT MUA HÀNG KHẨN] ${productName}`,
+        message: `Thủ kho vừa tạo đề xuất mua hàng ${poNumber} cho linh kiện "${productName}" (${finalQty} cái). Đơn nợ khách #${orderId}.`,
+        link: '/admin/purchasing',
+        type: 'RFQ_ALERT',
+        itemData: newPO
+      });
+    }
+
+    if (typeof addNotification === 'function') {
+      addNotification({
+        type: 'success',
+        title: 'Đã gửi Đề Xuất Mua Hàng (RFQ)!',
+        message: `Mã phiếu: ${poNumber}. Đã chuyển yêu cầu mua ${finalQty} cái "${productName}" sang bộ phận Mua Hàng.`
+      });
+    }
+
+    setRfqModalData(null);
+    navigate('/admin/purchasing?tab=orders');
+  };
+
+  // Handle Fulfill Backorder
+  const handleFulfillBackorder = (order) => {
+    const updatedOrders = orders.map(o => {
+      if (o.id === order.id || o.orderId === order.orderId) {
+        return {
+          ...o,
+          status: 'CONFIRMED',
+          note: `Đã đủ tồn kho linh kiện, sẵn sàng đóng gói xuất kho.`
+        };
+      }
+      return o;
+    });
+
+    setOrders(updatedOrders);
+    try {
+      localStorage.setItem('erp_orders', JSON.stringify(updatedOrders));
+    } catch (_) {}
+
+    if (typeof addNotification === 'function') {
+      addNotification({
+        type: 'success',
+        title: 'Đã xác nhận xuất kho!',
+        message: `Đơn hàng #${order.orderId || order.id} đã chuyển sang trạng thái Sẵn Sàng Đóng Gói (CONFIRMED).`
+      });
+    }
+
+    alert(`Đã xác nhận đơn hàng #${order.orderId || order.id} đủ điều kiện xuất kho! Đơn đã được chuyển sang danh sách Đóng gói & Giao hàng.`);
+  };
+
   // Shipper assignment
   const handleConfirmAssign = (order, shipperUser) => {
     const updatedOrders = orders.map(o => {
@@ -1421,9 +1590,44 @@ export default function Warehouse() {
     setOrderToAssign(null);
   };
 
-  // Pack & scan complete
+  // Pack & scan complete - called when user confirms packing
   const handlePackAndScanComplete = (order) => {
     setOrderToAssign(order);
+  };
+
+  // Called from PackAndScanModal when user clicks Xác Nhận Đóng Gói
+  const handleConfirmPack = (packedOrder, serials) => {
+    try {
+      const ordId = String(packedOrder.orderId || packedOrder.id || '');
+
+      // Dùng updateOrderStatus từ ERPContext — đúng cách, không crash
+      if (typeof updateOrderStatus === 'function') {
+        updateOrderStatus(ordId, 'READY_TO_SHIP', 'Kho đã hoàn tất đóng gói và kiểm tra Serial.', {
+          packedSerials: serials || [],
+          packedAt: new Date().toISOString()
+        });
+      } else {
+        // Fallback: cập nhật localStorage trực tiếp
+        const stored = JSON.parse(localStorage.getItem('erp_orders') || '[]');
+        const updated = stored.map(o => {
+          if (String(o.orderId || o.id) === ordId) {
+            return { ...o, status: 'READY_TO_SHIP', packedSerials: serials || [], packedAt: new Date().toISOString() };
+          }
+          return o;
+        });
+        localStorage.setItem('erp_orders', JSON.stringify(updated));
+      }
+
+      if (typeof addNotification === 'function') {
+        addNotification(`Đã hoàn tất đóng gói! Đơn hàng #${ordId} đã sẵn sàng phân công Shipper.`, 'success');
+      }
+    } catch (err) {
+      console.error('handleConfirmPack error:', err);
+    }
+
+    // Đóng pack modal và mở shipper modal trong cùng render cycle
+    setPackScanOrder(null);
+    setOrderToAssign(packedOrder);
   };
 
   // Add Product Submit
@@ -1621,6 +1825,16 @@ export default function Warehouse() {
     const matchType = movementTypeFilter === 'ALL' || m.type === movementTypeFilter;
     const matchDate = isDateInRange(m.timestamp, historyStartDate, historyEndDate);
     return matchSearch && matchType && matchDate;
+  });
+
+  // Backorders List (Orders with AWAITING_STOCK status)
+  const backorderOrders = orders.filter(o => o && o.status === 'AWAITING_STOCK');
+  const filteredBackordersList = backorderOrders.filter(o => {
+    const matchSearch = !backorderSearch.trim() ||
+      String(o.orderId || o.id).toLowerCase().includes(backorderSearch.toLowerCase()) ||
+      (o.customerName && o.customerName.toLowerCase().includes(backorderSearch.toLowerCase())) ||
+      (o.items && o.items.some(i => (i.name || i.productName || '').toLowerCase().includes(backorderSearch.toLowerCase())));
+    return matchSearch;
   });
 
   return (
@@ -1836,6 +2050,371 @@ export default function Warehouse() {
               </div>
             </div>
 
+            {/* Card 6: Đơn Chờ Hàng (Backorders) */}
+            <div style={{
+              borderRadius: '8px',
+              border: backorderOrders.length > 0 ? '1.5px solid #fdba74' : '1px solid #cbd5e1',
+              padding: '1.25rem',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              backgroundColor: backorderOrders.length > 0 ? '#fff7ed' : '#ffffff'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: backorderOrders.length > 0 ? '#c2410c' : '#0284c7', margin: '0 0 1rem 0' }}>
+                  Đơn Hàng Chờ Nhập Kho
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button
+                    onClick={() => setActiveTab('backorders')}
+                    style={{
+                      backgroundColor: backorderOrders.length > 0 ? '#ea580c' : '#2563eb',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.5rem 1.25rem',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {backorderOrders.length} Đơn chờ hàng
+                  </button>
+                  <div style={{ fontSize: '0.82rem', color: '#475569', textAlign: 'right' }}>
+                    <div>Linh kiện cần nhập: <strong style={{ color: '#dc2626' }}>{backorderOrders.reduce((s, o) => s + (o.items?.length || 1), 0)} SP</strong></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VIEW: QUẢN LÝ ĐƠN HÀNG CHỜ NHẬP KHO (BACKORDERS) - CLEAN ENTERPRISE UI */}
+      {/* ========================================================================= */}
+      {activeTab === 'backorders' && (
+        <div>
+          {/* Header Bar */}
+          <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Quản Lý Đơn Hàng Chờ Nhập Kho (Backorders)
+              </h2>
+              <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
+                Danh sách các đơn hàng tạm giữ chỗ do thiếu tồn kho. Hệ thống tự động giải phóng đơn sang Chờ xuất kho khi hoàn tất nhập hàng PO.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                const totalAwaiting = backorderOrders.length;
+                if (totalAwaiting === 0) {
+                  alert('Hiện tại không có đơn hàng nào đang chờ nhập hàng.');
+                  return;
+                }
+                let resolvedCount = 0;
+                backorderOrders.forEach(o => {
+                  let canFulfill = true;
+                  (o.items || []).forEach(item => {
+                    const inv = activeInventory.find(i => String(i.id) === String(item.productId || item.id));
+                    if (!inv || Number(inv.stock) < (Number(item.quantity) || 1)) canFulfill = false;
+                  });
+                  if (canFulfill) resolvedCount++;
+                });
+
+                if (resolvedCount > 0) {
+                  alert(`Đã tìm thấy ${resolvedCount} đơn hàng đã có đủ tồn kho trong hệ thống. Bạn có thể nhấn nút "Xác Nhận Xuất Kho" để tiến hành xuất hàng.`);
+                } else {
+                  alert(`Đang có ${totalAwaiting} đơn chờ hàng. Các sản phẩm này hiện vẫn chưa đủ tồn kho. Vui lòng bấm "Đề Xuất Mua Hàng" để gửi yêu cầu cho phòng Mua Hàng.`);
+                }
+              }}
+              style={{
+                backgroundColor: '#ffffff',
+                color: '#2563eb',
+                border: '1px solid #bfdbfe',
+                borderRadius: '6px',
+                padding: '0.55rem 1.1rem',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Kiểm Tra Lại Tồn Kho Hệ Thống
+            </button>
+          </div>
+
+          {/* Quick Metrics */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ backgroundColor: '#ffffff', padding: '1.1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Đơn Hàng Chờ Xử Lý
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ea580c', marginTop: '0.25rem' }}>
+                {backorderOrders.length} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>đơn</span>
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#ffffff', padding: '1.1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Mặt Hàng Thiếu Tồn Kho
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#dc2626', marginTop: '0.25rem' }}>
+                {backorderOrders.reduce((sum, o) => {
+                  const missingCount = (o.items || []).filter(item => {
+                    const inv = (inventory || []).find(i => String(i.id) === String(item.productId || item.id));
+                    return !inv || Number(inv.stock) < (Number(item.quantity) || 1);
+                  }).length;
+                  return sum + missingCount;
+                }, 0)} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>sản phẩm</span>
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#ffffff', padding: '1.1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Tổng Giá Trị Đơn Treo
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>
+                {safeFormatPrice(backorderOrders.reduce((sum, o) => sum + (parseFloat(o.totalAmount) || 0), 0))}
+              </div>
+            </div>
+          </div>
+
+          {/* Search Filter Bar */}
+          <div style={{ backgroundColor: '#ffffff', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '1.25rem' }}>
+            <input
+              type="text"
+              placeholder="Tìm theo mã đơn hàng, tên khách hàng, tên linh kiện..."
+              value={backorderSearch}
+              onChange={e => setBackorderSearch(e.target.value)}
+              style={{ width: '100%', padding: '0.55rem 0.85rem', fontSize: '0.83rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+            />
+          </div>
+
+          {/* Backorders Table */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569' }}>
+                  <th style={{ padding: '0.75rem 1rem', width: '130px' }}>Mã Đơn Hàng</th>
+                  <th style={{ padding: '0.75rem 1rem', width: '150px' }}>Khách Hàng</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Tình Trạng Linh Kiện & Tồn Kho</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'right', width: '120px' }}>Tổng Tiền</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center', width: '140px' }}>Trạng Thái</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center', width: '180px' }}>Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBackordersList.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '3rem 1rem', textAlign: 'center', color: '#64748b' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>Hiện tại không có đơn hàng nào cần nhập kho.</div>
+                      <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>Tất cả các đơn hàng đều đã có đủ tồn kho khả dụng để xuất giao.</div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredBackordersList.map((order, idx) => {
+                    const orderItems = order.items || [];
+                    
+                    // Evaluate availability of each item
+                    const evaluatedItems = orderItems.map(item => {
+                      const invItem = (inventory || []).find(inv => String(inv.id) === String(item.productId || item.id));
+                      const currentStock = invItem ? Number(invItem.stock) : 0;
+                      const neededQty = Number(item.quantity) || 1;
+                      const isOutOfStock = currentStock < neededQty;
+                      const shortage = Math.max(0, neededQty - currentStock);
+                      return {
+                        ...item,
+                        currentStock,
+                        neededQty,
+                        isOutOfStock,
+                        shortage
+                      };
+                    });
+
+                    const allFulfilled = evaluatedItems.every(i => !i.isOutOfStock);
+                    const missingItems = evaluatedItems.filter(i => i.isOutOfStock);
+
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        {/* Order Code & Date */}
+                        <td style={{ padding: '1rem', verticalAlign: 'top' }}>
+                          <div style={{ fontWeight: 800, color: '#2563eb', fontSize: '0.9rem' }}>
+                            #{order.orderId || order.id}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : '18/08/2026'}
+                          </div>
+                        </td>
+
+                        {/* Customer Info */}
+                        <td style={{ padding: '1rem', verticalAlign: 'top' }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
+                            {order.customerName || 'Khách Hàng'}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
+                            {order.phone || '090xxxxxxx'}
+                          </div>
+                        </td>
+
+                        {/* Items Breakdown */}
+                        <td style={{ padding: '0.85rem 1rem', verticalAlign: 'top' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {evaluatedItems.map((it, iIdx) => (
+                              <div
+                                key={iIdx}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '0.45rem 0.75rem',
+                                  borderRadius: '6px',
+                                  backgroundColor: it.isOutOfStock ? '#fef2f2' : '#f8fafc',
+                                  border: `1px solid ${it.isOutOfStock ? '#fecaca' : '#e2e8f0'}`
+                                }}
+                              >
+                                <div style={{ flex: 1, minWidth: 0, paddingRight: '0.75rem' }}>
+                                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {it.name || it.productName || 'Linh Kiện Máy Tính'}
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.1rem' }}>
+                                    Số lượng yêu cầu: <strong>{it.neededQty}</strong> | Tồn kho hiện tại: <strong>{it.currentStock}</strong>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  {it.isOutOfStock ? (
+                                    <span style={{
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 800,
+                                      backgroundColor: '#fee2e2',
+                                      color: '#b91c1c',
+                                      border: '1px solid #fca5a5'
+                                    }}>
+                                      Thiếu {it.shortage} SP
+                                    </span>
+                                  ) : (
+                                    <span style={{
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 700,
+                                      backgroundColor: '#f1f5f9',
+                                      color: '#475569',
+                                      border: '1px solid #cbd5e1'
+                                    }}>
+                                      Đủ hàng
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+
+                        {/* Total Amount */}
+                        <td style={{ padding: '1rem', textAlign: 'right', verticalAlign: 'top', fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>
+                          {safeFormatPrice(order.totalAmount)}
+                        </td>
+
+                        {/* Stock Status Badge */}
+                        <td style={{ padding: '1rem', textAlign: 'center', verticalAlign: 'top' }}>
+                          {allFulfilled ? (
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
+                              backgroundColor: '#dcfce7',
+                              color: '#15803d',
+                              border: '1px solid #bbf7d0',
+                              display: 'inline-block'
+                            }}>
+                              Đã Đủ Hàng
+                            </span>
+                          ) : (
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
+                              backgroundColor: '#ffedd5',
+                              color: '#c2410c',
+                              border: '1px solid #fed7aa',
+                              display: 'inline-block'
+                            }}>
+                              Thiếu {missingItems.length} Linh Kiện
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Actions Column */}
+                        <td style={{ padding: '1rem', textAlign: 'center', verticalAlign: 'top' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {allFulfilled ? (
+                              <button
+                                onClick={() => handleFulfillBackorder(order)}
+                                style={{
+                                  backgroundColor: '#16a34a',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '5px',
+                                  padding: '0.45rem 0.75rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  width: '100%'
+                                }}
+                              >
+                                Xác Nhận Xuất Kho
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleOpenBackorderRfqModal(order, missingItems[0] || orderItems[0])}
+                                style={{
+                                  backgroundColor: '#2563eb',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '5px',
+                                  padding: '0.45rem 0.75rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  width: '100%'
+                                }}
+                              >
+                                Đề Xuất Mua Hàng (RFQ)
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => setSelectedOrderForDetail(order)}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                color: '#475569',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '5px',
+                                padding: '0.4rem 0.75rem',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                width: '100%'
+                              }}
+                            >
+                              Xem Chi Tiết
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -1990,8 +2569,8 @@ export default function Warehouse() {
                   <th style={{ padding: '0.75rem 1rem' }}>Địa Chỉ Giao</th>
                   <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Giá Trị Đơn</th>
                   <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Shipper Đảm Nhận</th>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Trạng Thái</th>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Hành Động</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Tiến Trình & Trạng Thái</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Hành Động Nghiệp Vụ</th>
                 </tr>
               </thead>
               <tbody>
@@ -2002,62 +2581,174 @@ export default function Warehouse() {
                     </td>
                   </tr>
                 ) : (
-                  filteredDeliveriesList.map(o => (
-                    <tr key={o.id || o.orderId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#2563eb' }}>#{o.orderId || o.id}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>{o.customerName || 'Khách hàng'}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>{o.shippingAddress || o.address || 'TP. Hồ Chí Minh'}</td>
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>
-                        {formatPrice ? formatPrice(o.totalAmount || o.total || 0) : o.totalAmount}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'center', color: '#334155' }}>
-                        {o.assignedShipper || 'Chưa phân công'}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                        <span style={{
-                          padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700,
-                          backgroundColor: o.status === 'DELIVERED' ? '#dcfce7' : (o.status === 'SHIPPED' ? '#dbeafe' : '#fef3c7'),
-                          color: o.status === 'DELIVERED' ? '#15803d' : (o.status === 'SHIPPED' ? '#1d4ed8' : '#d97706')
-                        }}>
-                          {o.status === 'DELIVERED' ? 'Đã Giao Thành Công' : (o.status === 'SHIPPED' ? 'Đang Giao Hàng' : 'Chờ Phân Công')}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => setPackScanOrder(o)}
-                            style={{
-                              backgroundColor: '#0284c7',
-                              color: '#ffffff',
-                              border: 'none',
+                  filteredDeliveriesList.map(o => {
+                    const isPendingPack = ['CONFIRMED', 'PROCESSING', 'PENDING', 'AWAITING_SHIP'].includes(o.status);
+                    const isPackedWaitingShipper = ['PACKED', 'READY_TO_SHIP'].includes(o.status);
+                    const isShipping = ['SHIPPED', 'OUT_FOR_DELIVERY', 'ASSIGNED'].includes(o.status);
+                    const isDelivered = ['DELIVERED', 'COMPLETED'].includes(o.status);
+
+                    return (
+                      <tr key={o.id || o.orderId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#2563eb' }}>
+                          #{o.orderId || o.id}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
+                          <div style={{ fontWeight: 700 }}>{o.customerName || 'Khách hàng'}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{o.phone || o.customerPhone || '090xxxxxxx'}</div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#475569', maxWidth: '240px' }}>
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {o.shippingAddress || o.address || 'TP. Hồ Chí Minh'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>
+                          {safeFormatPrice(o.totalAmount || o.total || 0)}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'center', color: '#334155' }}>
+                          {isShipping || isDelivered ? (
+                            <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                              {o.assignedShipper || 'Shipper Nội Bộ'}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                              {isPackedWaitingShipper ? 'Chưa phân công' : '---'}
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                          {isPendingPack && (
+                            <span style={{
+                              padding: '3px 10px',
                               borderRadius: '4px',
-                              padding: '0.35rem 0.75rem',
                               fontSize: '0.75rem',
                               fontWeight: 700,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Đóng Gói & Quét Mã
-                          </button>
-                          <button
-                            onClick={() => setOrderToAssign(o)}
-                            style={{
-                              backgroundColor: '#2563eb',
-                              color: '#ffffff',
-                              border: 'none',
+                              backgroundColor: '#fff7ed',
+                              color: '#c2410c',
+                              border: '1px solid #fdba74'
+                            }}>
+                              Bước 1: Chờ Đóng Gói
+                            </span>
+                          )}
+
+                          {isPackedWaitingShipper && (
+                            <span style={{
+                              padding: '3px 10px',
                               borderRadius: '4px',
-                              padding: '0.35rem 0.75rem',
                               fontSize: '0.75rem',
                               fontWeight: 700,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Phân Công Shipper
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                              backgroundColor: '#f5f3ff',
+                              color: '#6d28d9',
+                              border: '1px solid #ddd6fe'
+                            }}>
+                              Bước 2: Đã Đóng Gói (Chờ Shipper)
+                            </span>
+                          )}
+
+                          {isShipping && (
+                            <span style={{
+                              padding: '3px 10px',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              backgroundColor: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe'
+                            }}>
+                              Bước 3: Đang Giao Hàng
+                            </span>
+                          )}
+
+                          {isDelivered && (
+                            <span style={{
+                              padding: '3px 10px',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              backgroundColor: '#f0fdf4',
+                              color: '#15803d',
+                              border: '1px solid #bbf7d0'
+                            }}>
+                              Hoàn Tất: Đã Giao Hàng
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                            {isPendingPack && (
+                              <button
+                                onClick={() => setPackScanOrder(o)}
+                                style={{
+                                  backgroundColor: '#1d4ed8',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '5px',
+                                  padding: '0.45rem 0.85rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Đóng Gói & Quét Mã
+                              </button>
+                            )}
+
+                            {isPackedWaitingShipper && (
+                              <>
+                                <button
+                                  onClick={() => setOrderToAssign(o)}
+                                  style={{
+                                    backgroundColor: '#6d28d9',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    padding: '0.45rem 0.85rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Phân Công Shipper
+                                </button>
+                                <button
+                                  onClick={() => setSelectedOrderForDetail(o)}
+                                  style={{
+                                    backgroundColor: '#ffffff',
+                                    color: '#475569',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '5px',
+                                    padding: '0.45rem 0.65rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Xem Gói Hàng
+                                </button>
+                              </>
+                            )}
+
+                            {(isShipping || isDelivered) && (
+                              <button
+                                onClick={() => setSelectedOrderForDetail(o)}
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  color: '#1d4ed8',
+                                  border: '1px solid #bfdbfe',
+                                  borderRadius: '5px',
+                                  padding: '0.45rem 0.85rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Xem Chi Tiết
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -2327,30 +3018,111 @@ export default function Warehouse() {
                         {dateDisplay}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                        <span style={{
-                          padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700,
-                          backgroundColor: item.status === 'RESTOCKED' ? '#dcfce7' : (item.status === 'INSPECTED_SCRAP' ? '#ffe4e6' : '#fef3c7'),
-                          color: item.status === 'RESTOCKED' ? '#15803d' : (item.status === 'INSPECTED_SCRAP' ? '#e11d48' : '#d97706')
-                        }}>
-                          {item.status === 'RESTOCKED' ? 'Đã Nhập Lại Kho' : (item.status === 'INSPECTED_SCRAP' ? 'Hàng Lỗi (Hủy Scrap)' : 'Chờ Kiểm Định')}
-                        </span>
+                        {(() => {
+                          const st = item.status || 'PENDING';
+                          let label = 'Chờ QC Kiểm Định';
+                          let bg = '#fef3c7';
+                          let color = '#b45309';
+                          let border = '#fde68a';
+
+                          if (['QC_PASSED', 'RESTOCKED', 'APPROVED'].includes(st)) {
+                            label = 'Đã Nhập Lại Kho';
+                            bg = '#dcfce7';
+                            color = '#15803d';
+                            border = '#bbf7d0';
+                          } else if (st === 'EXCHANGE_NEW' || st === 'EXCHANGED') {
+                            label = 'Đã Duyệt Đổi Mới';
+                            bg = '#ede9fe';
+                            color = '#6d28d9';
+                            border = '#ddd6fe';
+                          } else if (st === 'VENDOR_WARRANTY') {
+                            label = 'Chuyển Gửi Hãng BH';
+                            bg = '#ffedd5';
+                            color = '#c2410c';
+                            border = '#fed7aa';
+                          } else if (st === 'INSPECTED_SCRAP') {
+                            label = 'Phế Phẩm / Kho Lỗi';
+                            bg = '#ffe4e6';
+                            color = '#be123c';
+                            border = '#fecdd3';
+                          } else if (['REJECTED', 'REJECT_RMA'].includes(st)) {
+                            label = 'Từ Chối Bảo Hành';
+                            bg = '#fee2e2';
+                            color = '#dc2626';
+                            border = '#fca5a5';
+                          }
+
+                          return (
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              backgroundColor: bg,
+                              color: color,
+                              border: `1px solid ${border}`,
+                              display: 'inline-block',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                        <button
-                          onClick={() => alert(`Đã duyệt kiểm định và chuyển trạng thái cho yêu cầu #${item.rmaNumber || item.id || `RET-${index + 1}`}`)}
-                          style={{
-                            backgroundColor: '#2563eb',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '0.35rem 0.75rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Xử Lý Trả Hàng
-                        </button>
+                        {(() => {
+                          const st = item.status || 'PENDING';
+                          let btnText = 'Xử lý nhập kho';
+                          let btnBg = '#2563eb';
+
+                          if (['QC_PASSED', 'RESTOCKED', 'APPROVED'].includes(st)) {
+                            btnText = 'Xem vị trí kệ';
+                            btnBg = '#16a34a';
+                          } else if (st === 'VENDOR_WARRANTY') {
+                            btnText = 'Chi tiết gửi hãng';
+                            btnBg = '#d97706';
+                          } else if (st === 'INSPECTED_SCRAP') {
+                            btnText = 'Xem kho lỗi';
+                            btnBg = '#e11d48';
+                          } else if (st === 'EXCHANGE_NEW' || st === 'EXCHANGED') {
+                            btnText = 'Xem đổi mới';
+                            btnBg = '#7c3aed';
+                          } else if (['REJECTED', 'REJECT_RMA'].includes(st)) {
+                            btnText = 'Xem lý do';
+                            btnBg = '#64748b';
+                          }
+
+                          return (
+                            <button
+                              onClick={() => {
+                                setSelectedReturnProcessing(item);
+                                setReturnShelfLocation(
+                                  ['QC_PASSED', 'RESTOCKED', 'APPROVED'].includes(item.status) ? 'SHELF_A1_RESTOCK' :
+                                  item.status === 'EXCHANGE_NEW' ? 'SHELF_A1_RESTOCK' :
+                                  item.status === 'VENDOR_WARRANTY' ? 'SHELF_C2_VENDOR' :
+                                  item.status === 'INSPECTED_SCRAP' ? 'SHELF_D_SCRAP' : 'SHELF_A1_RESTOCK'
+                                );
+                                setReturnProcessNote(item.resolution || item.shelfNote || item.reason || 'Đã phân luồng vị trí kệ kho');
+                              }}
+                              style={{
+                                backgroundColor: btnBg,
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '0.45rem 0.9rem',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-block',
+                                minWidth: '120px',
+                                textAlign: 'center',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                              }}
+                            >
+                              {btnText}
+                            </button>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );
@@ -2598,7 +3370,7 @@ export default function Warehouse() {
                           )}
                         </td>
                         <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: '#16a34a', whiteSpace: 'nowrap' }}>
-                          {formatPrice ? formatPrice(p.price) : (Number(p.price || 0).toLocaleString('vi-VN') + ' VNĐ')}
+                          {safeFormatPrice(p.price)}
                         </td>
                         <td style={{ padding: '0.75rem 1rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                           <button
@@ -2852,7 +3624,7 @@ export default function Warehouse() {
                         {totalSkus}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: totalValue > 0 ? '#2563eb' : '#64748b' }}>
-                        {formatPrice ? formatPrice(totalValue) : (totalValue.toLocaleString('vi-VN') + ' VNĐ')}
+                        {safeFormatPrice(totalValue)}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <button
@@ -2910,7 +3682,7 @@ export default function Warehouse() {
           purchaseOrders={purchaseOrders}
           handleValidateReceipt={handleValidateReceipt}
           submitting={submitting}
-          formatPrice={formatPrice}
+          formatPrice={safeFormatPrice}
         />
       )}
 
@@ -3078,6 +3850,615 @@ export default function Warehouse() {
                 <button type="button" onClick={handleEditProductSubmit} style={{ padding: '0.5rem 1.35rem', fontSize: '0.82rem', border: 'none', borderRadius: '6px', background: '#2563eb', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}>Lưu Cập Nhật</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Order Detail Modal */}
+      {selectedOrderForDetail && (
+        <OrderDetailModal
+          order={selectedOrderForDetail}
+          onClose={() => setSelectedOrderForDetail(null)}
+        />
+      )}
+
+      {/* Backorder RFQ Proposal Modal */}
+      {rfqModalData && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', maxWidth: '580px', width: '100%', border: '1px solid #cbd5e1', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            
+            {/* Header */}
+            <div style={{ padding: '1.25rem 1.5rem', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                  Khởi Tạo Đề Xuất Mua Hàng (RFQ)
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                  Phục vụ đơn nợ khách: <strong style={{ color: '#2563eb' }}>#{rfqModalData.orderId}</strong> ({rfqModalData.customerName})
+                </span>
+              </div>
+              <button onClick={() => setRfqModalData(null)} style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0.2rem 0.6rem', cursor: 'pointer', color: '#475569', fontWeight: 600 }}>
+                Đóng
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleConfirmSendBackorderRfq} style={{ padding: '1.5rem' }}>
+              <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.25rem' }}>
+                <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a', marginBottom: '0.5rem' }}>
+                  {rfqModalData.productName}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.8rem', color: '#475569' }}>
+                  <div>Khách yêu cầu: <strong style={{ color: '#dc2626' }}>{rfqModalData.neededQty || 1} cái</strong></div>
+                  <div>Tồn kho hiện tại: <strong style={{ color: Number(rfqModalData.currentStock || 0) === 0 ? '#dc2626' : '#15803d' }}>{rfqModalData.currentStock || 0} cái</strong></div>
+                  <div>Đơn giá vốn ước tính: <strong style={{ color: '#0f172a' }}>{safeFormatPrice(rfqModalData.unitPrice || 0)}</strong></div>
+                  <div>Tổng trị giá đề xuất: <strong style={{ color: '#16a34a' }}>{safeFormatPrice((Number(rfqModalData.suggestedQty) || 5) * (Number(rfqModalData.unitPrice) || 1500000))}</strong></div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.35rem' }}>
+                      Số Lượng Đề Xuất Mua *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={rfqModalData.neededQty || 1}
+                      value={rfqModalData.suggestedQty || 5}
+                      onChange={(e) => setRfqModalData({ ...rfqModalData, suggestedQty: parseInt(e.target.value, 10) || 1 })}
+                      style={{ width: '100%', padding: '0.55rem 0.85rem', fontSize: '0.9rem', fontWeight: 800, color: '#2563eb', border: '1.5px solid #bfdbfe', borderRadius: '6px', backgroundColor: '#eff6ff', boxSizing: 'border-box' }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
+                      (Tối thiểu {rfqModalData.neededQty || 1} cái để trả khách)
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.35rem' }}>
+                      Nhà Cung Cấp Đề Xuất
+                    </label>
+                    <select
+                      value={rfqModalData.supplier || 'Intel Vietnam'}
+                      onChange={(e) => setRfqModalData({ ...rfqModalData, supplier: e.target.value })}
+                      style={{ width: '100%', padding: '0.55rem 0.85rem', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    >
+                      {STANDARD_SUPPLIERS.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                      {rfqModalData.supplier && !STANDARD_SUPPLIERS.includes(rfqModalData.supplier) && (
+                        <option value={rfqModalData.supplier}>{rfqModalData.supplier}</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.35rem' }}>
+                    Ghi Chú Cho Phòng Mua Hàng
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={rfqModalData.reason}
+                    onChange={(e) => setRfqModalData({ ...rfqModalData, reason: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem 0.85rem', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setRfqModalData(null)}
+                  style={{ padding: '0.55rem 1.15rem', fontSize: '0.82rem', fontWeight: 600, border: '1px solid #cbd5e1', borderRadius: '6px', background: '#ffffff', color: '#475569', cursor: 'pointer' }}
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  style={{ padding: '0.55rem 1.35rem', fontSize: '0.82rem', border: 'none', borderRadius: '6px', background: '#2563eb', color: '#ffffff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 4px rgba(37,99,235,0.25)' }}
+                >
+                  Xác Nhận & Gửi RFQ Sang Mua Hàng
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* Pack & Scan Modal */}
+      {packScanOrder && (
+        <PackAndScanModal
+          show={true}
+          order={packScanOrder}
+          onClose={() => setPackScanOrder(null)}
+          onConfirmPack={handleConfirmPack}
+        />
+      )}
+
+      {/* Shipper Assign Modal */}
+      {orderToAssign && (() => {
+        const address = (orderToAssign.shippingAddress || orderToAssign.address || '').toLowerCase();
+        const isHCM = address.includes('hcm') || address.includes('hồ chí minh') || address.includes('thành phố hồ chí minh') || address.includes('quận') || address.includes('thủ đức') || address.includes('bình thạnh') || address.includes('gò vấp');
+        const defaultCarrier = isHCM 
+          ? 'Shipper Nội Bộ - Nguyễn Văn A (0912.345.678)' 
+          : 'Đối Tác Giao Hàng Tiết Kiệm (GHTK Express)';
+        const autoTrackingCode = isHCM
+          ? `NB-HCM-${(orderToAssign.orderId || orderToAssign.id || '').replace(/\D/g, '').slice(-6) || Date.now().toString().slice(-6)}`
+          : `GHTK-VN-${Date.now().toString().slice(-6)}`;
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20000, padding: '1rem' }}>
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', maxWidth: '620px', width: '100%', border: '1px solid #cbd5e1', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+              {/* Header */}
+              <div style={{ padding: '1.25rem 1.5rem', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 800 }}>
+                    Điều Phối Vận Chuyển - Đơn #{orderToAssign.orderId || orderToAssign.id}
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                    Khách hàng: <strong style={{ color: '#2563eb' }}>{orderToAssign.customerName}</strong> ({orderToAssign.phone || '090xxxxxxx'})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOrderToAssign(null)}
+                  style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0.25rem 0.6rem', cursor: 'pointer', color: '#475569', fontWeight: 600 }}
+                >
+                  Đóng
+                </button>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const shipperName = formData.get('shipperName') || defaultCarrier;
+                const trackingCode = formData.get('trackingCode') || autoTrackingCode;
+                const deliveryType = formData.get('deliveryType') || (isHCM ? 'INTERNAL_HCM' : 'EXTERNAL_3PL');
+                const note = formData.get('note') || '';
+                
+                const ordId = String(orderToAssign.orderId || orderToAssign.id || '');
+
+                // Cập nhật ERP Context / Database
+                if (typeof updateOrderStatus === 'function') {
+                  updateOrderStatus(ordId, 'SHIPPED', `Đã bàn giao cho ${shipperName} [Mã VĐ: ${trackingCode}]`, {
+                    assignedShipper: shipperName,
+                    trackingCode: trackingCode,
+                    deliveryType: deliveryType,
+                    shippingNote: note,
+                    shippedAt: new Date().toISOString()
+                  });
+                } else {
+                  const updatedOrders = orders.map(o => {
+                    if ((o.orderId && o.orderId === ordId) || o.id === ordId || String(o.id) === String(orderToAssign.id)) {
+                      return {
+                        ...o,
+                        status: 'SHIPPED',
+                        deliveryStatus: 'SHIPPED',
+                        assignedShipper: shipperName,
+                        trackingCode: trackingCode,
+                        deliveryType: deliveryType,
+                        shippingNote: note,
+                        shippedAt: new Date().toISOString(),
+                        lastNote: `Đã bàn giao cho ${shipperName}. Mã tra cứu: ${trackingCode}`
+                      };
+                    }
+                    return o;
+                  });
+                  setOrders(updatedOrders);
+                  try { localStorage.setItem('erp_orders', JSON.stringify(updatedOrders)); } catch (_) {}
+                }
+
+                if (sendSystemNotification) {
+                  sendSystemNotification({
+                    targetRoles: ['DELIVERY', 'SALES', 'CUSTOMER'],
+                    title: `Đã Bàn Giao Vận Chuyển Đơn #${ordId}`,
+                    message: `Đơn hàng đã bàn giao cho ${shipperName} (Mã VĐ: ${trackingCode}) xuất phát đi giao.`,
+                    type: 'INFO'
+                  });
+                }
+
+                if (typeof addNotification === 'function') {
+                  addNotification(`Điều phối vận chuyển thành công! Đơn hàng #${ordId} đã chuyển giao cho ${shipperName}.`, 'success');
+                }
+
+                setOrderToAssign(null);
+              }} style={{ padding: '1.5rem' }}>
+                
+                {/* Routing Alert Box */}
+                <div style={{
+                  padding: '0.85rem 1rem',
+                  borderRadius: '8px',
+                  marginBottom: '1.25rem',
+                  backgroundColor: isHCM ? '#eff6ff' : '#fef3c7',
+                  border: `1.5px solid ${isHCM ? '#bfdbfe' : '#fde68a'}`
+                }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.85rem', color: isHCM ? '#1e40af' : '#92400e' }}>
+                    {isHCM ? 'Đơn Hàng Nội Thành TP.HCM (Khu Vực Trụ Sở)' : 'Đơn Hàng Ngoại Tỉnh / Vùng Xa (Chuyển Phát Liên Tỉnh)'}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: isHCM ? '#3b82f6' : '#b45309', marginTop: '0.2rem' }}>
+                    {isHCM 
+                      ? 'Doanh nghiệp có đội xe giao hàng trực tiếp tại HCM trong 2 - 4 giờ.' 
+                      : 'Hệ thống tự động liên kết đối tác vận chuyển thứ 3 (3PL Logistics) như GHTK, GHN, Viettel Post để giao liên tỉnh an toàn.'}
+                  </div>
+                </div>
+
+                {/* Order Summary */}
+                <div style={{ backgroundColor: '#f8fafc', padding: '0.9rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.8rem', color: '#475569' }}>
+                    <div>Địa chỉ giao: <strong style={{ color: '#0f172a' }}>{orderToAssign.shippingAddress || orderToAssign.address || 'TP.HCM'}</strong></div>
+                    <div>Thu hộ COD: <strong style={{ color: '#16a34a' }}>{safeFormatPrice(orderToAssign.totalAmount || orderToAssign.total || 0)}</strong></div>
+                    <div>Hình thức: <strong style={{ color: '#0f172a' }}>{orderToAssign.paymentMethod || 'COD'}</strong></div>
+                    <div>Đóng gói: <strong style={{ color: '#2563eb' }}>{orderToAssign.packedSerials?.length || 1} linh kiện đã niêm phong</strong></div>
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.35rem' }}>
+                        Đơn Vị / Nhân Viên Vận Chuyển *
+                      </label>
+                      <select
+                        name="shipperName"
+                        defaultValue={defaultCarrier}
+                        style={{ width: '100%', padding: '0.6rem 0.75rem', fontSize: '0.82rem', fontWeight: 600, border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#ffffff', boxSizing: 'border-box' }}
+                      >
+                        <optgroup label="Đội Giao Hàng Nội Bộ (TP.HCM)">
+                          <option value="Shipper Nội Bộ - Nguyễn Văn A (0912.345.678)">Shipper Nội Bộ - Nguyễn Văn A (0912.345.678) [Đang rảnh]</option>
+                          <option value="Shipper Nội Bộ - Trần Văn B (0988.765.432)">Shipper Nội Bộ - Trần Văn B (0988.765.432) [Đang rảnh]</option>
+                          <option value="Shipper Nội Bộ - Lê Hoàng Long (0909.112.233)">Shipper Nội Bộ - Lê Hoàng Long (0909.112.233)</option>
+                        </optgroup>
+                        <optgroup label="Đối Tác Vận Chuyển Liên Tỉnh (3PL Logistics)">
+                          <option value="Đối Tác Giao Hàng Tiết Kiệm (GHTK Express)">Đối Tác Giao Hàng Tiết Kiệm (GHTK Express) [Khuyên dùng cho liên tỉnh]</option>
+                          <option value="Đối Tác Giao Hàng Nhanh (GHN Express)">Đối Tác Giao Hàng Nhanh (GHN Express) [Lấy hàng 15-30p]</option>
+                          <option value="Đối Tác Viettel Post">Đối Tác Viettel Post [Phủ 100% huyện xã vùng xa]</option>
+                          <option value="Đối Tác VNPost (Bưu Điện Việt Nam)">Đối Tác VNPost (Bưu Điện Việt Nam)</option>
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.35rem' }}>
+                        Mã Vận Đơn (Tracking Code)
+                      </label>
+                      <input
+                        type="text"
+                        name="trackingCode"
+                        defaultValue={autoTrackingCode}
+                        style={{ width: '100%', padding: '0.6rem 0.75rem', fontSize: '0.82rem', fontWeight: 700, color: '#2563eb', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#f8fafc', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.35rem' }}>
+                      Ghi Chú Giao Hàng Cho Đơn Vị Vận Chuyển
+                    </label>
+                    <textarea
+                      name="note"
+                      rows={2}
+                      defaultValue={isHCM ? 'Giao giờ hành chính, gọi khách trước 15 phút' : 'Hàng linh kiện điện tử dễ vỡ, bảo quản cẩn thận, cho khách đồng kiểm ngoại quan'}
+                      style={{ width: '100%', padding: '0.55rem 0.85rem', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setOrderToAssign(null)}
+                    style={{ padding: '0.55rem 1.15rem', fontSize: '0.82rem', fontWeight: 600, border: '1px solid #cbd5e1', borderRadius: '6px', background: '#ffffff', color: '#475569', cursor: 'pointer' }}
+                  >
+                    Hủy Bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    style={{ padding: '0.55rem 1.35rem', fontSize: '0.82rem', border: 'none', borderRadius: '6px', background: isHCM ? '#2563eb' : '#d97706', color: '#ffffff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.15)' }}
+                  >
+                    {isHCM ? 'Xác Nhận Giao Cho Shipper Nội Bộ' : 'Xác Nhận Đẩy Đơn Sang Đối Tác 3PL'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ========================================================================= */}
+      {/* MODAL: XỬ LÝ NHẬP KHO HÀNG ĐỔI TRẢ & ĐỊNH VỊ KỆ KHO */}
+      {/* ========================================================================= */}
+      {selectedReturnProcessing && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '14px',
+            maxWidth: '620px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '1.5rem 1.75rem',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid #e2e8f0'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem', marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Package size={22} style={{ color: '#2563eb' }} />
+                  <span>Xử Lý Nhập Kho Kiện Hàng Đổi Trả</span>
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0.2rem 0 0' }}>
+                  Phân luồng vị trí kệ lưu trữ và ghi nhận biến động số lượng vào Thẻ Kho ERP
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedReturnProcessing(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Kiện Hàng Overview Card */}
+            <div style={{ backgroundColor: '#f8fafc', borderRadius: '10px', padding: '1rem', border: '1px solid #e2e8f0', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#2563eb' }}>
+                    {selectedReturnProcessing.rmaNumber || selectedReturnProcessing.id || 'RET-001'}
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', marginLeft: '0.4rem' }}>
+                    • Đơn gốc: <strong>#{selectedReturnProcessing.orderId || selectedReturnProcessing.orderNumber || 'N/A'}</strong>
+                  </span>
+                </div>
+
+                {/* Status Badge */}
+                {(() => {
+                  const st = selectedReturnProcessing.status || 'PENDING';
+                  const isPassed = ['QC_PASSED', 'RESTOCKED', 'APPROVED'].includes(st);
+                  const isExchange = st === 'EXCHANGE_NEW' || st === 'EXCHANGED';
+                  const isVendor = st === 'VENDOR_WARRANTY';
+                  const isScrap = st === 'INSPECTED_SCRAP';
+                  const isReject = ['REJECTED', 'REJECT_RMA'].includes(st);
+
+                  let badgeLabel = 'Chờ QC Thẩm Định';
+                  if (isPassed) badgeLabel = 'Đã Nhập Lại Kho';
+                  else if (isExchange) badgeLabel = 'Đã Duyệt Đổi Mới';
+                  else if (isVendor) badgeLabel = 'Chờ Gửi Hãng BH';
+                  else if (isScrap) badgeLabel = 'Phế Phẩm / Kho Lỗi';
+                  else if (isReject) badgeLabel = 'Từ Chối Bảo Hành';
+
+                  return (
+                    <span style={{
+                      padding: '3px 9px',
+                      borderRadius: '6px',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      backgroundColor: isPassed ? '#dcfce7' : isExchange ? '#ede9fe' : isVendor ? '#ffedd5' : isScrap ? '#ffe4e6' : isReject ? '#fee2e2' : '#fef3c7',
+                      color: isPassed ? '#15803d' : isExchange ? '#6d28d9' : isVendor ? '#c2410c' : isScrap ? '#be123c' : isReject ? '#dc2626' : '#b45309',
+                      border: `1px solid ${isPassed ? '#bbf7d0' : isExchange ? '#ddd6fe' : isVendor ? '#fed7aa' : isScrap ? '#fecdd3' : isReject ? '#fca5a5' : '#fde68a'}`
+                    }}>
+                      {badgeLabel}
+                    </span>
+                  );
+                })()}
+              </div>
+
+              <div style={{ marginTop: '0.5rem', fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>
+                {selectedReturnProcessing.productName || selectedReturnProcessing.product || selectedReturnProcessing.items?.[0]?.name || 'Linh kiện máy tính'}
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.76rem', color: '#475569', marginTop: '0.35rem' }}>
+                <span>Khách hàng: <strong>{selectedReturnProcessing.customerName || selectedReturnProcessing.customer || 'Khách lẻ'}</strong></span>
+                <span>SĐT: {selectedReturnProcessing.customerPhone || selectedReturnProcessing.phone || 'N/A'}</span>
+                <span style={{ color: '#dc2626', fontWeight: 600 }}>Lý do: {selectedReturnProcessing.reason || selectedReturnProcessing.description || 'Hàng đổi trả / bảo hành'}</span>
+              </div>
+            </div>
+
+            {/* Phân Luồng Kệ Kho Form */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 750, color: '#1e293b', marginBottom: '0.45rem' }}>
+                  Chọn Vị Trí Kệ Kho Lưu Trữ *
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                  {[
+                    { key: 'SHELF_A1_RESTOCK', label: 'Kệ A1 - Tồn Kho Bán Mới', desc: 'Hàng nguyên seal, đủ điều kiện bán lại', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+                    { key: 'SHELF_B3_OUTLET', label: 'Kệ B3 - Kho Outlet Open-Box', desc: 'Móp vỏ hộp nhẹ, bán thanh lý -15%', color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+                    { key: 'SHELF_C2_VENDOR', label: 'Kệ C2 - Khu Chờ Gửi Hãng', desc: 'Chờ đóng gói chuyển tiếp NCC/Hãng', color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
+                    { key: 'SHELF_D_SCRAP', label: 'Kệ D - Khu Phế Phẩm / Lỗi', desc: 'Lỗi nặng, giữ làm xác linh kiện/hủy', color: '#be123c', bg: '#fff1f2', border: '#fecdd3' }
+                  ].map(shelf => {
+                    const isSelected = returnShelfLocation === shelf.key;
+                    return (
+                      <div
+                        key={shelf.key}
+                        onClick={() => setReturnShelfLocation(shelf.key)}
+                        style={{
+                          padding: '0.75rem 0.85rem',
+                          borderRadius: '8px',
+                          border: isSelected ? `2px solid ${shelf.color}` : '1px solid #cbd5e1',
+                          backgroundColor: isSelected ? shelf.bg : '#ffffff',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ fontWeight: 750, fontSize: '0.82rem', color: shelf.color }}>
+                          {shelf.label}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px' }}>
+                          {shelf.desc}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 750, color: '#1e293b', marginBottom: '0.35rem' }}>
+                  Ghi Chú Nhập Kệ & Mã Định Danh Ô Kho
+                </label>
+                <input
+                  type="text"
+                  value={returnProcessNote}
+                  onChange={e => setReturnProcessNote(e.target.value)}
+                  placeholder="Ví dụ: Đã xếp vào Ô Kệ A1-04, mã vạch seal nguyên vẹn..."
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#ffffff', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedReturnProcessing(null);
+                  window.location.href = '/admin/quality-control?tab=returns';
+                }}
+                style={{
+                  backgroundColor: '#f5f3ff',
+                  color: '#7c3aed',
+                  border: '1px solid #ddd6fe',
+                  borderRadius: '6px',
+                  padding: '0.5rem 0.85rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                🔍 Mở Màn Hình QC Thẩm Định
+              </button>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReturnProcessing(null)}
+                  style={{ backgroundColor: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.5rem 1rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isScrap = returnShelfLocation === 'SHELF_D_SCRAP';
+                    const isVendor = returnShelfLocation === 'SHELF_C2_VENDOR';
+                    const targetStatus = isScrap ? 'INSPECTED_SCRAP' : isVendor ? 'VENDOR_WARRANTY' : 'RESTOCKED';
+
+                    // Lấy base list từ returnRequests hoặc effectiveReturnRequests
+                    const baseList = (returnRequests && returnRequests.length > 0) ? [...returnRequests] : [...effectiveReturnRequests];
+                    const targetId = String(selectedReturnProcessing.id || '');
+                    const targetRma = String(selectedReturnProcessing.rmaNumber || selectedReturnProcessing.code || '');
+                    const targetOrder = String(selectedReturnProcessing.orderId || '');
+
+                    const updated = baseList.map(r => {
+                      const matchId = targetId && String(r.id) === targetId;
+                      const matchRma = targetRma && (String(r.rmaNumber) === targetRma || String(r.code) === targetRma);
+                      const matchOrder = targetOrder && String(r.orderId) === targetOrder;
+                      if (matchId || matchRma || matchOrder) {
+                        return {
+                          ...r,
+                          status: targetStatus,
+                          shelfLocation: returnShelfLocation,
+                          shelfNote: returnProcessNote || 'Đã phân luồng vị trí kệ kho'
+                        };
+                      }
+                      return r;
+                    });
+
+                    if (typeof setReturnRequests === 'function') {
+                      setReturnRequests(updated);
+                    }
+                    localStorage.setItem('erp_return_requests', JSON.stringify(updated));
+
+                    // Tự động tăng tồn kho nếu nhập kho bán mới hoặc outlet
+                    if (['SHELF_A1_RESTOCK', 'SHELF_B3_OUTLET'].includes(returnShelfLocation)) {
+                      const pName = selectedReturnProcessing.productName || selectedReturnProcessing.product || selectedReturnProcessing.items?.[0]?.name;
+                      if (pName && Array.isArray(inventory) && typeof setInventory === 'function') {
+                        const invUpdated = inventory.map(inv => {
+                          if (inv.name === pName || (pName && inv.name.toLowerCase().includes(pName.toLowerCase()))) {
+                            return { ...inv, stock: Number(inv.stock || 0) + 1 };
+                          }
+                          return inv;
+                        });
+                        setInventory(invUpdated);
+                        localStorage.setItem('erp_inventory', JSON.stringify(invUpdated));
+                      }
+                    }
+
+                    // Lưu log điều chuyển kho
+                    const newLog = {
+                      id: `MOV-RET-${Date.now().toString().slice(-4)}`,
+                      type: isScrap ? 'SCRAP_INBOUND' : isVendor ? 'VENDOR_WARRANTY' : 'RETURN_RESTOCK',
+                      orderId: selectedReturnProcessing.orderId || 'N/A',
+                      productName: selectedReturnProcessing.productName || selectedReturnProcessing.product || selectedReturnProcessing.items?.[0]?.name || 'Linh kiện đổi trả',
+                      quantity: 1,
+                      fromLocation: 'Khu Vực Tiếp Nhận Trả Hàng',
+                      toLocation: returnShelfLocation === 'SHELF_A1_RESTOCK' ? 'Kệ A1 (Tồn Kho Bán Mới)' : returnShelfLocation === 'SHELF_B3_OUTLET' ? 'Kệ B3 (Thanh Lý Outlet)' : returnShelfLocation === 'SHELF_C2_VENDOR' ? 'Kệ C2 (Chờ Gửi Hãng)' : 'Kệ D (Kho Lỗi Phế Phẩm)',
+                      timestamp: new Date().toISOString(),
+                      performedBy: 'Thủ Kho (Lê Văn C)',
+                      note: returnProcessNote || 'Đã phân luồng vị trí kệ kho'
+                    };
+                    const updatedMovements = [newLog, ...stockMovements];
+                    setStockMovements(updatedMovements);
+                    localStorage.setItem('erp_stock_movements', JSON.stringify(updatedMovements));
+
+                    if (typeof sendSystemNotification === 'function') {
+                      sendSystemNotification({
+                        title: `[NHẬP KHO TRẢ HÀNG] Phiếu ${selectedReturnProcessing.rmaNumber || selectedReturnProcessing.id}`,
+                        content: `Thủ kho đã hoàn tất xếp kiện hàng vào ${newLog.toLocation} (${targetStatus}).`,
+                        type: 'SUCCESS',
+                        recipient: 'Quản Lý Kho, QC, Kế Toán'
+                      });
+                    }
+
+                    if (typeof addNotification === 'function') {
+                      addNotification(`Đã phân luồng kiện hàng vào ${newLog.toLocation} và cập nhật trạng thái thành công!`, 'success');
+                    }
+
+                    setSelectedReturnProcessing(null);
+                  }}
+                  style={{
+                    backgroundColor: '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '0.5rem 1.15rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 750,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    boxShadow: '0 2px 4px rgba(22,163,74,0.25)'
+                  }}
+                >
+                  <CheckCircle size={16} /> Xác Nhận Nhập Kệ & Cập Nhật Tồn Kho
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

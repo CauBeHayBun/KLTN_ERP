@@ -96,6 +96,7 @@ export default function Sidebar() {
 
   const warehouseSubItems = [
     { tab: 'overview', label: 'Tổng Quan Tồn Kho' },
+    { tab: 'backorders', label: 'Đơn Chờ Hàng (Nợ Khách)', badgeKey: 'backordersCount' },
     { tab: 'grn', label: 'Phiếu Nhập Kho', badgeKey: 'pendingReceipts' },
     { tab: 'delivery', label: 'Lệnh Giao Hàng', badgeKey: 'pendingExportCount' },
     { tab: 'intake', label: 'Nhập Trực Tiếp' },
@@ -113,6 +114,7 @@ export default function Sidebar() {
 
   const activeInventory = (inventory || []).filter(item => !isItemDiscontinued(item));
   const lowStockCount = activeInventory.filter(item => Number(item.stock || 0) <= Number(item.threshold || 0)).length;
+  const backordersCount = (orders || []).filter(o => o && o.status === 'AWAITING_STOCK').length;
   const pendingReceipts = (receipts && receipts.length > 0)
     ? receipts.filter(r => r && r.status === 'READY').length
     : 2;
@@ -378,20 +380,45 @@ export default function Sidebar() {
       }
     }
 
-    // 5. GIAO VẬN (DELIVERY): Chỉ nhận đơn hàng đã đóng gói sẵn sàng giao
+    // 5. GIAO VẬN (DELIVERY): Nhận đơn hàng đã bàn giao & đơn chờ nhận tại kho
     if (['DELIVERY', 'ADMIN'].includes(role)) {
-      const readyOrders = (orders || []).filter(o => o.status === 'READY_TO_SHIP' || o.status === 'CONFIRMED');
+      const uName = String(user?.fullname || user?.name || '').toLowerCase();
+      const uUser = String(user?.username || '').toLowerCase();
+      const uPhone = String(user?.phone || '').replace(/\D/g, '');
+
+      // Đơn hàng đã bàn giao cho shipper này
+      const myAssignedOrders = (orders || []).filter(o => {
+        if (!o || o.status !== 'SHIPPED') return false;
+        const s = String(o.assignedShipper || '').toLowerCase();
+        return (uName && s.includes(uName)) || (uUser && s.includes(uUser)) || (uPhone && s.includes(uPhone)) || String(o.assignedShipperId) === String(user?.id);
+      });
+
+      if (myAssignedOrders.length > 0) {
+        list.push({
+          id: 'NOTIF-DELIVERY-ASSIGNED',
+          title: `📦 Có ${myAssignedOrders.length} đơn hàng mới đã bàn giao cho bạn`,
+          desc: `Thủ kho đã hoàn tất đóng gói và bàn giao ${myAssignedOrders.length} kiện hàng. Bạn tiến hành xuất phát giao hàng và thu tiền COD.`,
+          link: '/admin/delivery?tab=pending',
+          badge: 'Giao Vận',
+          badgeColor: '#16a34a',
+          category: 'URGENT',
+          actionText: 'Xem Đơn Ngay',
+          time: 'Vừa giao'
+        });
+      }
+
+      const readyOrders = (orders || []).filter(o => o.status === 'READY_TO_SHIP');
       if (readyOrders.length > 0) {
         list.push({
-          id: 'NOTIF-DELIVERY-LIST',
-          title: `Điều phối vận chuyển ${readyOrders.length} đơn hàng`,
-          desc: `Đơn hàng đã được kho đóng gói hoàn tất. Nhân viên giao hàng cần nhận đơn và tiến hành bàn giao shipper.`,
-          link: '/admin/delivery',
-          badge: 'Giao Vận',
+          id: 'NOTIF-DELIVERY-READY',
+          title: `🚚 Có ${readyOrders.length} đơn hàng đóng gói xong chờ lấy tại kho`,
+          desc: `Kho đã niêm phong xong ${readyOrders.length} đơn. Shipper có thể đến kho nhận chuyến và đi giao.`,
+          link: '/admin/delivery?tab=pending',
+          badge: 'Kho Chờ Giao',
           badgeColor: '#2563eb',
-          category: 'URGENT',
-          actionText: 'Nhận Đơn Giao',
-          time: 'Mới'
+          category: 'INFO',
+          actionText: 'Nhận Chuyến',
+          time: 'Chờ nhận'
         });
       }
     }
@@ -731,6 +758,7 @@ export default function Sidebar() {
                       const isSubActive = currentTab === sub.tab;
                       
                       let badgeVal = 0;
+                      if (sub.badgeKey === 'backordersCount') badgeVal = backordersCount;
                       if (sub.badgeKey === 'pendingReceipts') badgeVal = pendingReceipts;
                       if (sub.badgeKey === 'pendingExportCount') badgeVal = pendingExportCount;
                       if (sub.badgeKey === 'lowStockCount') badgeVal = lowStockCount;

@@ -57,7 +57,15 @@ const StorefrontLayout = () => {
 
 // 2. Layout for Admin Panel Views
 const AdminLayout = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Đang tải...</div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -81,7 +89,15 @@ const AdminLayout = () => {
 
 // 3. Role-Based Access Guard Wrapper
 const ProtectedRoute = ({ allowedRoles, children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Đang tải...</div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

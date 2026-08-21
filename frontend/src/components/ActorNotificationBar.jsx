@@ -141,6 +141,31 @@ export default function ActorNotificationBar() {
     badgeText = `${pendingDeliveryOrders} Đơn Mới`;
     badgeColor = '#818cf8';
     icon = <ShoppingBag size={18} style={{ color: badgeColor }} />;
+  } else if (role === 'DELIVERY') {
+    const uName = String(user?.fullname || user?.name || '').toLowerCase();
+    const uUser = String(user?.username || '').toLowerCase();
+    const uPhone = String(user?.phone || '').replace(/\D/g, '');
+
+    const myAssignedOrders = (orders || []).filter(o => {
+      if (!o || o.status !== 'SHIPPED') return false;
+      const s = String(o.assignedShipper || '').toLowerCase();
+      return (uName && s.includes(uName)) || (uUser && s.includes(uUser)) || (uPhone && s.includes(uPhone)) || String(o.assignedShipperId) === String(user?.id);
+    });
+
+    const readyAtWarehouse = (orders || []).filter(o => o && o.status === 'READY_TO_SHIP');
+    const totalDeliveryTasks = myAssignedOrders.length + readyAtWarehouse.length;
+
+    bannerTitle = 'Trung Tâm Nhiệm Vụ Giao Vận (Delivery Task Center)';
+    bannerDesc = myAssignedOrders.length > 0
+      ? `🚚 THÔNG BÁO MỚI: Bạn có ${myAssignedOrders.length} đơn hàng mới đã được Thủ kho bàn giao, sẵn sàng xuất phát đi giao và thu tiền COD!`
+      : readyAtWarehouse.length > 0
+        ? `📦 Có ${readyAtWarehouse.length} đơn hàng đã đóng gói xong tại kho đang chờ Shipper nhận chuyến!`
+        : 'Hiện tại tất cả các chuyến giao hàng của bạn đã hoàn tất. Không có đơn tồn đọng!';
+    actionText = 'Xem Chuyến Giao Ngay';
+    actionPath = '/admin/delivery?tab=pending';
+    badgeText = `${totalDeliveryTasks} Chuyến Cần Giao`;
+    badgeColor = myAssignedOrders.length > 0 ? '#16a34a' : '#2563eb';
+    icon = <Truck size={18} style={{ color: badgeColor }} />;
   } else {
     return null;
   }

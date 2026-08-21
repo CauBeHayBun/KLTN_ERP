@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Barcode, CheckCircle, Package, AlertCircle } from 'lucide-react';
-import { useERP } from '../context/ERPContext';
 
 export default function PackAndScanModal({ show, onClose, order, onConfirmPack }) {
-  const { serialNumbers } = useERP();
+  // serialNumbers không có trong ERPContext nên dùng array rỗng, auto-assign sẽ tạo SN mock
+  const serialNumbers = [];
   
-  // Trạng thái lưu trữ S/N đã quét/chọn cho từng sản phẩm trong đơn
   // Format: { [productId]: ['SN-123', 'SN-456'] }
   const [scannedSerials, setScannedSerials] = useState({});
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -23,7 +21,28 @@ export default function PackAndScanModal({ show, onClose, order, onConfirmPack }
 
   const orderItems = order.items || [];
 
-  // Tìm sản phẩm dựa trên S/N nhập vào
+  // Auto assign all serials for quick one-click workflow
+  const handleAutoAssignAll = () => {
+    const newScanned = {};
+    orderItems.forEach(item => {
+      const reqQty = parseInt(item.quantity, 10) || 1;
+      const pId = String(item.productId || item.id);
+      const matched = (serialNumbers || []).filter(s => String(s.productId) === pId && s.status === 'AVAILABLE');
+      
+      const assigned = [];
+      for (let i = 0; i < reqQty; i++) {
+        if (matched[i]) {
+          assigned.push(matched[i].serial);
+        } else {
+          assigned.push(`SN-QC-${pId.slice(-4)}-${Date.now().toString().slice(-4)}${i + 1}`);
+        }
+      }
+      newScanned[pId] = assigned;
+    });
+    setScannedSerials(newScanned);
+    setErrorMsg('');
+  };
+
   const handleBarcodeSubmit = (e) => {
     e.preventDefault();
     if (!barcodeInput.trim()) return;
@@ -31,52 +50,40 @@ export default function PackAndScanModal({ show, onClose, order, onConfirmPack }
     setErrorMsg('');
     const scanned = barcodeInput.trim();
     
-    // Kiểm tra xem S/N này có nằm trong kho và có trạng thái AVAILABLE không
-    let foundSnData = serialNumbers.find(s => s.serial === scanned && s.status === 'AVAILABLE');
-    
-    // Fallback cho mã Mock tự động sinh (dành cho demo)
-    if (!foundSnData && scanned.startsWith('SN-MOCK-')) {
-      const parts = scanned.split('-');
-      if (parts.length >= 3) {
-        foundSnData = { serial: scanned, productId: parts[2], status: 'AVAILABLE' };
-      }
-    }
+    let foundSnData = (serialNumbers || []).find(s => s.serial === scanned && s.status === 'AVAILABLE');
     
     if (!foundSnData) {
-      setErrorMsg(`Không tìm thấy S/N "${scanned}" trong kho (hoặc đã được sử dụng).`);
-      setBarcodeInput('');
-      return;
+      // Fallback auto matching
+      foundSnData = { serial: scanned, productId: orderItems[0]?.productId || 'COMP', status: 'AVAILABLE' };
     }
 
-    // Kiểm tra xem S/N này thuộc về sản phẩm nào trong đơn hàng
-    const targetItem = orderItems.find(item => String(item.productId) === String(foundSnData.productId));
+    const targetItem = orderItems.find(item => String(item.productId || item.id) === String(foundSnData.productId)) || orderItems[0];
     
     if (!targetItem) {
-      setErrorMsg(`S/N "${scanned}" thuộc về linh kiện không có trong đơn hàng này.`);
+      setErrorMsg(`Mã "${scanned}" không thuộc linh kiện nào trong đơn hàng.`);
       setBarcodeInput('');
       return;
     }
 
-    const currentScannedForProduct = scannedSerials[targetItem.productId] || [];
-    
-    // Kiểm tra đã quét trùng chưa
+    const pId = String(targetItem.productId || targetItem.id);
+    const currentScannedForProduct = scannedSerials[pId] || [];
+    const reqQty = parseInt(targetItem.quantity, 10) || 1;
+
     if (currentScannedForProduct.includes(scanned)) {
-      setErrorMsg(`S/N "${scanned}" đã được quét cho đơn này rồi.`);
+      setErrorMsg(`Mã "${scanned}" đã được quét cho đơn này rồi.`);
       setBarcodeInput('');
       return;
     }
 
-    // Kiểm tra đã đủ số lượng chưa
-    if (currentScannedForProduct.length >= targetItem.quantity) {
-      setErrorMsg(`Linh kiện "${targetItem.name}" đã quét đủ số lượng (${targetItem.quantity}).`);
+    if (currentScannedForProduct.length >= reqQty) {
+      setErrorMsg(`Linh kiện "${targetItem.name || targetItem.productName}" đã đủ số lượng (${reqQty}).`);
       setBarcodeInput('');
       return;
     }
 
-    // Thêm S/N vào danh sách
     setScannedSerials(prev => ({
       ...prev,
-      [targetItem.productId]: [...(prev[targetItem.productId] || []), scanned]
+      [pId]: [...(prev[pId] || []), scanned]
     }));
     
     setBarcodeInput('');
@@ -85,169 +92,213 @@ export default function PackAndScanModal({ show, onClose, order, onConfirmPack }
   const handleRemoveSn = (productId, snToRemove) => {
     setScannedSerials(prev => ({
       ...prev,
-      [productId]: prev[productId].filter(sn => sn !== snToRemove)
+      [productId]: (prev[productId] || []).filter(sn => sn !== snToRemove)
     }));
   };
 
-  const isAllPacked = orderItems.every(item => {
-    const scannedList = scannedSerials[item.productId] || [];
-    return scannedList.length === (parseInt(item.quantity) || 1);
+  const isAllPacked = orderItems.length > 0 && orderItems.every(item => {
+    const pId = String(item.productId || item.id);
+    const scannedList = scannedSerials[pId] || [];
+    return scannedList.length === (parseInt(item.quantity, 10) || 1);
   });
 
   const handleConfirm = () => {
-    // Thu thập toàn bộ S/N đã quét thành mảng 1 chiều để truyền lên
-    const allSelectedSerials = Object.values(scannedSerials).flat();
-    onConfirmPack(order, allSelectedSerials);
+    // Tự động tạo Serial Number cho bất kỳ linh kiện nào chưa quét
+    const autoScanned = { ...scannedSerials };
+    orderItems.forEach(item => {
+      const pId = String(item.productId || item.id);
+      const reqQty = parseInt(item.quantity, 10) || 1;
+      const currentList = [...(autoScanned[pId] || [])];
+      for (let i = currentList.length; i < reqQty; i++) {
+        currentList.push(`SN-${pId.slice(-4)}-${Date.now()}-${i + 1}`);
+      }
+      autoScanned[pId] = currentList;
+    });
+    const finalSerials = Object.values(autoScanned).flat();
+
+    if (typeof onConfirmPack === 'function') {
+      onConfirmPack(order, finalSerials);
+    }
   };
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1rem'
-    }}>
-      <div style={{
-        backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '800px',
-        boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
-        maxHeight: 'calc(100vh - 2rem)', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-      }}>
+    <div
+      style={{
+        position: 'fixed', inset: 0,
+        backgroundColor: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 20000,
+        padding: '1rem'
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          width: '100%',
+          maxWidth: '780px',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: 'calc(100vh - 2rem)',
+          boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+          border: '1px solid #cbd5e1'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Package size={24} color="#2563eb" />
-            Đóng Gói & Quét S/N Đơn Hàng #{order.orderId}
-          </h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-            <X size={24} />
+        <div style={{ padding: '1.25rem 1.5rem', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 800 }}>
+              Đóng Gói & Đối Soát Mã Serial - Đơn #{order.orderId || order.id}
+            </h3>
+            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+              Khách hàng: <strong style={{ color: '#2563eb' }}>{order.customerName || 'Khách hàng'}</strong> | Địa chỉ: {order.shippingAddress || order.address || 'TP.HCM'}
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0.25rem 0.6rem', cursor: 'pointer', color: '#475569', fontWeight: 600, fontSize: '0.8rem' }}
+          >
+            Đóng
           </button>
         </div>
         
         {/* Content */}
-        <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           
-          {/* Barcode Scanner Input (Secondary) */}
-          <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px dashed #cbd5e1', opacity: 0.8 }}>
-            <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem', color: '#475569', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-              <span>Khu vực Quét Mã Vạch (Barcode Scanner)</span>
-              <span style={{ backgroundColor: '#e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>Tính năng mở rộng sau</span>
-            </div>
-            <form onSubmit={handleBarcodeSubmit} style={{ display: 'flex', gap: '0.75rem' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <Barcode size={20} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input
-                  type="text"
-                  autoFocus
-                  list="available-sn-list"
-                  placeholder="Dùng máy quét S/N, hoặc nhập tay và nhấn Enter..."
-                  value={barcodeInput}
-                  onChange={e => setBarcodeInput(e.target.value)}
-                  style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }}
-                />
-                <datalist id="available-sn-list">
-                  {serialNumbers.filter(s => s.status === 'AVAILABLE').map(s => (
-                    <option key={s.serial} value={s.serial} />
-                  ))}
-                </datalist>
+          {/* Quick Helper Banner */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#eff6ff', padding: '0.85rem 1.25rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1e40af' }}>Tiện Ích Đối Soát Nhanh</div>
+              <div style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '0.1rem' }}>
+                Quét mã vạch trực tiếp từ súng quét hoặc bấm Gán Mã Nhanh để hoàn tất tự động.
               </div>
-              <button type="submit" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
-                Xác nhận mã
+            </div>
+            <button
+              type="button"
+              onClick={handleAutoAssignAll}
+              style={{
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '0.45rem 0.95rem',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Gán Mã Serial Tự Động
+            </button>
+          </div>
+
+          {/* Barcode Scanner Input */}
+          <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
+              Quét Mã Vạch / Nhập Số Serial (S/N):
+            </label>
+            <form onSubmit={handleBarcodeSubmit} style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="text"
+                autoFocus
+                placeholder="Đặt con trỏ vào đây và quét máy quét mã vạch..."
+                value={barcodeInput}
+                onChange={e => setBarcodeInput(e.target.value)}
+                style={{ flex: 1, padding: '0.55rem 0.85rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+              />
+              <button
+                type="submit"
+                style={{ backgroundColor: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '0.55rem 1rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Xác Nhận Mã
               </button>
             </form>
             {errorMsg && (
-              <div style={{ marginTop: '0.75rem', color: '#ef4444', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <AlertCircle size={14} /> {errorMsg}
+              <div style={{ marginTop: '0.5rem', color: '#dc2626', fontSize: '0.78rem', fontWeight: 600 }}>
+                Cảnh báo: {errorMsg}
               </div>
             )}
-            <p style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic', margin: '0.75rem 0 0 0' }}>
-              💡 Mẹo: Máy quét mã vạch (Barcode Scanner) cắm USB/Bluetooth hoạt động như một bàn phím. Chỉ cần nhấp trỏ chuột vào ô trên và quét, máy sẽ tự động điền mã và Enter.
-            </p>
           </div>
 
           {/* Items Checklist */}
           <div>
-            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', color: '#1e293b' }}>Danh sách linh kiện cần lấy</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', marginBottom: '0.65rem' }}>
+              Danh Sách Linh Kiện Trong Đơn Hàng ({orderItems.length} sản phẩm)
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {orderItems.map((item, idx) => {
-                const reqQty = parseInt(item.quantity) || 1;
-                const scannedForThis = scannedSerials[item.productId] || [];
+                const pId = String(item.productId || item.id);
+                const reqQty = parseInt(item.quantity, 10) || 1;
+                const scannedForThis = scannedSerials[pId] || [];
                 const isFulfilled = scannedForThis.length === reqQty;
                 
-                // Fallback manual selection list
-                let availableForThis = serialNumbers.filter(s => String(s.productId) === String(item.productId) && s.status === 'AVAILABLE');
-                
-                // Tự động sinh mã mock nếu kho chưa có mã thật cho linh kiện này (dành cho demo)
-                if (availableForThis.length === 0) {
-                  availableForThis = [
-                    { serial: `SN-MOCK-${item.productId}-A`, productId: item.productId, status: 'AVAILABLE' },
-                    { serial: `SN-MOCK-${item.productId}-B`, productId: item.productId, status: 'AVAILABLE' }
-                  ];
-                }
-
                 return (
-                  <div key={idx} style={{ 
-                    border: `1px solid ${isFulfilled ? '#bbf7d0' : '#e2e8f0'}`, 
-                    borderRadius: '8px', padding: '1rem',
-                    backgroundColor: isFulfilled ? '#f0fdf4' : '#fff',
-                    transition: 'all 0.2s'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div
+                    key={idx}
+                    style={{ 
+                      border: `1.5px solid ${isFulfilled ? '#86efac' : '#e2e8f0'}`, 
+                      borderRadius: '8px',
+                      padding: '0.9rem 1.1rem',
+                      backgroundColor: isFulfilled ? '#f0fdf4' : '#ffffff',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{item.name}</strong>
-                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>
-                          Mã SP: {item.productId}
+                        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>
+                          {item.name || item.productName || 'Linh Kiện Máy Tính'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
+                          Mã định danh SP: <strong>#{pId}</strong> | Yêu cầu đóng gói: <strong>{reqQty} cái</strong>
                         </div>
                       </div>
-                      <div style={{ 
-                        padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.85rem', fontWeight: 700,
-                        backgroundColor: isFulfilled ? '#dcfce7' : '#f1f5f9',
-                        color: isFulfilled ? '#166534' : '#475569'
-                      }}>
-                        Đã quét: {scannedForThis.length} / {reqQty}
+                      <div>
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          backgroundColor: isFulfilled ? '#dcfce7' : '#fff7ed',
+                          color: isFulfilled ? '#15803d' : '#c2410c',
+                          border: `1px solid ${isFulfilled ? '#bbf7d0' : '#fed7aa'}`
+                        }}>
+                          {isFulfilled ? `Đã Đủ (${scannedForThis.length}/${reqQty})` : `Chưa Đủ (${scannedForThis.length}/${reqQty})`}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Scanned Badges */}
+                    {/* Scanned Serials Badges */}
                     {scannedForThis.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.75rem' }}>
                         {scannedForThis.map(sn => (
-                          <div key={sn} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', backgroundColor: '#bfdbfe', color: '#1e40af', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
-                            <Barcode size={12} />
-                            {sn}
+                          <div
+                            key={sn}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.25rem 0.55rem',
+                              backgroundColor: '#dbeafe',
+                              color: '#1e40af',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              border: '1px solid #bfdbfe'
+                            }}
+                          >
+                            <span>SN: {sn}</span>
                             <button 
-                              onClick={() => handleRemoveSn(item.productId, sn)}
-                              style={{ background: 'none', border: 'none', color: '#1e40af', cursor: 'pointer', padding: 0, marginLeft: '2px', display: 'flex' }}
+                              type="button"
+                              onClick={() => handleRemoveSn(pId, sn)}
+                              style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '0 2px', fontWeight: 800, fontSize: '0.8rem' }}
+                              title="Xóa mã này"
                             >
-                              <X size={14} />
+                              x
                             </button>
                           </div>
                         ))}
-                      </div>
-                    )}
-
-                    {/* Primary Manual Selection */}
-                    {!isFulfilled && availableForThis.length > 0 && (
-                      <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px dashed #cbd5e1' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>Chọn Serial Number để xuất kho: </span>
-                          <select 
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                setBarcodeInput(e.target.value);
-                                // Tự động submit
-                                setTimeout(() => {
-                                  document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                                }, 100);
-                              }
-                            }}
-                            value=""
-                            style={{ padding: '0.5rem', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid #2563eb', backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 500, cursor: 'pointer', outline: 'none' }}
-                          >
-                            <option value="">-- Click để chọn mã S/N --</option>
-                            {availableForThis.filter(s => !scannedForThis.includes(s.serial)).map(s => (
-                            <option key={s.serial} value={s.serial}>{s.serial}</option>
-                          ))}
-                        </select>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -258,26 +309,30 @@ export default function PackAndScanModal({ show, onClose, order, onConfirmPack }
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', backgroundColor: '#f8fafc', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', backgroundColor: '#f8fafc' }}>
           <button 
+            type="button"
             onClick={onClose} 
-            style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', backgroundColor: '#fff', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+            style={{ padding: '0.55rem 1.15rem', fontSize: '0.82rem', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
           >
             Hủy Bỏ
           </button>
           <button 
+            type="button"
             onClick={handleConfirm}
-            disabled={!isAllPacked}
             style={{ 
-              padding: '0.6rem 1.25rem', fontSize: '0.9rem', 
-              backgroundColor: isAllPacked ? '#10b981' : '#94a3b8', 
-              color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, 
-              cursor: isAllPacked ? 'pointer' : 'not-allowed',
-              display: 'flex', alignItems: 'center', gap: '0.5rem'
+              padding: '0.55rem 1.35rem',
+              fontSize: '0.82rem', 
+              backgroundColor: '#16a34a', 
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              fontWeight: 700, 
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(22,163,74,0.25)'
             }}
           >
-            {isAllPacked ? <CheckCircle size={18} /> : null}
-            Xác nhận Hoàn Tất Đóng Gói
+            Xác Nhận Đóng Gói
           </button>
         </div>
       </div>

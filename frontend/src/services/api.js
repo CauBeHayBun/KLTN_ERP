@@ -166,14 +166,13 @@ async function request(endpoint, options = {}) {
   try {
     const response = await fetch(`${BASE_URL}${endpoint}`, config);
     
-    // Auto logout on 401 ONLY for real backend JWT tokens (not mock-token-* fallback tokens)
+    // Auto logout on 401 ONLY for explicit auth verification endpoints with expired real token
     const storedToken = localStorage.getItem('token') || '';
     const isMockToken = storedToken.startsWith('mock-token-');
     if (
       response.status === 401 &&
       !isMockToken &&
-      !endpoint.includes('/auth/login') &&
-      !endpoint.includes('/auth/employee/login')
+      (endpoint.includes('/auth/me') || endpoint.includes('/auth/verify') || endpoint.includes('/auth/refresh'))
     ) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');

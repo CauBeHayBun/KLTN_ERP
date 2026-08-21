@@ -48,7 +48,10 @@ const INITIAL_EMPLOYEES = [
   { id: 3, fullname: 'Lê Văn C', username: 'warehouse', role: 'WAREHOUSE', salary: 12000000, attendance: 'ABSENT', salaryPaid: false },
   { id: 4, fullname: 'Phạm Văn D', username: 'assembly', role: 'ASSEMBLY', salary: 14000000, attendance: 'PRESENT', salaryPaid: false },
   { id: 5, fullname: 'Nguyễn Nhân Sự', username: 'hr', role: 'HR', salary: 16000000, attendance: 'PRESENT', salaryPaid: false },
-  { id: 6, fullname: 'Trần Kế Toán', username: 'accounting', role: 'ACCOUNTANT', salary: 18000000, attendance: 'PRESENT', salaryPaid: false }
+  { id: 6, fullname: 'Trần Kế Toán', username: 'accounting', role: 'ACCOUNTANT', salary: 18000000, attendance: 'PRESENT', salaryPaid: false },
+  { id: 15, fullname: 'Nguyễn Văn A', username: 'delivery', role: 'DELIVERY', salary: 11000000, attendance: 'PRESENT', salaryPaid: false, phone: '0912.345.678' },
+  { id: 17, fullname: 'Trần Văn B', username: 'delivery2', role: 'DELIVERY', salary: 11500000, attendance: 'PRESENT', salaryPaid: false, phone: '0988.765.432' },
+  { id: 18, fullname: 'Lê Hoàng Long', username: 'delivery3', role: 'DELIVERY', salary: 12000000, attendance: 'PRESENT', salaryPaid: false, phone: '0909.112.233' }
 ];
 
 // Initial Assembly Jobs
@@ -720,8 +723,8 @@ export const ERPProvider = ({ children }) => {
   const updatePurchaseOrderStatus = (poId, newStatus, extraData = null) => {
     const extraObj = typeof extraData === 'object' && extraData !== null ? extraData : (typeof extraData === 'string' ? { cancelReason: extraData, note: extraData } : {});
     let updated = false;
-    const updatedPOs = purchaseOrders.map(po => {
-      if (po.id === poId || po.poNumber === poId || String(po.id) === String(poId)) {
+    let updatedPOs = purchaseOrders.map(po => {
+      if (po.id === poId || po.poNumber === poId || String(po.id) === String(poId) || String(po.poNumber) === String(poId)) {
         updated = true;
         return { 
           ...po, 
@@ -733,9 +736,22 @@ export const ERPProvider = ({ children }) => {
       }
       return po;
     });
-    // Do not overwrite persistent orders when this context has not loaded the
-    // target PO yet; SupplierPortal writes the authoritative record itself.
-    if (updated) saveState('erp_pos', updatedPOs, setPurchaseOrders);
+
+    if (!updated) {
+      let localPOs = [];
+      try { localPOs = JSON.parse(localStorage.getItem('erp_pos') || '[]'); } catch (_) { localPOs = []; }
+      const locMatchIndex = localPOs.findIndex(po => po.id === poId || po.poNumber === poId || String(po.id) === String(poId) || String(po.poNumber) === String(poId));
+      if (locMatchIndex >= 0) {
+        localPOs[locMatchIndex] = { ...localPOs[locMatchIndex], status: newStatus, ...extraObj };
+        updatedPOs = localPOs;
+      } else {
+        const newPoItem = { id: poId, poNumber: poId, status: newStatus, ...extraObj };
+        localPOs.push(newPoItem);
+        updatedPOs = [...purchaseOrders, newPoItem];
+      }
+    }
+    
+    saveState('erp_pos', updatedPOs, setPurchaseOrders);
   };
 
   // 2. Warehouse GRN imports
@@ -1005,8 +1021,14 @@ export const ERPProvider = ({ children }) => {
 
   // Sales Manager/CEO/Delivery cập nhật trạng thái đơn hàng thủ công
   const updateOrderStatus = (orderId, newStatus, note = null, extraData = {}) => {
+    // Tự động nhận diện nếu người dùng truyền object vào tham số thứ 3
+    if (typeof note === 'object' && note !== null) {
+      extraData = { ...note };
+      note = note.note || note.failNote || note.receiverNote || null;
+    }
+
     const dateStr = new Date().toLocaleDateString('vi-VN');
-    const targetOrder = orders.find(o => o.orderId === orderId);
+    const targetOrder = orders.find(o => (o.orderId === orderId || o.id === orderId));
     if (!targetOrder) return;
 
     let nextInventory = [...inventory];
@@ -1132,6 +1154,17 @@ export const ERPProvider = ({ children }) => {
     });
     saveState('erp_orders', updatedOrders, setOrders);
     syncExistingPoints(updatedOrders);
+
+    // Đồng bộ trạng thái đơn hàng trực tiếp với Backend API & PostgreSQL Database
+    api.patch(`/orders/${orderId}/status`, {
+      status: newStatus,
+      note,
+      ...extraData
+    }).then(res => {
+      console.log(`[ERPContext] ✅ Backend order #${orderId} status synced to ${newStatus}`);
+    }).catch(err => {
+      console.warn(`[ERPContext] ⚠️ Backend order #${orderId} sync notice:`, err.message);
+    });
 
     // Bắn thông báo Hệ thống cho Bộ phận Kho (Warehouse) nếu đơn hàng liên quan đến Kho
     if (newStatus === 'CONFIRMED' && !isCancelledTransition) {
@@ -2086,13 +2119,16 @@ export const ERPProvider = ({ children }) => {
       addProduct,
       updateProduct,
       deleteProduct,
+      setOrders,
       setInventory,
       // CSKH & Return operations
       addReturnRequest,
       updateReturnStatus,
       processRefund,
       addComplaint,
-      updateComplaintStatus
+      updateComplaintStatus,
+      // Misc helpers
+      formatDateTime: (d) => d ? new Date(d).toLocaleString('vi-VN') : ''
     }}>
       {children}
     </ERPContext.Provider>

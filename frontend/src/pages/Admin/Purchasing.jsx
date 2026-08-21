@@ -157,6 +157,55 @@ export default function Purchasing() {
     return products.filter(p => p.status !== 'DISCONTINUED');
   }, [erpContext.inventory, erpContext.products, products]);
 
+  // Backorders Detection from Sales Orders (AWAITING_STOCK)
+  const backorderSalesOrders = useMemo(() => {
+    return (erpContext.orders || []).filter(o => o && o.status === 'AWAITING_STOCK');
+  }, [erpContext.orders]);
+
+  const backorderRequiredItems = useMemo(() => {
+    const map = {};
+    backorderSalesOrders.forEach(o => {
+      (o.items || []).forEach(it => {
+        const pId = String(it.productId || it.id || '');
+        if (!pId) return;
+        if (!map[pId]) {
+          map[pId] = {
+            productId: pId,
+            name: it.name || it.productName || 'Linh kiện',
+            neededQty: 0,
+            ordersCount: 0,
+            orderIds: []
+          };
+        }
+        map[pId].neededQty += (Number(it.quantity) || 1);
+        map[pId].ordersCount += 1;
+        map[pId].orderIds.push(o.orderId || o.id);
+      });
+    });
+    return Object.values(map);
+  }, [backorderSalesOrders]);
+
+  const handleCreateRfqForBackorder = (backorderItem) => {
+    const product = effectiveCatalog.find(p => String(p.id) === String(backorderItem.productId));
+    const supp = product?.supplier || 'Intel Vietnam';
+    const suppObj = suppliers.find(s => s.name === supp || s.code === supp);
+    
+    setSelectedSupplier(suppObj ? suppObj.code : (suppliers[0]?.code || 's1'));
+    setSelectedSuppliersList([suppObj ? suppObj.code : (suppliers[0]?.code || 's1'), '']);
+    setIsMultiSupplierRFQ(false);
+    setExpectedDeliveryDate(new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0]);
+    
+    const estCost = product?.price ? Math.round(Number(product.price) * 0.8) : 1500000;
+    setPoItems([{
+      productId: String(backorderItem.productId),
+      productName: backorderItem.name,
+      quantity: Math.max(Number(backorderItem.neededQty) * 2, 5),
+      unitCost: estCost
+    }]);
+
+    setShowCreateModal(true);
+  };
+
   const handleOpenCreateModal = () => {
     setSelectedSupplier('');
     setSelectedSuppliersList(['', '']);
@@ -195,16 +244,20 @@ export default function Purchasing() {
         api.get('/purchasing/products')
       ]);
 
-      let finalOrders = [];
-      if (ordersRes?.success && Array.isArray(ordersRes.data) && ordersRes.data.length > 0) {
-        finalOrders = ordersRes.data;
-      } else {
-        try { finalOrders = JSON.parse(localStorage.getItem('erp_pos') || '[]'); } catch (_) {}
-        if (!finalOrders || finalOrders.length === 0) {
-          finalOrders = erpContext.purchaseOrders || [];
+      let apiOrders = (ordersRes?.success && Array.isArray(ordersRes.data)) ? ordersRes.data : [];
+      let localOrders = [];
+      try { localOrders = JSON.parse(localStorage.getItem('erp_pos') || '[]'); } catch (_) { localOrders = erpContext.purchaseOrders || []; }
+
+      const mergedOrders = [...apiOrders];
+      [...localOrders, ...(erpContext.purchaseOrders || [])].forEach(locPo => {
+        const idx = mergedOrders.findIndex(o => o.poNumber === locPo.poNumber || String(o.id) === String(locPo.id));
+        if (idx >= 0) {
+          mergedOrders[idx] = { ...mergedOrders[idx], ...locPo };
+        } else {
+          mergedOrders.unshift(locPo);
         }
-      }
-      setOrders(finalOrders);
+      });
+      setOrders(mergedOrders);
 
       let finalSuppliers = [];
       if (suppliersRes?.success && Array.isArray(suppliersRes.data) && suppliersRes.data.length > 0) {
@@ -234,6 +287,7 @@ export default function Purchasing() {
       if (!fallbackOrders || fallbackOrders.length === 0) {
         fallbackOrders = erpContext.purchaseOrders || [];
       }
+      setOrders(fallbackOrders);
       if (fallbackOrders.length > 0) {
         setOrders(fallbackOrders);
       } else {
@@ -722,6 +776,72 @@ export default function Purchasing() {
           <div style={{ marginBottom: '1.25rem' }}>
             <ActorNotificationBar />
           </div>
+
+          {/* 2.1 Backorders Demand Banner (If there are AWAITING_STOCK customer orders) */}
+          {backorderSalesOrders.length > 0 && (
+            <div style={{
+              backgroundColor: '#fff7ed',
+              borderRadius: '8px',
+              border: '1.5px solid #fdba74',
+              padding: '1.25rem',
+              marginBottom: '1.25rem',
+              boxShadow: '0 4px 12px rgba(234, 88, 12, 0.08)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#c2410c', margin: 0 }}>
+                    Nhu Cầu Nhập Hàng Gấp Cho Đơn Khách Đang Chờ ({backorderSalesOrders.length} Đơn Hàng)
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: '#9a3412', margin: '0.15rem 0 0 0' }}>
+                    Các đơn hàng bán lẻ của khách đang tạm giữ chỗ do thiếu tồn kho. Nhấn tạo RFQ để đề xuất mua bổ sung từ nhà cung cấp.
+                  </p>
+                </div>
+
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ea580c' }}>
+                  Tổng {backorderRequiredItems.length} mặt hàng cần mua
+                </div>
+              </div>
+
+              {/* Items Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
+                {backorderRequiredItems.map((item, idx) => (
+                  <div key={idx} style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '6px',
+                    border: '1px solid #fed7aa',
+                    padding: '0.75rem 1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>{item.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.15rem' }}>
+                        Khách đang nợ: <strong style={{ color: '#dc2626' }}>{item.neededQty} SP</strong> (trong {item.ordersCount} đơn: {item.orderIds.slice(0, 2).map(id => `#${id}`).join(', ')}{item.orderIds.length > 2 ? '...' : ''})
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleCreateRfqForBackorder(item)}
+                      style={{
+                        backgroundColor: '#ea580c',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '5px',
+                        padding: '0.45rem 0.85rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Tạo RFQ
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Odoo KPI Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
