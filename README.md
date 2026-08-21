@@ -248,19 +248,17 @@ Tất cả tài khoản hệ thống dùng chung mật khẩu mặc định: `12
 | :--- | :---: | :---: | :--- | :--- |
 | **Quản Trị Hệ Thống** | `admin` | `123456` | Quản Trị Viên Hệ Thống | `/admin/system?tab=overview` |
 | **Ban Giám Đốc** | `ceo` | `123456` | Nguyễn Văn A (Tổng Giám Đốc) | `/admin/dashboard` |
-| **Quản Lý Bán Hàng** | `sales_manager` | `123456` | Trịnh Quản Lý (Trưởng Phòng Kinh Doanh) | `/admin/sales` |
-| **Nhân Viên Bán Hàng** | `sales` | `123456` | Trần Thị B (Nhân Viên Bán Hàng) | `/admin/sales` |
-| **Quản Lý Kho** | `warehouse_manager`|`123456` | Hoàng Kho Vận (Trưởng Kho) | `/admin/warehouse` |
-| **Thủ Kho** | `warehouse` | `123456` | Lê Văn C (Thủ Kho Quản Lý) | `/admin/warehouse` |
-| **Nhân Viên Mua Hàng** | `purchasing` | `123456` | Phạm Thu Mua (Phòng Mua Hàng) | `/admin/purchasing` |
+| **Quản Lý & Bán Hàng** | `sales` | `123456` | Trần Thị B (Nhân Viên Bán Hàng) | `/admin/sales` |
+| **Quản Lý & Kho Vận** | `warehouse` | `123456` | Lê Văn C (Thủ Kho Quản Lý) | `/admin/warehouse` |
+| **Phòng Mua Hàng** | `purchasing` | `123456` | Phạm Thu Mua (Phòng Mua Hàng) | `/admin/purchasing` |
 | **Kiểm Định Chất Lượng**| `qc` | `123456` | Nguyễn Văn QC (Chuyên Viên Kiểm Định) | `/admin/quality-control` |
 | **Kỹ Thuật Lắp Ráp** | `assembly` | `123456` | Phạm Văn D (Kỹ Thuật Viên Phần Cứng) | `/admin/assembly` |
-| **Quản Lý Nhân Sự** | `hr` | `123456` | Nguyễn Nhân Sự (Trưởng Phòng Nhân Sự) | `/admin/hr` |
-| **Kế Toán Trưởng** | `accounting` | `123456` | Trần Kế Toán (Kế Toán Trưởng) | `/admin/accounting` |
+| **Quản Trị Nhân Sự** | `hr` | `123456` | Nguyễn Nhân Sự (Trưởng Phòng Nhân Sự) | `/admin/hr` |
+| **Kế Toán Tài Chính** | `accounting` | `123456` | Trần Kế Toán (Kế Toán Trưởng) | `/admin/accounting` |
 | **Chăm Sóc Khách Hàng**| `cskh` | `123456` | Nguyễn CSKH (Chuyên Viên Tư Vấn) | `/admin/cskh` |
-| **Giao Hàng (Tài xế 1)**| `delivery` / `shipper1`|`123456`| Nguyễn Văn A (Nhân Viên Giao Hàng) | `/admin/delivery` |
-| **Giao Hàng (Tài xế 2)**| `delivery2` / `shipper2`|`123456`| Trần Văn B (Nhân Viên Giao Hàng) | `/admin/delivery` |
-| **Khách Hàng Mua Sắm** | `customer` | `123456` | Nguyễn Khách Hàng (Tài Khoản Khách) | `/profile` |
+| **Giao Vận (Giao Hàng)**| `delivery` | `123456` | Nguyễn Văn A (Nhân Viên Giao Hàng) | `/admin/delivery` |
+| **Khách Hàng Mua Sắm** | `customer` | `123456` | Nguyễn Khách Hàng (Tài Khoản Mua Sắm) | `/profile` |
+| **Nhà Cung Cấp Đối Tác**| `supplier` | `123456` | Nhà Cung Cấp Đối Tác (Cổng B2B) | `/supplier/portal` |
 
 ---
 
